@@ -1,0 +1,443 @@
+# RHDP Publishing House — Design Specification
+
+**Date:** 2026-04-09
+**Author:** nstephan
+**Status:** Draft
+
+---
+
+## Overview
+
+RHDP Publishing House is a Claude Code plugin that manages the full content lifecycle for Red Hat Demo Platform (RHDP) content — from initial idea through ready-for-publishing. It enables content developers to become content architects by orchestrating specialized AI agents that handle writing, editing, automation development, and security review.
+
+One entry point. One manifest. Pick up where you left off, any day, any session. Hand off to a colleague across timezones or skill levels — they see exactly where things stand and what's next.
+
+## Problem
+
+Content development for RHDP is labor-intensive. A single workshop involves writing AsciiDoc modules, building AgnosticV catalogs, developing Ansible/GitOps automation, running security checks, and coordinating technical reviews. Each step requires different skills and tools. Content developers spend most of their time on toil rather than architecture and design.
+
+## Solution
+
+A Hub + Spoke plugin where a thin orchestrator manages project state and dispatches specialized agent skills for each lifecycle phase. The content owner stays in control — orchestrating agents, reviewing outputs, and making decisions at gates — while the bulk writing, validation, and automation work is handled by agents backed by existing RHDP skills.
+
+## Architecture
+
+### Hub + Spoke Model
+
+```
+/rhdp-publishing-house [autonomy-level]
+         |
+    Orchestrator (reads manifest, determines phase, presents options)
+         |
+    +----+----+--------+----------+---------+--------+
+    |         |        |          |         |        |
+ Intake    Writer   Editor   Automation  Security  Review
+ Agent     Agent    Agent     Agent       Agent    Agent
+    |         |        |          |
+  RCARS    showroom  showroom  agnosticv
+  API      :create-  :verify-  :catalog-
+           lab/demo  content   builder
+```
+
+**Why Hub + Spoke over monolithic:** Each agent is a separate skill file — focused, testable, independently iterable. Adding a new phase means adding a new spoke, not rewriting the monolith. Only relevant context loads per phase, reducing token pressure.
+
+### Plugin Namespace
+
+- **Namespace:** `rhdp-publishing-house`
+- **Entry point:** `/rhdp-publishing-house` (aliases to `rhdp-publishing-house:orchestrator`)
+- **Future migration path:** `/rhdp` namespace when RHDP skills consolidate
+
+### Autonomy Levels
+
+Passed as argument to entry point. Stored in manifest, persists across sessions. Default: `supervised`.
+
+| Level | Behavior |
+|-------|----------|
+| **supervised** (default) | Agent produces draft, presents to user, user approves before commit. Every artifact reviewed. |
+| **semi** | Agent commits WIP to branch, runs validation automatically. Flags user at phase gates and decision points only. |
+| **full** | Agent works through entire phase end-to-end. Presents completed output at phase gate for review. |
+
+Invocation:
+- `/rhdp-publishing-house` — supervised (default)
+- `/rhdp-publishing-house semi` — semi-autonomous
+- `/rhdp-publishing-house full` — fully autonomous within phases
+
+User can change autonomy mid-session by saying "switch to semi" or re-invoking.
+
+## Content Lifecycle
+
+```
+Intake → Vetting → Spec Refinement → Approval → Writing → Technical Editing
+  → Automation (catalog → environment → grading*) → Security Review
+  → Final Review → Ready for Publishing
+
+* grading/health checks deferred to future phase
+```
+
+### Phase Details
+
+#### 1. Intake
+- **Agent:** Intake Agent
+- **Three entry paths:**
+  - Experienced content dev brings mostly-complete spec — agent fills gaps
+  - Someone with an idea ("I need a lab on X") — agent builds spec through conversation
+  - RCARS gap — single sentence gap description becomes seed for spec generation
+- **Produces:** `publishing-house/spec/design.md` (master) + `publishing-house/spec/modules/*.md` (per-module outlines)
+
+#### 2. Vetting
+- **Agent:** Intake Agent (continues)
+- **Action:** Calls RCARS REST API with spec content (learning objectives, topics, products, audience)
+- **Possible outcomes:**
+  - Gap confirmed — nothing covers this, proceed
+  - Partial overlap — similar content exists, spec refinement should differentiate
+  - Already covered — recommend enhancement over new project
+- **Produces:** `publishing-house/reviews/rcars-vetting.md`
+- **If RCARS unavailable:** Phase can be skipped with explicit user acknowledgment
+
+#### 3. Spec Refinement
+- **Agent:** Intake Agent (continues)
+- **Action:** Rewrites/cleans up spec and module outlines based on:
+  - RCARS feedback (if available)
+  - Clarity and precision for downstream agent consumption
+  - Standard format with See/Learn/Do, timing, numbered steps
+- **Goal:** Spec and module outlines sufficient for writer agent to produce content without ambiguity
+
+#### 4. Approval
+- **Human decision gate**
+- **Owner reviews** master design + individual module outlines
+- **Outcome:** Proceed / revise specific modules / reject
+- **Manifest updated** with approval decision and approver
+
+#### 5. Writing
+- **Agent:** Writer Agent
+- **Wraps:** `showroom:create-lab`, `showroom:create-demo`
+- **Works module-by-module** based on approved outlines in `spec/modules/`
+- **Owner triggers** which module to write: "write module 2"
+- **Produces:** AsciiDoc files in `content/`
+
+#### 6. Technical Editing
+- **Agent:** Editor Agent
+- **Wraps:** `showroom:verify-content` + Red Hat style guide references
+- **Reviews:** Accuracy, style, consistency, clarity, Red Hat standards compliance
+- **Produces:** Review notes in `publishing-house/reviews/`, edits to `content/`
+
+#### 7. Automation
+Three substeps, first two active, third deferred:
+
+**7a. AgnosticV Catalog Creation**
+- **Agent:** Automation Agent
+- **Wraps:** `agnosticv:catalog-builder`, `agnosticv:validator`
+- **Produces:** Config in `agnosticv/`
+
+**7b. Automation Development**
+- **Agent:** Automation Agent (continues)
+- **Action:** Creates Ansible roles/playbooks or Argo+Helm manifests to configure the lab environment
+- **Determines base** (OCP vs RHEL) from AgnosticV config
+- **Includes its own code review + security review cycle** (separate from phase 8)
+- **Wraps:** `code-review:code-review` for automation code review
+- **Produces:** Automation in `automation/`
+- **Optional:** Only if `needs_automation: true` in manifest (asked during intake)
+
+**7c. ZT Grading + Health Checks** *(deferred — future phase)*
+- Would wrap: `ftl:rhdp-lab-validator`, `health:deployment-validator`
+
+#### 8. Security Review
+- **Agent:** Security Agent
+- **Focus:** Content-level security (separate from automation code review in 7b)
+- **Checks:** Exposed credentials in docs, hardcoded URLs, sensitive info in public-facing content, Red Hat sensitive data policy compliance
+- **Produces:** `publishing-house/reviews/security-review.md`
+
+#### 9. Final Review
+- **Agent:** Review Agent
+- **Holistic check:** Spec alignment, completeness, cross-module consistency, all prior review items addressed
+- **Produces:** Final review report
+
+#### 10. Ready for Publishing
+- **Manifest updated** to `ready_for_publishing`
+- **Not "Published"** — actual publication is a separate process outside this tool's scope (for now)
+
+## Collaboration & Handoff
+
+The manifest-driven design makes Publishing House inherently collaborative:
+
+- **Timezone handoff** — Developer A in one timezone works through intake and spec refinement, pushes to the repo. Developer B in a later timezone runs `/rhdp-publishing-house`, immediately sees "Spec approved. Writing phase — 3 modules pending. Suggested next: write Module 1."
+- **Role-based handoff** — A content architect designs the spec and overall structure, then hands the project to a developer who runs the writing, editing, and automation phases with agent assistance. The spec provides guardrails; the agents provide expertise. Each person works to their strengths.
+- **One-person show** — Solo content developers benefit equally. The orchestrator tracks progress across sessions, agents handle the bulk work, and the manifest ensures nothing falls through the cracks.
+- **Review distribution** — Different team members can own different review phases. One person writes, another edits, a third handles security review. The manifest tracks who did what and when.
+
+All collaboration happens through the repo (push/pull) and the manifest. No external coordination tool needed — the project state is the coordination.
+
+## State Management
+
+### Manifest (`publishing-house/manifest.yaml`)
+
+Structured YAML — single source of truth. Orchestrator reads/writes this every session.
+
+```yaml
+project:
+  name: "Configuring ServiceMesh on OpenShift"
+  id: "servicemesh-ocp-lab"
+  created: 2026-04-09
+  owner: "nstephan"
+  type: workshop  # workshop | demo
+  autonomy: supervised  # supervised | semi | full
+
+lifecycle:
+  current_phase: writing
+  phases:
+    intake:
+      status: completed  # pending | in_progress | completed | skipped
+      completed_at: 2026-04-09
+      artifacts:
+        - publishing-house/spec/design.md
+        - publishing-house/spec/modules/module-01-overview.md
+        - publishing-house/spec/modules/module-02-deploy.md
+    vetting:
+      status: completed
+      completed_at: 2026-04-09
+      result: approved  # approved | revise | rejected
+      rcars_response: publishing-house/reviews/rcars-vetting.md
+    spec_refinement:
+      status: completed
+      completed_at: 2026-04-10
+    approval:
+      status: completed
+      approved_by: nstephan
+      completed_at: 2026-04-10
+    writing:
+      status: in_progress
+      modules:
+        - name: "Module 1: Installing ServiceMesh"
+          status: drafted  # pending | in_progress | drafted | approved
+        - name: "Module 2: Traffic Management"
+          status: pending
+        - name: "Module 3: Observability"
+          status: pending
+    editing:
+      status: pending
+    automation:
+      status: pending
+      needs_automation: true
+      substeps:
+        catalog: pending
+        environment: pending
+        grading: deferred
+    security_review:
+      status: pending
+    final_review:
+      status: pending
+    ready_for_publishing:
+      status: pending
+
+integrations:
+  rcars_api: "https://rcars.apps.example.com/api/v1"
+  showroom_repo: null
+  automation_repo: null
+```
+
+### Work Journal (`publishing-house/journal.md`) — Experimental
+
+Human-readable session log. Updated alongside manifest but not the source of truth.
+
+```markdown
+# Work Journal
+
+## 2026-04-10
+
+### What was done
+- Completed spec refinement for all 3 modules
+- Owner approved design and module outlines
+
+### Key decisions
+- Module 2 split into two sub-modules per owner feedback
+
+### Next up
+- Begin writing Module 1
+```
+
+### Session Flow
+
+```
+Session start → Orchestrator reads manifest.yaml
+  → Presents: current phase, what's done, what's next
+  → User directs: "write module 2" / "what's next" / "switch to semi"
+  → Orchestrator dispatches appropriate agent
+  → Agent works (per autonomy level)
+  → Agent completes → Orchestrator updates manifest
+  → Loop until user ends session
+  → Journal updated with session summary
+```
+
+## Plugin Package Structure
+
+Lives in the RHDP Skills Marketplace (`rhpds/rhdp-skills-marketplace`):
+
+```
+rhdp-publishing-house/
+├── .claude-plugin/
+│   └── plugin.json
+├── README.md
+├── docs/
+│   ├── PH-COMMON-RULES.md           # Shared rules across all PH skills
+│   └── getting-started.md           # Concise usage guide
+├── skills/
+│   ├── orchestrator/
+│   │   ├── SKILL.md                 # Entry point — state mgmt + dispatch
+│   │   └── workflow.svg
+│   ├── intake/
+│   │   ├── SKILL.md                 # Spec generation + RCARS vetting
+│   │   ├── workflow.svg
+│   │   └── references/
+│   │       └── spec-guidelines.md
+│   ├── writer/
+│   │   ├── SKILL.md                 # Content writing (wraps showroom skills)
+│   │   ├── workflow.svg
+│   │   └── references/
+│   │       └── writing-standards.md
+│   ├── editor/
+│   │   ├── SKILL.md                 # Technical editing (wraps verify-content)
+│   │   ├── workflow.svg
+│   │   └── references/
+│   │       └── editing-checklist.md
+│   ├── automation/
+│   │   ├── SKILL.md                 # AgnosticV + Ansible/Helm automation
+│   │   ├── workflow.svg
+│   │   └── references/
+│   │       └── automation-patterns.md
+│   ├── security/
+│   │   ├── SKILL.md                 # Content security review
+│   │   ├── workflow.svg
+│   │   └── references/
+│   │       └── security-checklist.md
+│   └── review/
+│       ├── SKILL.md                 # Final holistic review
+│       ├── workflow.svg
+│       └── references/
+│           └── review-criteria.md
+```
+
+## Template Repo
+
+Separate GitHub template repo: `rhpds/rhdp-publishing-house-template`
+
+User creates their project repo from this template, clones it locally, then invokes `/rhdp-publishing-house`.
+
+```
+my-new-lab/
+├── publishing-house/
+│   ├── manifest.yaml                 # Pre-populated with empty phases
+│   ├── journal.md                    # Empty work journal
+│   ├── spec/
+│   │   ├── design.md                 # Blank — intake agent populates
+│   │   ├── modules/                  # Per-module outlines land here
+│   │   └── SPEC-TEMPLATE.md          # Reference template (don't edit)
+│   ├── reviews/                      # Agent review artifacts
+│   └── decisions/                    # Decision records
+├── content/                          # Showroom AsciiDoc (writer agent output)
+│   └── .gitkeep
+├── automation/                       # Ansible/Helm (automation agent output)
+│   └── .gitkeep
+├── agnosticv/                        # AgnosticV catalog config
+│   └── .gitkeep
+├── CLAUDE.md                         # Points to publishing-house/ context
+├── .gitignore
+└── README.md
+```
+
+### Module Outline Format
+
+Per-module outlines in `spec/modules/` follow the pattern from `ocp4-getting-started-workspace`:
+
+- **Brief Overview** — 3-4 sentences setting context
+- **Audience and Time** — Target personas, prerequisites, duration
+- **What You Will See, Learn, and Do** — Bulleted lists organized by verb
+- **Lab Structure** — Named sections with time estimates
+- **Detailed Steps** — Numbered, granular enough for writer agent
+- **Key Takeaways** — Concepts reinforced
+- **Infrastructure Notes** — Requirements, config details (if applicable)
+
+Granularity scales with complexity: simple module ~80 lines, complex multi-demo module ~300 lines.
+
+## RCARS Integration
+
+- **Protocol:** REST API (HTTP)
+- **Endpoint:** `POST /api/v1/recommend`
+- **Payload:** Spec content — learning objectives, topics, products, audience
+- **Response:** Recommendations for existing overlapping content + identified gaps
+- **Config:** API URL stored in `manifest.yaml` under `integrations.rcars_api`
+- **Fallback:** If RCARS unavailable, vetting phase skippable with explicit user acknowledgment
+
+## Agent Details
+
+### Orchestrator
+- **Invoked by:** User via `/rhdp-publishing-house [autonomy]`
+- **Does:** Reads manifest, presents state summary + recommended next action, dispatches agents, updates manifest after agent completion
+- **Does NOT contain:** Agent logic — purely state management and routing
+- **Project discovery:** On invocation, orchestrator looks for `publishing-house/manifest.yaml` in the current directory. If not found, prompts user for the project directory path. Remembers this path for the session.
+- **First-time flow:** If manifest found but empty/fresh (from template), asks if user has a spec or needs help creating one, kicks off intake.
+- **No template detected:** If invoked in a directory with no manifest and no template structure, instructs user to clone the template repo first and provides the repo URL.
+
+### Intake Agent
+- **Handles:** Intake, vetting, spec refinement phases
+- **Three paths:** Full spec provided, rough idea, RCARS gap
+- **All converge to:** Normalized master design.md + per-module outlines
+- **RCARS call:** During vetting substep
+
+### Writer Agent
+- **Wraps:** `showroom:create-lab`, `showroom:create-demo`
+- **Input:** Approved module outline from `spec/modules/`
+- **Output:** AsciiDoc in `content/`
+- **Works per-module** — owner triggers which module
+
+### Editor Agent
+- **Wraps:** `showroom:verify-content` + style guide references
+- **Reviews:** After all modules drafted (or per-module in semi/full autonomy)
+- **Output:** Review notes + direct edits to content
+
+### Automation Agent
+- **Wraps:** `agnosticv:catalog-builder`, `agnosticv:validator`, `code-review:code-review`
+- **7a:** Creates AgnosticV catalog from spec
+- **7b:** Writes Ansible roles/playbooks or Argo+Helm manifests for environment setup
+- **Includes own code + security review cycle** for automation code
+- **Optional:** Only runs if `needs_automation: true`
+- **New skill needed:** Automation writing (Ansible + Argo/Helm generation)
+
+### Security Agent
+- **Focus:** Content-level security (NOT automation code — that's covered in 7b)
+- **Checks:** Credentials in docs, hardcoded URLs, sensitive info in public content, Red Hat data policy
+- **Output:** `publishing-house/reviews/security-review.md`
+
+### Review Agent
+- **Holistic final check:** Spec alignment, completeness, cross-module consistency
+- **Verifies:** All prior review items addressed
+- **Output:** Final review report, manifest updated to `ready_for_publishing`
+
+## Existing Skills Reused
+
+| Skill | Used By | Phase |
+|-------|---------|-------|
+| `showroom:create-lab` | Writer Agent | Writing |
+| `showroom:create-demo` | Writer Agent | Writing |
+| `showroom:verify-content` | Editor Agent | Technical Editing |
+| `agnosticv:catalog-builder` | Automation Agent | Automation (7a) |
+| `agnosticv:validator` | Automation Agent | Automation (7a) |
+| `code-review:code-review` | Automation Agent, Security Agent | Automation (7b), Security Review |
+
+## New Skills/Capabilities Needed
+
+| Capability | Agent | Notes |
+|-----------|-------|-------|
+| Spec generation + RCARS integration | Intake Agent | New skill |
+| Automation writing (Ansible) | Automation Agent | New skill or sourced |
+| Automation writing (Argo + Helm) | Automation Agent | New skill or sourced |
+| Content security audit | Security Agent | New skill |
+| Holistic review criteria | Review Agent | New skill |
+
+## Open Items
+
+- [ ] **GitHub template repo** — Create `rhpds/rhdp-publishing-house-template` with proper structure
+- [ ] **RCARS API contract** — Finalize endpoint spec when RCARS REST API is ready
+- [ ] **Automation skill sourcing** — Determine if existing Ansible/Helm generation tools exist or need full development
+- [ ] **Namespace migration** — Plan for moving from `rhdp-publishing-house` to `/rhdp` namespace
+- [ ] **ZT grading + health checks** — Design phase 7c when ready to implement
+- [ ] **Infosec review of project structure** — Validate that keeping design docs in private repo addresses sensitivity concerns
