@@ -1,0 +1,49 @@
+# RHDP Publishing House
+
+AI-powered content lifecycle management for Red Hat Demo Platform.
+
+## Overview
+
+One command — `/rhdp-publishing-house` — provides a persistent, state-aware orchestrator
+that manages the entire content lifecycle through specialized AI agents. Content developers
+become content architects: design the architecture, agents handle the writing, editing,
+automation, and review.
+
+## Skills
+
+### /rhdp-publishing-house (orchestrator)
+
+Entry point. Reads project manifest, presents current state, recommends next action,
+dispatches agent skills. Supports three autonomy levels: supervised (default), semi, full.
+
+### /rhdp-publishing-house:intake
+
+Spec generation and RCARS vetting. Three intake paths:
+- Full spec provided — agent fills gaps
+- Rough idea — agent builds spec through conversation
+- RCARS gap — gap description becomes seed for new spec
+
+### /rhdp-publishing-house:writer *(Phase 2)*
+### /rhdp-publishing-house:editor *(Phase 2)*
+### /rhdp-publishing-house:automation *(Phase 3)*
+### /rhdp-publishing-house:security *(Phase 4)*
+### /rhdp-publishing-house:review *(Phase 4)*
+
+## Getting Started
+
+See [docs/getting-started.md](docs/getting-started.md).
+
+## Autonomy Levels
+
+| Level | Behavior |
+|-------|----------|
+| **supervised** (default) | Review every artifact before commit |
+| **semi** | Review at phase gates only |
+| **full** | Review at phase completion |
+
+## Content Lifecycle
+
+```
+Intake → Vetting → Spec Refinement → [Approval] → Writing → Editing
+  → Automation → Security Review → Final Review → Ready for Publishing
+```
