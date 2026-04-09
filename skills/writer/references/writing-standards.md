@@ -3,15 +3,22 @@
 Standards for the writer agent when generating content via showroom skills.
 These supplement the showroom skill's own rules — do not duplicate them.
 
-## Module Outline as Contract
+## Module Outline as Starting Point
 
 The approved module outline in `publishing-house/spec/modules/module-NN-*.md` is the
-writer's contract. Every section in the outline must appear in the generated content.
-Do not add sections not in the outline. Do not skip sections that are in the outline.
+writer's primary input. When generating new content, every section in the outline should
+appear in the generated content. Do not add major sections not in the outline. Do not
+skip sections that are in the outline.
 
 If the outline is ambiguous or incomplete, ask the user for clarification rather than
 guessing. In `full` autonomy mode, make reasonable assumptions and note them in the
 module's review notes for the editor to validate.
+
+**However:** Both the outline and any existing content may have been modified by a human
+since the last agent run. Always read the current version of files from disk. If existing
+content diverges from the outline, the human's edits take precedence — build on what
+exists rather than overwriting it. Note any divergence for the editor to review, but
+do not treat human modifications as errors.
 
 ## Content Type Routing
 

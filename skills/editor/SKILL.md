@@ -62,13 +62,30 @@ Read the module outline from `publishing-house/spec/modules/module-NN-*.md`.
 Read the generated content from the path in the manifest (`content_file` field).
 Read `publishing-house/spec/design.md` for project-level context.
 
+### Human Modifications
+
+Content files may have been modified by a human since the writer agent produced them.
+The file on disk is the authoritative version — not whatever the writer last generated.
+
+When spec alignment checks find divergence between content and outline:
+- **Report the divergence clearly** — note what the outline says vs. what the content says
+- **Do not assume divergence is an error.** A human may have intentionally restructured
+  sections, added context, changed terminology, or refined steps based on hands-on testing
+- **Classify divergence as INFORMATIONAL** unless there is a clear quality problem
+  (e.g., a learning objective is completely missing with no replacement, or content
+  contradicts the spec in a way that would confuse learners)
+- **Ask before reverting human work.** Even in `full` autonomy mode, do not silently
+  undo changes a human made. Flag them, explain the divergence, and let the user decide
+  whether the spec or the content should be updated
+
 ### SA-1: Outline Coverage
 
 Compare the outline's sections against the generated content:
 - List each section from the outline
 - Check if the generated content has a corresponding section
 - Flag missing sections as HIGH severity
-- Flag sections in content that aren't in the outline as MEDIUM severity (scope creep)
+- Note sections in content that aren't in the outline — these may be intentional human
+  additions (INFORMATIONAL) or scope creep (MEDIUM). Check git blame or ask if unclear.
 
 ### SA-2: Learning Objectives Match
 
@@ -185,6 +202,7 @@ When reviewing all drafted modules:
 ## What You Do NOT Do
 
 - Do not write new content — that is the writer agent's responsibility
-- Do not modify the module outlines — if the content doesn't match the outline, flag it; don't change the spec
+- Do not modify the module outlines — if the content diverges from the outline, report the divergence; do not silently change either the spec or the content to force alignment
+- Do not assume content that differs from the spec is wrong — humans may have edited it intentionally. Report, don't revert.
 - Do not advance the lifecycle phase — only update module-level status
 - Do not re-implement checks that `showroom:verify-content` already performs — wrap and extend, not duplicate

@@ -35,7 +35,18 @@ Check what the user requested:
 Read `lifecycle.phases.writing.modules` from the manifest to find module status.
 
 **If the requested module is already `drafted` or `approved`:**
-> "Module N is already drafted. Would you like to re-draft it (this will overwrite the current content) or move to the next pending module?"
+
+Read the existing content file first. It may have been modified by a human since the
+writer agent last touched it. Present what exists:
+
+> "Module N has existing content at [file path]. It may have been modified since it was
+> initially drafted. Would you like to:
+> 1. **Continue from current content** — add to or refine what's there
+> 2. **Re-draft from scratch** — regenerate from the module outline (overwrites current content)
+> 3. **Move to the next pending module**"
+
+If the user chooses to continue, read the existing content and provide it as additional
+context to the showroom skill alongside the module outline. Preserve human edits.
 
 **If a prior module is still `pending` (not in order):**
 > "Module [N-1] hasn't been written yet. Modules should be written in order for story continuity. Write Module [N-1] first, or proceed with Module N anyway?"
@@ -112,6 +123,9 @@ After the showroom skill finishes generating content:
 3. Cross-check the generated content sections against the module outline:
    - Every section in the outline should have a corresponding section in the content
    - Flag any outline sections that were not covered
+   - If the content diverges from the outline (e.g., because a human refined the outline
+     or content between sessions), note the divergence but do not treat it as an error —
+     the human's version may be intentionally different
 4. Check for hardcoded values that should use `{attribute}` placeholders
 
 ### Autonomy Behavior
