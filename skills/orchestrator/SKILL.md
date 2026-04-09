@@ -1,5 +1,5 @@
 ---
-name: rhdp-publishing-house:orchestrator
+name: rhdp-publishing-house
 description: This skill should be used when the user asks to "start a publishing house project", "continue my lab project", "check project status", "what's next on my lab", or invokes "/rhdp-publishing-house". It is the main entry point for RHDP Publishing House — reads project state and orchestrates the content lifecycle.
 ---
 
