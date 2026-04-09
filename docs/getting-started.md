@@ -1,0 +1,64 @@
+# Getting Started with RHDP Publishing House
+
+## Prerequisites
+
+- Claude Code with the RHDP Skills Marketplace installed
+- The `rhdp-publishing-house` plugin enabled
+- A GitHub account with access to the `rhpds` org (for creating project repos)
+
+## Quick Start
+
+### 1. Create a project repo
+
+Clone the template:
+
+```bash
+gh repo create my-new-lab \
+  --template rhpds/rhdp-publishing-house-template \
+  --private --clone
+cd my-new-lab
+```
+
+### 2. Start the orchestrator
+
+```bash
+# In Claude Code, from inside your project directory:
+/rhdp-publishing-house
+```
+
+The orchestrator detects a fresh project and walks you through intake.
+
+### 3. Follow the orchestrator
+
+The orchestrator guides you through each phase:
+- **Intake** — build your spec (bring one or create from scratch)
+- **Vetting** — check against existing RHDP content via RCARS
+- **Spec Refinement** — clean up for downstream agents
+- **Approval** — you review and approve the spec
+- **Writing → Editing → Automation → Security → Review → Ready**
+
+At any point, ask "what's next" and the orchestrator tells you where you are
+and what to do.
+
+### 4. Collaborate
+
+Push your repo. A colleague clones it, runs `/rhdp-publishing-house`, and picks
+up exactly where you left off. The manifest tracks everything.
+
+## Autonomy Levels
+
+Control how much review you want:
+
+```
+/rhdp-publishing-house              # supervised (default) — review everything
+/rhdp-publishing-house semi         # review at phase gates only
+/rhdp-publishing-house full         # review at phase completion
+```
+
+Switch mid-session: "switch to semi"
+
+## Tips
+
+- The manifest (`publishing-house/manifest.yaml`) is the source of truth — don't edit it manually
+- Module outlines in `publishing-house/spec/modules/` drive the writing phase — invest time making them good
+- If RCARS API isn't available, you can skip vetting and come back to it later
