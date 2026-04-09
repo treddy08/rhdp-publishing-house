@@ -23,8 +23,16 @@ Spec generation and RCARS vetting. Three intake paths:
 - Rough idea — agent builds spec through conversation
 - RCARS gap — gap description becomes seed for new spec
 
-### /rhdp-publishing-house:writer *(Phase 2)*
-### /rhdp-publishing-house:editor *(Phase 2)*
+### /rhdp-publishing-house:writer
+
+Content writing agent. Wraps `showroom:create-lab` (workshops) and `showroom:create-demo`
+(demos) to generate Showroom AsciiDoc from approved module outlines. Works module-by-module.
+
+### /rhdp-publishing-house:editor
+
+Technical editing agent. Wraps `showroom:verify-content` and adds Publishing House-specific
+spec alignment checks. Reviews content against Red Hat quality standards and the approved
+project spec. Produces review reports and offers interactive fix loops.
 ### /rhdp-publishing-house:automation *(Phase 3)*
 ### /rhdp-publishing-house:security *(Phase 4)*
 ### /rhdp-publishing-house:review *(Phase 4)*
