@@ -41,7 +41,6 @@ All agents MUST read their input files fresh at execution time. Never rely on pr
 - Decision records go in `publishing-house/decisions/`
 - Content output goes in `content/`
 - Automation output goes in `automation/`
-- AgnosticV config goes in `agnosticv/`
 
 ## Sensitive Content
 

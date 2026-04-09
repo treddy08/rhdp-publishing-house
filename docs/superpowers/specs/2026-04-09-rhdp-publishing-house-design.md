@@ -127,7 +127,7 @@ Three substeps, first two active, third deferred:
 **7a. AgnosticV Catalog Creation**
 - **Agent:** Automation Agent
 - **Wraps:** `agnosticv:catalog-builder`, `agnosticv:validator`
-- **Produces:** Config in `agnosticv/`
+- **Produces:** Config in the AgnosticV repo (via `agnosticv:catalog-builder` skill)
 
 **7b. Automation Development**
 - **Agent:** Automation Agent (continues)
@@ -336,8 +336,6 @@ my-new-lab/
 ├── content/                          # Showroom AsciiDoc (writer agent output)
 │   └── .gitkeep
 ├── automation/                       # Ansible/Helm (automation agent output)
-│   └── .gitkeep
-├── agnosticv/                        # AgnosticV catalog config
 │   └── .gitkeep
 ├── CLAUDE.md                         # Points to publishing-house/ context
 ├── .gitignore
