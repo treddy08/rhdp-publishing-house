@@ -79,8 +79,8 @@ Map user phrases to agent dispatch:
 | User Says                                      | Action                                                                 |
 |-----------------------------------------------|------------------------------------------------------------------------|
 | "start intake", "gather requirements"          | Dispatch `rhdp-publishing-house:intake`                                |
-| "write module N", "draft content"              | Dispatch `rhdp-publishing-house:writer` (Phase 2, not yet implemented) |
-| "edit module N", "review content"              | Dispatch `rhdp-publishing-house:editor` (Phase 2, not yet implemented) |
+| "write module N", "draft content", "start writing" | Dispatch `rhdp-publishing-house:writer` with the module number |
+| "edit module N", "review content", "technical edit" | Dispatch `rhdp-publishing-house:editor` with the module number (or "all") |
 | "build automation", "create catalog"           | Dispatch `rhdp-publishing-house:automation` (Phase 3, not yet implemented) |
 | "security review", "check for secrets"         | Dispatch `rhdp-publishing-house:security` (Phase 4, not yet implemented) |
 | "final review", "ready to publish"             | Dispatch `rhdp-publishing-house:review` (Phase 4, not yet implemented) |
@@ -91,7 +91,7 @@ Map user phrases to agent dispatch:
 **Guard Rails:**
 - Phases must complete in order: intake → vetting → spec refinement → approval → writing → editing → automation → security review → final review → ready for publishing.
 - If user requests a phase that depends on an incomplete prior phase, inform them: "We need to complete <prior phase> first. Would you like to continue there?"
-- If user requests an agent that hasn't been implemented yet (Phase 2-4 agents), inform them: "The <agent name> agent is not yet available. It will be built in a future phase of the Publishing House plugin. For now, you can complete <phase> manually and update the manifest when done."
+- If user requests an agent that hasn't been implemented yet (automation, security, review agents), inform them: "The <agent name> agent is not yet available. It will be built in a future phase of the Publishing House plugin. For now, you can complete <phase> manually and update the manifest when done."
 - The approval gate (phase 4) always requires explicit human approval. Never auto-advance past it even in `full` autonomy mode.
 
 ## Dispatch Context
@@ -99,8 +99,8 @@ Map user phrases to agent dispatch:
 When dispatching an agent, provide the specific file paths it needs to read. Agents must read these fresh — do not paste file contents into the dispatch.
 
 - **Intake agent:** Provide path to any existing spec document the user referenced
-- **Writer agent:** Provide path to the specific module outline (e.g., `publishing-house/spec/modules/module-02-deploy.md`)
-- **Editor agent:** Provide paths to both the module outline and the generated content file
+- **Writer agent:** Provide the module number to write. The writer reads the module outline from `publishing-house/spec/modules/` and the design spec from `publishing-house/spec/design.md`. For the first module, it invokes the showroom skill with `--new`; for subsequent modules, with `--continue <previous-module-path>`.
+- **Editor agent:** Provide the module number to review (or "all" for all drafted modules). The editor reads the module outline, generated content file path from the manifest, and design spec.
 - **Automation agent:** Provide path to the design spec and AgnosticV config if it exists
 
 This ensures every agent reads the current version of its input at execution time. See @rhdp-publishing-house/docs/PH-COMMON-RULES.md "Read Before You Act" section.
