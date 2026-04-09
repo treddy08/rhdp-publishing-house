@@ -23,6 +23,16 @@ The manifest's `project.autonomy` field controls agent behavior:
 - Agents report completion back to the user; the orchestrator updates the manifest
 - Never skip the approval gate (phase 4) — it always requires explicit human approval
 
+## Read Before You Act
+
+All agents MUST read their input files fresh at execution time. Never rely on prior context, cached content, or assumptions about file state.
+
+- **Orchestrator:** Read `manifest.yaml` at session start and after every agent dispatch
+- **Intake agent:** Read the manifest and any provided spec documents at the start of each phase
+- **Writer agent:** Read the specific module outline from `spec/modules/` immediately before writing. If the outline changed since the last draft, the new version is what matters.
+- **Editor agent:** Read both the module outline and the generated content before reviewing
+- **All agents:** The files on disk at dispatch time are the contract. If a human or another agent modifies a file after dispatch, the running agent is not responsible for picking up those changes mid-execution.
+
 ## File Conventions
 
 - Specs go in `publishing-house/spec/`

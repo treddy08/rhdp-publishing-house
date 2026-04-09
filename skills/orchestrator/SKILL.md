@@ -94,6 +94,17 @@ Map user phrases to agent dispatch:
 - If user requests an agent that hasn't been implemented yet (Phase 2-4 agents), inform them: "The <agent name> agent is not yet available. It will be built in a future phase of the Publishing House plugin. For now, you can complete <phase> manually and update the manifest when done."
 - The approval gate (phase 4) always requires explicit human approval. Never auto-advance past it even in `full` autonomy mode.
 
+## Dispatch Context
+
+When dispatching an agent, provide the specific file paths it needs to read. Agents must read these fresh — do not paste file contents into the dispatch.
+
+- **Intake agent:** Provide path to any existing spec document the user referenced
+- **Writer agent:** Provide path to the specific module outline (e.g., `publishing-house/spec/modules/module-02-deploy.md`)
+- **Editor agent:** Provide paths to both the module outline and the generated content file
+- **Automation agent:** Provide path to the design spec and AgnosticV config if it exists
+
+This ensures every agent reads the current version of its input at execution time. See @rhdp-publishing-house/docs/PH-COMMON-RULES.md "Read Before You Act" section.
+
 ## Step 4: Post-Agent Update
 
 When an agent skill completes work:
