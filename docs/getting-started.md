@@ -57,6 +57,23 @@ Control how much review you want:
 
 Switch mid-session: "switch to semi"
 
+## Model Recommendations
+
+Different phases benefit from different models:
+
+| Phase | Recommended Model | Why |
+|-------|------------------|-----|
+| **Intake** | Opus 4.6 | Deep exploration of requirements, thorough spec generation |
+| **Writing** | Sonnet 4.6 | Module outlines provide sufficient guardrails |
+| **Editing** | Sonnet 4.6 | Checklist-driven review against standards |
+| **Automation** | Opus 4.6 | Complex reasoning for Ansible/Helm generation |
+| **Security** | Sonnet 4.6 | Pattern-matching against known security checks |
+| **Review** | Sonnet 4.6 | Structured holistic review |
+
+For simple 5-10 minute labs, Sonnet 4.6 handles all phases well.
+For large multi-module workshops, Opus on intake and automation pays off in spec
+quality and automation correctness.
+
 ## Tips
 
 - The manifest (`publishing-house/manifest.yaml`) is the source of truth — don't edit it manually

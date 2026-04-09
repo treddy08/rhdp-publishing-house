@@ -412,6 +412,22 @@ Granularity scales with complexity: simple module ~80 lines, complex multi-demo 
 - **Verifies:** All prior review items addressed
 - **Output:** Final review report, manifest updated to `ready_for_publishing`
 
+## Model Selection
+
+Different agents use different models based on task complexity:
+
+| Agent | Model | Reasoning |
+|-------|-------|-----------|
+| **Orchestrator** | Opus 4.6 | Needs to understand project state and route intent |
+| **Intake** | Opus 4.6 | Deep exploration, thorough spec generation |
+| **Writer** | Sonnet 4.6 | Module outlines provide sufficient guardrails |
+| **Editor** | Sonnet 4.6 | Checklist-driven review against standards |
+| **Automation** | Opus 4.6 | Complex reasoning for Ansible/Helm generation |
+| **Security** | Sonnet 4.6 | Pattern-matching against security checks |
+| **Review** | Sonnet 4.6 | Structured holistic review |
+
+For simple 5-10 minute labs, Sonnet handles all phases well. For large multi-module workshops, Opus on intake and automation pays off in spec quality and automation correctness.
+
 ## Existing Skills Reused
 
 | Skill | Used By | Phase |
