@@ -29,8 +29,16 @@ See @rhdp-publishing-house/skills/writer/references/writing-standards.md for wri
 Check what the user requested:
 
 - If user said "write module N" → write that specific module
-- If user said "write all" or "start writing" → write the next pending module
+- If user said "write modules N & M" or "write modules 2, 3, 4" → write them **sequentially,
+  in order** (not in parallel). Each module depends on the previous one for story continuity
+  and `--continue` context. Complete one fully before starting the next.
+- If user said "write all" or "start writing" → write all pending modules sequentially,
+  starting from the lowest-numbered pending module
 - If user said "write conclusion" → generate the conclusion module (only after all other modules are drafted)
+
+**Never write modules in parallel.** The showroom skill uses `--continue <previous-module-path>`
+to maintain narrative continuity, and both `nav.adoc` and the manifest are updated after each
+module. Concurrent writes would cause conflicts and break story flow.
 
 Read `lifecycle.phases.writing.modules` from the manifest to find module status.
 
