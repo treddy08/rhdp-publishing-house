@@ -103,7 +103,8 @@ Creates AgnosticV catalog configuration and environment automation.
   - **7a: Catalog Item** -- wraps `agnosticv:catalog-builder` and `agnosticv:validator`
   - **7b: Automation Requirements** -- analyzes content to produce a reviewable automation manifest
   - **7c: Automation Code** -- writes Ansible collections or GitOps repos from approved requirements, runs its own code review cycle
-  - **7d: E2E Checks** -- end-to-end validation *(deferred)*
+  - **7d: Testing** -- human gate: deploy and verify the automation works on a real environment
+  - **7e: E2E Checks** -- end-to-end validation *(deferred)*
 - **Determines infrastructure type** (OCP, RHEL/VMs, Sandbox) from the design spec
 - **Produces:** AgnosticV config + automation code in `automation/`
 

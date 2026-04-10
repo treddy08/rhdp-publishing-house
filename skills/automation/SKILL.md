@@ -36,7 +36,8 @@ Check the manifest's `lifecycle.phases.automation.substeps`:
 - If `catalog_item` is `pending` → start with 7a (Catalog Item)
 - If `catalog_item` is `completed` and `requirements` is `pending` → start with 7b (Automation Requirements)
 - If `requirements` is `completed` and `automation_code` is `pending` → start with 7c (Automation Code)
-- If all are `completed` → inform user automation is done
+- If `automation_code` is `completed` and `testing` is `pending` → present 7d (Testing gate)
+- If all are `completed` (or testing skipped) → inform user automation is done
 - If user requests a specific sub-phase, route to it (but warn if out of order)
 
 Check what the user requested:
@@ -44,6 +45,8 @@ Check what the user requested:
 - **"create catalog" / "AgnosticV config" / "catalog item"** → 7a
 - **"automation requirements" / "what needs to be automated"** → 7b
 - **"write automation" / "create roles" / "write code"** → 7c
+- **"testing done" / "testing passed"** → complete 7d
+- **"skip testing"** → skip 7d (with confirmation)
 - **"automate" / "start automation"** → next pending sub-phase
 
 ## Phase 7a: AgnosticV Catalog Creation
@@ -321,23 +324,69 @@ After automation code is complete and review cycle passes:
 
 ```yaml
 automation:
-  status: in_progress  # Orchestrator sets to completed
   substeps:
     catalog_item: completed
     requirements: completed
     automation_code: completed
+    testing: pending
     e2e_checks: deferred
-  catalog_path: "<agv-relative-path>"
-  agv_repo: "<local-agv-repo-path>"
   automation_files:
     - automation/roles/ocp4_workload_<project-id>/
     - automation/helm/<chart-name>/  # if GitOps
 ```
 
+## Phase 7d: Testing (Gate)
+
+The automation code must be deployed and tested on a real environment before the
+automation phase can be marked complete. This is a human gate — the agent does not
+deploy or test automation itself.
+
+### Step 7d-1: Present Testing Gate
+
+After automation code is written (7c complete), inform the user:
+
+> "Automation code is written but has not been deployed or tested.
+>
+> Before proceeding, you should:
+> 1. Deploy the catalog item to a dev environment
+> 2. Verify the automation runs successfully
+> 3. Confirm the lab/demo works end-to-end with the automated environment
+>
+> When testing is complete, say **'testing done'** or **'testing passed'**.
+> To skip testing, say **'skip testing'** (not recommended)."
+
+### Step 7d-2: Record Testing Result
+
+When the user confirms testing:
+
+- **"testing done" / "testing passed"** → Set `substeps.testing: completed`. Ask for
+  any notes about what was tested and any issues found. Record in the manifest:
+  ```yaml
+  testing: completed
+  testing_notes: "<user's notes about what was tested>"
+  ```
+
+- **"skip testing"** → Confirm: "Skipping testing means the automation code has not
+  been verified on a real environment. Are you sure?" If confirmed, set
+  `substeps.testing: skipped`.
+
+### Step 7d-3: Update Manifest
+
+```yaml
+automation:
+  status: in_progress  # Orchestrator sets to completed
+  substeps:
+    catalog_item: completed
+    requirements: completed
+    automation_code: completed
+    testing: completed  # or skipped
+    e2e_checks: deferred
+```
+
 **Do not change `lifecycle.phases.automation.status` or `lifecycle.current_phase`.**
 Phase-level transitions are managed by the orchestrator.
 
-## Step 8: Report Back
+## Step 9: Report Back
 
 After completing each sub-phase, inform the user:
 
@@ -360,6 +409,12 @@ After completing each sub-phase, inform the user:
 > Code review: [PASSED / findings addressed]
 > Catalog re-validation: [PASSED]
 >
+> Next: Deploy and test the automation (7d). The code has not been tested yet."
+
+**After 7d (Testing):**
+> "Automation testing [completed / skipped].
+> [If completed: testing notes]
+>
 > Automation phase complete. Next: security review."
 
 ## Skipping Sub-Phases
@@ -372,6 +427,8 @@ Users can skip individual sub-phases:
   automation code directly without a manifest.
 - **"skip automation code"** — Set `substeps.automation_code: skipped`. Automation
   handled externally.
+- **"skip testing"** — Set `substeps.testing: skipped`. Not recommended — automation
+  code has not been verified on a real environment.
 - **"skip all automation"** — Set entire automation phase to `skipped`.
 
 Always confirm skip decisions: "Are you sure? This means [consequence]."
@@ -380,8 +437,8 @@ Always confirm skip decisions: "Are you sure? This means [consequence]."
 
 - Do not write Showroom content — that is the writer agent's job
 - Do not review content quality — that is the editor agent's job
-- Do not implement E2E checks — deferred (7d)
-- Do not deploy or test the environment — deployment is outside PH scope
+- Do not deploy or test the automation yourself — that is the user's responsibility;
+  this agent tracks whether testing has been done
 - Do not manage the AgnosticV git repository beyond writing files — the user owns git workflow
 - Do not advance the lifecycle phase — only update substep status
 - Do not guess infrastructure configuration — let the catalog-builder skill ask its

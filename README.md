@@ -42,7 +42,9 @@ Automation agent. Four sub-phases:
   describing what needs to be pre-configured.
 - **7c: Automation Code** — Writes Ansible collections or GitOps repos (Helm + ArgoCD) from
   the approved requirements, then runs its own code review cycle.
-- **7d: E2E Checks** — End-to-end validation *(deferred)*.
+- **7d: Testing** — Human gate: deploy to a dev environment and verify automation works.
+  Must be completed or explicitly skipped.
+- **7e: E2E Checks** — End-to-end validation *(deferred)*.
 
 Only runs when `needs_automation: true` in the manifest. Uses Opus 4.6.
 

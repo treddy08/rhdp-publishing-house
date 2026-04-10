@@ -21,11 +21,13 @@ Automation has four sub-phases tracked in the manifest:
 | 7a: Catalog Item | `substeps.catalog_item` | pending → completed | AgnosticV catalog configuration |
 | 7b: Automation Requirements | `substeps.requirements` | pending → completed | Reviewable scope document (what to automate) |
 | 7c: Automation Code | `substeps.automation_code` | pending → completed | Ansible collection or GitOps repo |
-| 7d: E2E Checks | `substeps.e2e_checks` | deferred | End-to-end validation (future) |
+| 7d: Testing | `substeps.testing` | pending → completed | Deploy and verify automation works |
+| 7e: E2E Checks | `substeps.e2e_checks` | deferred | End-to-end validation (future) |
 
 Sub-phases run in order: catalog item first (establishes infrastructure context and
 identifies what's already handled), then requirements (analyzes content to determine
-what's missing), then automation code (writes from the approved requirements).
+what's missing), then automation code (writes from the approved requirements), then
+testing (human deploys and verifies the automation works on a real environment).
 
 ## Infrastructure Type Routing
 

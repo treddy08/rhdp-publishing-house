@@ -178,7 +178,12 @@ Four sub-phases, first three active, fourth deferred:
 
 **Skip if:** Environment setup is handled externally, or `needs_automation: false` in manifest
 
-**7d. E2E Checks** *(deferred — future phase)*
+**7d. Testing (gate)**
+- **Human responsibility** — deploy the catalog item to a dev environment and verify it works
+- **Always a gate** — must be explicitly completed or skipped before automation phase closes
+- **Agent tracks status** but does not deploy or test itself
+
+**7e. E2E Checks** *(deferred — future phase)*
 - Would wrap: `ftl:rhdp-lab-validator`, `health:deployment-validator`
 
 #### 8. Security Review
@@ -262,6 +267,7 @@ lifecycle:
         catalog_item: pending
         requirements: pending
         automation_code: pending
+        testing: pending
         e2e_checks: deferred
     security_review:
       status: pending
