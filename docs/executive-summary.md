@@ -1,3 +1,8 @@
+---
+layout: default
+title: Executive Summary
+---
+
 # RHDP Publishing House
 
 ## AI-Powered Content Lifecycle Management for RHDP

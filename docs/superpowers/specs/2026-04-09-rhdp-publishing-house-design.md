@@ -489,4 +489,5 @@ For simple 5-10 minute labs, Sonnet handles all phases well. For large multi-mod
 - [ ] **Namespace migration** — Plan for moving from `rhdp-publishing-house` to `/rhdp` namespace
 - [ ] **ZT grading + health checks** — Design phase 7c when ready to implement
 - [ ] **Infosec review of project structure** — Validate that keeping design docs in private repo addresses sensitivity concerns
+- [ ] **Polish GitHub Pages docs** — Refine the Jekyll site at `docs/` (index, executive summary, getting started, how it works). Consider a better theme (just-the-docs or minimal-mistakes), add screenshots/diagrams, improve navigation, add a changelog page.
 - [ ] **Red Hat style guide reference** — Add a condensed Red Hat writing style reference (`docs/redhat-style-guide.md` or shared in `references/`) for writer and editor agents. Currently the showroom skills enforce style at invocation time, but the PH agents have no independent style awareness. A lightweight reference would help the writer generate style-compliant content upfront (fewer editor findings) and give the editor explicit criteria beyond RS-1/RS-2.

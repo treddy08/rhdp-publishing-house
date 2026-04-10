@@ -1,3 +1,8 @@
+---
+layout: default
+title: Getting Started
+---
+
 # Getting Started with RHDP Publishing House
 
 ## Prerequisites
