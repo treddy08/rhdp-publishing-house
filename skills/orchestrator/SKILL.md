@@ -87,12 +87,44 @@ Map user phrases to agent dispatch:
 | "what's next", "status", "where are we"        | Re-read manifest and present status (Step 2)                           |
 | "switch to supervised/semi/full"               | Update `project.autonomy` in manifest, confirm change                  |
 | "approve and continue"                         | Mark current gate as approved, transition to next phase                |
+| "skip writing" / "skip automation" / "skip vetting" | Set phase to `skipped`, confirm with user (optional phases only)  |
+| "I already have content" / "content is ready"  | Skip writing, proceed to editing                                       |
+| "I already have a spec"                        | Shortcut intake — dispatch intake agent in validation mode             |
 
 **Guard Rails:**
-- Phases must complete in order: intake → vetting → spec refinement → approval → writing → editing → automation → security review → final review → ready for publishing.
-- If user requests a phase that depends on an incomplete prior phase, inform them: "We need to complete <prior phase> first. Would you like to continue there?"
-- If user requests an agent that hasn't been implemented yet (automation, security, review agents), inform them: "The <agent name> agent is not yet available. It will be built in a future phase of the Publishing House plugin. For now, you can complete <phase> manually and update the manifest when done."
-- The approval gate (phase 4) always requires explicit human approval. Never auto-advance past it even in `full` autonomy mode.
+
+Publishing House does not require end-to-end usage. Phases are either **required** or
+**optional**. Users can skip optional phases and jump to what they need.
+
+**Required phases** (cannot be skipped):
+- **Intake** — required, but shortcuttable with a pre-existing design doc
+- **Approval** — always requires explicit human sign-off; never auto-advance
+- **Technical Editing** — always runs; quality gate regardless of how content was produced
+- **Security Review** — always runs; non-negotiable for publishing readiness
+- **Final Review** — holistic check before marking ready
+
+**Optional phases** (can be skipped):
+- **Vetting** — skip if RCARS unavailable or uniqueness already validated
+- **Spec Refinement** — skip if spec is already clean and detailed
+- **Writing** — skip if content was written manually or with another tool
+- **Automation** — skip if environment setup handled externally or not needed
+
+**Phase dependencies** (enforce these, not strict ordering):
+- Approval requires intake to be completed (need a spec to approve)
+- Writing requires approval (need an approved spec to write from)
+- Editing requires content to exist in `content/` (agent-generated or manual)
+- Security review requires content to exist
+- Automation can run in parallel with or after writing — no dependency between them
+
+**Skipping a phase:** When a user says "skip writing" or "skip automation", set that
+phase's status to `skipped` in the manifest. Confirm first: "Skip [phase]? This means
+[consequence]. You can un-skip later if needed."
+
+**Shortcutting intake:** If the user says "I already have a spec" or provides a design
+doc, dispatch the intake agent — it validates and normalizes the doc rather than building
+from scratch. This is faster but still required.
+
+- If user requests an agent that hasn't been implemented yet (security, review agents), inform them: "The <agent name> agent is not yet available. It will be built in a future phase of the Publishing House plugin. For now, you can complete <phase> manually and update the manifest when done."
 
 ## Dispatch Context
 

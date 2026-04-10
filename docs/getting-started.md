@@ -30,15 +30,24 @@ The orchestrator detects a fresh project and walks you through intake.
 
 ### 3. Follow the orchestrator
 
-The orchestrator guides you through each phase:
-- **Intake** — build your spec (bring one or create from scratch)
+The orchestrator guides you through the content lifecycle. Not all phases are required —
+use what helps you, skip what doesn't.
+
+**Required phases:**
+- **Intake** — build your spec (or bring an existing one to shortcut)
+- **Approval** — you review and approve the spec
+- **Technical Editing** — quality review (runs regardless of how content was produced)
+- **Security Review** — content security audit
+- **Final Review** — holistic check before marking ready
+
+**Optional phases** (skip if you've handled them another way):
 - **Vetting** — check against existing RHDP content via RCARS
 - **Spec Refinement** — clean up for downstream agents
-- **Approval** — you review and approve the spec
-- **Writing → Editing → Automation → Security → Review → Ready**
+- **Writing** — skip if you wrote the content manually
+- **Automation** — skip if environment setup is handled externally
 
-At any point, ask "what's next" and the orchestrator tells you where you are
-and what to do.
+Say "skip writing" or "I already have content" to jump ahead.
+Ask "what's next" at any point for guidance.
 
 ### 4. Collaborate
 

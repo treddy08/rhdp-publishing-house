@@ -23,6 +23,18 @@ The manifest's `project.autonomy` field controls agent behavior:
 - Agents report completion back to the user; the orchestrator updates the manifest
 - Never skip the approval gate (phase 4) — it always requires explicit human approval
 
+## Flexible Adoption
+
+Not all phases are required. Users adopt what helps them:
+
+- **Required:** Intake (shortcuttable), Approval, Technical Editing, Security Review, Final Review
+- **Optional:** Vetting, Spec Refinement, Writing, Automation
+
+Optional phases can be `skipped` in the manifest. Skipped phases are still visible in
+status summaries so reviewers know what was and wasn't done. The editor and security
+agents review whatever content exists — regardless of whether it was agent-generated,
+hand-written, or produced by another tool.
+
 ## Read Before You Act
 
 All agents MUST read their input files fresh at execution time. Never rely on prior context, cached content, or assumptions about file state.

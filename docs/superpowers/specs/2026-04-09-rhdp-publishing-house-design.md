@@ -67,24 +67,52 @@ User can change autonomy mid-session by saying "switch to semi" or re-invoking.
 ## Content Lifecycle
 
 ```
-Intake → Vetting → Spec Refinement → Approval → Writing → Technical Editing
-  → Automation (catalog → environment → grading*) → Security Review
+Intake* → Vetting → Spec Refinement → Approval → Writing° → Technical Editing*
+  → Automation° (catalog → environment → grading†) → Security Review*
   → Final Review → Ready for Publishing
 
-* grading/health checks deferred to future phase
+* = required (but intake can be shortcut with a pre-existing spec)
+° = optional (can skip if done manually)
+† = grading/health checks deferred to future phase
 ```
+
+### Flexible Adoption
+
+Publishing House does not require end-to-end usage. Teams adopt the phases that help them:
+
+| Phase | Required? | Can Skip If... |
+|-------|-----------|----------------|
+| Intake | Yes, but shortcuttable | User provides a pre-existing design doc; agent validates format and fills gaps |
+| Vetting | No | RCARS unavailable or user has already validated uniqueness |
+| Spec Refinement | No | Spec is already clean and agent-ready |
+| Approval | Yes (gate) | Always requires explicit human sign-off |
+| Writing | No | Content already exists (written manually or in a prior tool) |
+| Technical Editing | Yes | — always runs; catches quality issues regardless of how content was produced |
+| Automation | No | Environment setup handled externally or not needed |
+| Security Review | Yes | — always runs; non-negotiable for publishing readiness |
+| Final Review | Yes | — holistic check before marking ready |
+
+**Skipping a phase** means setting its status to `skipped` in the manifest. The orchestrator
+still tracks it — skipped phases show in the status summary so reviewers know what was
+and wasn't done. Skipped phases can be un-skipped later if the user changes their mind.
+
+**Shortcutting intake** means the user provides an existing design doc (file, paste, or
+Google Doc). The intake agent validates it against the spec template, fills gaps, and
+generates module outlines — but skips the conversational spec-building workflow.
 
 ### Phase Details
 
-#### 1. Intake
+#### 1. Intake (required — shortcuttable)
 - **Agent:** Intake Agent
+- **Required** because downstream agents need a normalized spec and module outlines to work from
+- **Shortcut:** If the user already has a design doc, the agent validates and normalizes it rather than building from scratch
 - **Three entry paths:**
   - Experienced content dev brings mostly-complete spec — agent fills gaps
   - Someone with an idea ("I need a lab on X") — agent builds spec through conversation
   - RCARS gap — single sentence gap description becomes seed for spec generation
 - **Produces:** `publishing-house/spec/design.md` (master) + `publishing-house/spec/modules/*.md` (per-module outlines)
 
-#### 2. Vetting
+#### 2. Vetting (optional)
 - **Agent:** Intake Agent (continues)
 - **Action:** Calls RCARS REST API with spec content (learning objectives, topics, products, audience)
 - **Possible outcomes:**
@@ -92,36 +120,41 @@ Intake → Vetting → Spec Refinement → Approval → Writing → Technical Ed
   - Partial overlap — similar content exists, spec refinement should differentiate
   - Already covered — recommend enhancement over new project
 - **Produces:** `publishing-house/reviews/rcars-vetting.md`
-- **If RCARS unavailable:** Phase can be skipped with explicit user acknowledgment
+- **Skip if:** RCARS unavailable or user has already validated content uniqueness
 
-#### 3. Spec Refinement
+#### 3. Spec Refinement (optional)
 - **Agent:** Intake Agent (continues)
 - **Action:** Rewrites/cleans up spec and module outlines based on:
   - RCARS feedback (if available)
   - Clarity and precision for downstream agent consumption
   - Standard format with See/Learn/Do, timing, numbered steps
 - **Goal:** Spec and module outlines sufficient for writer agent to produce content without ambiguity
+- **Skip if:** Spec is already clean and detailed enough for downstream agents
 
-#### 4. Approval
+#### 4. Approval (required — gate)
 - **Human decision gate**
 - **Owner reviews** master design + individual module outlines
 - **Outcome:** Proceed / revise specific modules / reject
 - **Manifest updated** with approval decision and approver
 
-#### 5. Writing
+#### 5. Writing (optional)
 - **Agent:** Writer Agent
 - **Wraps:** `showroom:create-lab`, `showroom:create-demo`
 - **Works module-by-module** based on approved outlines in `spec/modules/`
 - **Owner triggers** which module to write: "write module 2"
 - **Produces:** AsciiDoc files in `content/`
+- **Skip if:** Content was written manually or with another tool. The editor agent
+  still reviews whatever content exists in `content/` regardless of how it got there.
 
-#### 6. Technical Editing
+#### 6. Technical Editing (required)
 - **Agent:** Editor Agent
 - **Wraps:** `showroom:verify-content` + Red Hat style guide references
 - **Reviews:** Accuracy, style, consistency, clarity, Red Hat standards compliance
 - **Produces:** Review notes in `publishing-house/reviews/`, edits to `content/`
+- **Always runs** — catches quality issues regardless of whether content was agent-generated
+  or hand-written. This is a quality gate, not an optional polish step.
 
-#### 7. Automation
+#### 7. Automation (optional)
 Three substeps, first two active, third deferred:
 
 **7a. AgnosticV Catalog Creation**
@@ -136,7 +169,8 @@ Three substeps, first two active, third deferred:
 - **Includes its own code review + security review cycle** (separate from phase 8)
 - **Wraps:** `code-review:code-review` for automation code review
 - **Produces:** Automation in `automation/`
-- **Optional:** Only if `needs_automation: true` in manifest (asked during intake)
+
+**Skip if:** Environment setup is handled externally, or `needs_automation: false` in manifest
 
 **7c. ZT Grading + Health Checks** *(deferred — future phase)*
 - Would wrap: `ftl:rhdp-lab-validator`, `health:deployment-validator`
