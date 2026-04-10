@@ -155,24 +155,30 @@ generates module outlines — but skips the conversational spec-building workflo
   or hand-written. This is a quality gate, not an optional polish step.
 
 #### 7. Automation (optional)
-Three substeps, first two active, third deferred:
+Four sub-phases, first three active, fourth deferred:
 
-**7a. AgnosticV Catalog Creation**
+**7a. Catalog Item**
 - **Agent:** Automation Agent
 - **Wraps:** `agnosticv:catalog-builder`, `agnosticv:validator`
-- **Produces:** Config in the AgnosticV repo (via `agnosticv:catalog-builder` skill)
+- **Produces:** AgnosticV catalog configuration (identifies infrastructure and existing workloads)
 
-**7b. Automation Development**
+**7b. Automation Requirements**
 - **Agent:** Automation Agent (continues)
-- **Action:** Creates Ansible roles/playbooks or Argo+Helm manifests to configure the lab environment
-- **Determines base** (OCP vs RHEL) from AgnosticV config
-- **Includes its own code review + security review cycle** (separate from phase 8)
+- **Action:** Analyzes content to determine what needs to be pre-configured vs what the learner does
+- **Produces:** `publishing-house/spec/automation-manifest.yaml` — reviewable scope document
+- **Always a review gate** — automation scope must be explicitly approved
+
+**7c. Automation Code**
+- **Agent:** Automation Agent (continues)
+- **Action:** Creates Ansible collections or GitOps repos (Helm + ArgoCD) from approved requirements
+- **Determines approach** (Ansible vs GitOps) from automation manifest
+- **Includes its own code review + catalog re-validation cycle** (separate from phase 8)
 - **Wraps:** `code-review:code-review` for automation code review
 - **Produces:** Automation in `automation/`
 
 **Skip if:** Environment setup is handled externally, or `needs_automation: false` in manifest
 
-**7c. ZT Grading + Health Checks** *(deferred — future phase)*
+**7d. E2E Checks** *(deferred — future phase)*
 - Would wrap: `ftl:rhdp-lab-validator`, `health:deployment-validator`
 
 #### 8. Security Review
@@ -253,9 +259,10 @@ lifecycle:
       status: pending
       needs_automation: true
       substeps:
-        catalog: pending
-        environment: pending
-        grading: deferred
+        catalog_item: pending
+        requirements: pending
+        automation_code: pending
+        e2e_checks: deferred
     security_review:
       status: pending
     final_review:

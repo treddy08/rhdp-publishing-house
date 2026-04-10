@@ -35,11 +35,14 @@ spec alignment checks. Reviews content against Red Hat quality standards and the
 project spec. Produces review reports and offers interactive fix loops.
 ### /rhdp-publishing-house:automation
 
-Automation agent. Two sub-phases:
-- **7a: Catalog** — Wraps `agnosticv:catalog-builder` and `agnosticv:validator` to create
-  and validate AgnosticV catalog configuration from the project spec.
-- **7b: Environment** — Writes Ansible roles/playbooks or Argo+Helm manifests for environment
-  setup, then runs its own code review cycle via `code-review:code-review`.
+Automation agent. Four sub-phases:
+- **7a: Catalog Item** — Wraps `agnosticv:catalog-builder` and `agnosticv:validator` to create
+  and validate AgnosticV catalog configuration.
+- **7b: Automation Requirements** — Analyzes content to produce a reviewable automation manifest
+  describing what needs to be pre-configured.
+- **7c: Automation Code** — Writes Ansible collections or GitOps repos (Helm + ArgoCD) from
+  the approved requirements, then runs its own code review cycle.
+- **7d: E2E Checks** — End-to-end validation *(deferred)*.
 
 Only runs when `needs_automation: true` in the manifest. Uses Opus 4.6.
 

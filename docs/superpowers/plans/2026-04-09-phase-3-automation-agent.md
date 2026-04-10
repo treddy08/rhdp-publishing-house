@@ -70,9 +70,10 @@ Automation has three sub-phases tracked in the manifest:
 
 | Sub-Phase | Manifest Key | Status | Description |
 |-----------|-------------|--------|-------------|
-| 7a: Catalog | `substeps.catalog` | pending → completed | AgnosticV catalog configuration |
-| 7b: Environment | `substeps.environment` | pending → completed | Ansible/Helm automation code |
-| 7c: Grading | `substeps.grading` | deferred | ZT grading + health checks (future) |
+| 7a: Catalog Item | `substeps.catalog_item` | pending → completed | AgnosticV catalog configuration |
+| 7b: Automation Requirements | `substeps.requirements` | pending → completed | Reviewable scope document |
+| 7c: Automation Code | `substeps.automation_code` | pending → completed | Ansible collection or GitOps repo |
+| 7d: E2E Checks | `substeps.e2e_checks` | deferred | End-to-end validation (future) |
 
 Sub-phases run in order: catalog first (provides infrastructure context), then environment
 automation (builds on catalog decisions).
@@ -130,12 +131,12 @@ Record the AgnosticV catalog path in the manifest:
 ```yaml
 automation:
   substeps:
-    catalog: completed
+    catalog_item: completed
   catalog_path: "summit-2026/lb1234-short-name-cnv"  # AgV relative path
   agv_repo: "/path/to/agnosticv"                      # Local AgV repo path
 ```
 
-## Environment Automation (7b) — Writing Automation Code
+## Automation Requirements (7b) and Automation Code (7c)
 
 ### Scope
 
@@ -323,7 +324,7 @@ Inform the user:
 Invoke `agnosticv:validator` at scope level 2 (Standard).
 
 **If validation passes:**
-- Update manifest: `substeps.catalog: completed`
+- Update manifest: `substeps.catalog_item: completed`
 - Record the catalog path and AgV repo path in the manifest
 - Proceed to autonomy-appropriate next step
 
@@ -343,9 +344,10 @@ Do not proceed to 7b until the catalog validates at least at Level 2 with no err
 automation:
   status: in_progress
   substeps:
-    catalog: completed
-    environment: pending
-    grading: deferred
+    catalog_item: completed
+    requirements: pending
+    automation_code: pending
+    e2e_checks: deferred
   catalog_path: "<agv-relative-path>"
   agv_repo: "<local-agv-repo-path>"
 ```
@@ -465,9 +467,10 @@ After automation is complete and review cycle passes:
 automation:
   status: in_progress  # Orchestrator sets to completed
   substeps:
-    catalog: completed
-    environment: completed
-    grading: deferred
+    catalog_item: completed
+    requirements: completed
+    automation_code: completed
+    e2e_checks: deferred
   catalog_path: "<agv-relative-path>"
   agv_repo: "<local-agv-repo-path>"
   automation_files:
@@ -502,9 +505,11 @@ After completing either sub-phase, inform the user:
 
 Users can skip individual sub-phases:
 
-- **"skip catalog"** — Set `substeps.catalog: skipped`. User manages AgV config
-  outside Publishing House. Proceed to 7b if requested.
-- **"skip automation"** — Set `substeps.environment: skipped`. Environment setup
+- **"skip catalog item"** — Set `substeps.catalog_item: skipped`. User manages AgV config
+  outside Publishing House.
+- **"skip requirements"** — Set `substeps.requirements: skipped`. User provides
+  automation code directly without a manifest.
+- **"skip automation code"** — Set `substeps.automation_code: skipped`. Automation
   handled externally.
 - **"skip all automation"** — Set entire automation phase to `skipped`.
 

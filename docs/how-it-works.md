@@ -99,9 +99,11 @@ Reviews content quality and spec alignment.
 Creates AgnosticV catalog configuration and environment automation.
 
 - **Model:** Opus 4.6
-- **Two sub-phases:**
-  - **7a: Catalog** -- wraps `agnosticv:catalog-builder` and `agnosticv:validator`
-  - **7b: Environment** -- writes Ansible roles or Argo+Helm manifests, runs its own code review cycle via `code-review:code-review`
+- **Four sub-phases:**
+  - **7a: Catalog Item** -- wraps `agnosticv:catalog-builder` and `agnosticv:validator`
+  - **7b: Automation Requirements** -- analyzes content to produce a reviewable automation manifest
+  - **7c: Automation Code** -- writes Ansible collections or GitOps repos from approved requirements, runs its own code review cycle
+  - **7d: E2E Checks** -- end-to-end validation *(deferred)*
 - **Determines infrastructure type** (OCP, RHEL/VMs, Sandbox) from the design spec
 - **Produces:** AgnosticV config + automation code in `automation/`
 
@@ -153,9 +155,9 @@ Publishing House wraps existing RHDP marketplace skills rather than reinventing 
 | `showroom:create-lab` | Writer Agent | Writing |
 | `showroom:create-demo` | Writer Agent | Writing |
 | `showroom:verify-content` | Editor Agent | Technical Editing |
-| `agnosticv:catalog-builder` | Automation Agent | Automation (7a) |
-| `agnosticv:validator` | Automation Agent | Automation (7a) |
-| `code-review:code-review` | Automation Agent | Automation (7b) |
+| `agnosticv:catalog-builder` | Automation Agent | Catalog Item (7a) |
+| `agnosticv:validator` | Automation Agent | Catalog Item (7a) |
+| `code-review:code-review` | Automation Agent | Automation Code (7c) |
 
 ## Project Template
 

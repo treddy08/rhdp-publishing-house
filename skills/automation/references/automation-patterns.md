@@ -14,16 +14,18 @@ and marks the phase as `skipped`.
 
 ## Sub-Phase Ordering
 
-Automation has three sub-phases tracked in the manifest:
+Automation has four sub-phases tracked in the manifest:
 
 | Sub-Phase | Manifest Key | Status | Description |
 |-----------|-------------|--------|-------------|
-| 7a: Catalog | `substeps.catalog` | pending → completed | AgnosticV catalog configuration |
-| 7b: Environment | `substeps.environment` | pending → completed | Ansible/Helm automation code |
-| 7c: Grading | `substeps.grading` | deferred | ZT grading + health checks (future) |
+| 7a: Catalog Item | `substeps.catalog_item` | pending → completed | AgnosticV catalog configuration |
+| 7b: Automation Requirements | `substeps.requirements` | pending → completed | Reviewable scope document (what to automate) |
+| 7c: Automation Code | `substeps.automation_code` | pending → completed | Ansible collection or GitOps repo |
+| 7d: E2E Checks | `substeps.e2e_checks` | deferred | End-to-end validation (future) |
 
-Sub-phases run in order: catalog first (provides infrastructure context), then environment
-automation (builds on catalog decisions).
+Sub-phases run in order: catalog item first (establishes infrastructure context and
+identifies what's already handled), then requirements (analyzes content to determine
+what's missing), then automation code (writes from the approved requirements).
 
 ## Infrastructure Type Routing
 
@@ -78,12 +80,12 @@ Record the AgnosticV catalog path in the manifest:
 ```yaml
 automation:
   substeps:
-    catalog: completed
+    catalog_item: completed
   catalog_path: "summit-2026/lb1234-short-name-cnv"  # AgV relative path
   agv_repo: "/path/to/agnosticv"                      # Local AgV repo path
 ```
 
-## Environment Automation (7b) — Writing Automation Code
+## Automation Requirements (7b) and Automation Code (7c)
 
 ### Scope
 

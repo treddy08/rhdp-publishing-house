@@ -33,15 +33,17 @@ See @rhdp-publishing-house/skills/automation/references/automation-manifest-form
 
 Check the manifest's `lifecycle.phases.automation.substeps`:
 
-- If `catalog` is `pending` → start with 7a (catalog creation)
-- If `catalog` is `completed` and `environment` is `pending` → start with 7b (automation)
-- If both are `completed` → inform user automation is done
+- If `catalog_item` is `pending` → start with 7a (Catalog Item)
+- If `catalog_item` is `completed` and `requirements` is `pending` → start with 7b (Automation Requirements)
+- If `requirements` is `completed` and `automation_code` is `pending` → start with 7c (Automation Code)
+- If all are `completed` → inform user automation is done
 - If user requests a specific sub-phase, route to it (but warn if out of order)
 
 Check what the user requested:
 
-- **"create catalog" / "AgnosticV config"** → 7a
-- **"write automation" / "create roles" / "set up environment"** → 7b
+- **"create catalog" / "AgnosticV config" / "catalog item"** → 7a
+- **"automation requirements" / "what needs to be automated"** → 7b
+- **"write automation" / "create roles" / "write code"** → 7c
 - **"automate" / "start automation"** → next pending sub-phase
 
 ## Phase 7a: AgnosticV Catalog Creation
@@ -94,7 +96,7 @@ Inform the user:
 Invoke `agnosticv:validator` at scope level 2 (Standard).
 
 **If validation passes:**
-- Update manifest: `substeps.catalog: completed`
+- Update manifest: `substeps.catalog_item: completed`
 - Record the catalog path and AgV repo path in the manifest
 - Proceed to autonomy-appropriate next step
 
@@ -114,9 +116,10 @@ Do not proceed to 7b until the catalog validates at least at Level 2 with no err
 automation:
   status: in_progress
   substeps:
-    catalog: completed
-    environment: pending
-    grading: deferred
+    catalog_item: completed
+    requirements: pending
+    automation_code: pending
+    e2e_checks: deferred
   catalog_path: "<agv-relative-path>"
   agv_repo: "<local-agv-repo-path>"
 ```
@@ -130,11 +133,10 @@ automation:
 - **Full:** Run catalog-builder and validator end-to-end. Present completed catalog
   summary with validation status.
 
-## Phase 7b: Environment Automation
+## Phase 7b: Automation Requirements
 
-Phase 7b has three stages: generate the automation manifest, get it approved, then
-write the automation code. The manifest is the reviewable contract between content
-and automation.
+Phase 7b generates and reviews the automation manifest — the reviewable contract
+between content and automation. Phase 7c then writes the code from the approved manifest.
 
 See @rhdp-publishing-house/skills/automation/references/automation-manifest-format.md
 for the full manifest format and field reference.
@@ -212,9 +214,27 @@ of autonomy level — automation scope must be explicitly approved.
 Wait for explicit approval. The user may edit the manifest file directly — always
 re-read it from disk after they say "approved" or "looks good."
 
-### Step 7b-4: Write Automation Code
+### Step 7b-4: Update Manifest
 
-After the manifest is approved, write the automation code based on `approach`:
+After requirements are approved:
+
+```yaml
+automation:
+  substeps:
+    catalog_item: completed
+    requirements: completed
+    automation_code: pending
+    e2e_checks: deferred
+```
+
+## Phase 7c: Automation Code
+
+Write the automation code from the approved automation manifest.
+
+### Step 7c-1: Write Automation Code
+
+Read the approved manifest from `publishing-house/spec/automation-manifest.yaml`.
+Write code based on `approach`:
 
 **For `approach: ansible`:**
 
@@ -253,7 +273,7 @@ See @rhdp-publishing-house/skills/automation/references/gitops-automation-guide.
 - GitOps for application workloads (tenant-level, continuously reconciled)
 - Clearly document the boundary in the automation README
 
-### Autonomy Behavior (7b Code Writing)
+### Autonomy Behavior (7c Code Writing)
 
 - **Supervised:** Present each role/chart before writing. Walk through the code.
   Ask for approval before writing files.
@@ -262,7 +282,7 @@ See @rhdp-publishing-house/skills/automation/references/gitops-automation-guide.
 - **Full:** Write all automation code. Run the code review cycle automatically.
   Present final results.
 
-### Step 7b-4: Code Review Cycle
+### Step 7c-2: Code Review Cycle
 
 After writing automation code, run a self-contained review cycle:
 
@@ -282,7 +302,7 @@ Invoke `code-review:code-review` against the PR.
 If there is no PR yet (code is local only), skip the automated PR review and rely
 on the self-review + validation below.
 
-**3. Re-Validate Catalog:**
+**3. Re-Validate Catalog Item:**
 > "Re-running `agnosticv:validator` to verify workload references are consistent."
 
 Run `agnosticv:validator` again to ensure:
@@ -295,17 +315,18 @@ Run `agnosticv:validator` again to ensure:
 - Fix validation errors
 - Re-run validation until clean
 
-### Step 7b-5: Update Manifest
+### Step 7c-3: Update Manifest
 
-After automation is complete and review cycle passes:
+After automation code is complete and review cycle passes:
 
 ```yaml
 automation:
   status: in_progress  # Orchestrator sets to completed
   substeps:
-    catalog: completed
-    environment: completed
-    grading: deferred
+    catalog_item: completed
+    requirements: completed
+    automation_code: completed
+    e2e_checks: deferred
   catalog_path: "<agv-relative-path>"
   agv_repo: "<local-agv-repo-path>"
   automation_files:
@@ -318,18 +339,23 @@ Phase-level transitions are managed by the orchestrator.
 
 ## Step 8: Report Back
 
-After completing either sub-phase, inform the user:
+After completing each sub-phase, inform the user:
 
-**After 7a (catalog):**
-> "AgnosticV catalog created and validated.
+**After 7a (Catalog Item):**
+> "AgnosticV catalog item created and validated.
 > Catalog path: `<agv-relative-path>`
 > Validation: [PASSED / PASSED WITH WARNINGS]
 >
-> Next: Write environment automation (7b), or 'skip automation' if environment
-> setup is handled externally."
+> Next: Generate automation requirements (7b)."
 
-**After 7b (environment):**
-> "Environment automation complete.
+**After 7b (Automation Requirements):**
+> "Automation requirements documented and approved.
+> Manifest: `publishing-house/spec/automation-manifest.yaml`
+>
+> Next: Write automation code (7c), or 'skip automation code' if handled externally."
+
+**After 7c (Automation Code):**
+> "Automation code complete.
 > Files: [list of roles/charts created]
 > Code review: [PASSED / findings addressed]
 > Catalog re-validation: [PASSED]
@@ -340,9 +366,11 @@ After completing either sub-phase, inform the user:
 
 Users can skip individual sub-phases:
 
-- **"skip catalog"** — Set `substeps.catalog: skipped`. User manages AgV config
-  outside Publishing House. Proceed to 7b if requested.
-- **"skip automation"** — Set `substeps.environment: skipped`. Environment setup
+- **"skip catalog item"** — Set `substeps.catalog_item: skipped`. User manages AgV config
+  outside Publishing House.
+- **"skip requirements"** — Set `substeps.requirements: skipped`. User provides
+  automation code directly without a manifest.
+- **"skip automation code"** — Set `substeps.automation_code: skipped`. Automation
   handled externally.
 - **"skip all automation"** — Set entire automation phase to `skipped`.
 
@@ -352,7 +380,7 @@ Always confirm skip decisions: "Are you sure? This means [consequence]."
 
 - Do not write Showroom content — that is the writer agent's job
 - Do not review content quality — that is the editor agent's job
-- Do not implement ZT grading or health checks — deferred (7c)
+- Do not implement E2E checks — deferred (7d)
 - Do not deploy or test the environment — deployment is outside PH scope
 - Do not manage the AgnosticV git repository beyond writing files — the user owns git workflow
 - Do not advance the lifecycle phase — only update substep status

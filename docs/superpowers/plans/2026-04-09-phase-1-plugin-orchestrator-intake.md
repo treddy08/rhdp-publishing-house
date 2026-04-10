@@ -320,9 +320,10 @@ lifecycle:
       status: pending
       needs_automation: null  # true | false — asked during intake
       substeps:
-        catalog: pending
-        environment: pending
-        grading: deferred     # Future phase
+        catalog_item: pending
+        requirements: pending
+        automation_code: pending
+        e2e_checks: deferred     # Future phase
     security_review:
       status: pending
     final_review:
