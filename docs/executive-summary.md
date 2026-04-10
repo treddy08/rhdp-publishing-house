@@ -18,7 +18,8 @@ Building an RHDP workshop today requires a content developer to juggle multiple 
 
 ```
 Intake* → Vetting → Spec Refinement → [Approval*] → Writing → Editing*
-  → Automation → Security Review* → Final Review* → Ready for Publishing
+  → Automation (Catalog Item → Requirements → Code → Testing)
+  → Security Review* → Final Review* → Ready for Publishing
 
 * = required    (unmarked = optional, skip if handled another way)
 ```
@@ -84,11 +85,11 @@ A thin orchestrator manages state and dispatches to specialized agent skills. Ea
  Intake    Writer   Editor   Automation  Security  Review
 ```
 
-### Implementation Path
+### Implementation Status
 
-- **Phase 1:** Plugin structure + orchestrator + manifest system + intake agent
-- **Phase 2:** Writer + editor agents (wrapping existing showroom skills)
-- **Phase 3:** Automation agent (AgnosticV + Ansible/Helm generation)
-- **Phase 4:** Security + review agents
+- **Phase 1:** Plugin structure + orchestrator + intake agent -- **complete**
+- **Phase 2:** Writer + editor agents (wrapping showroom skills) -- **complete**
+- **Phase 3:** Automation agent (AgnosticV catalog + Ansible/GitOps code generation + testing gate) -- **complete**
+- **Phase 4:** Security + review agents -- in development
 - **Phase 5:** RCARS integration (when API is ready)
-- **Future:** CLI/web app extraction, ZT grading integration, `/rhdp` namespace consolidation
+- **Future:** Standalone automation-writing skills, E2E checks, `/rhdp` namespace consolidation

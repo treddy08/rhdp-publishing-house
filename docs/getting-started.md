@@ -29,7 +29,7 @@ gh repo create my-new-lab \
   --private --clone
 ```
 
-### 3. Clone and enter your project repo
+### 3. Enter your project repo
 
 ```bash
 cd my-new-lab
@@ -111,6 +111,8 @@ quality and automation correctness.
 
 ## Tips
 
-- The manifest (`publishing-house/manifest.yaml`) is the source of truth — don't edit it manually
+- The manifest (`publishing-house/manifest.yaml`) is the source of truth for lifecycle state
 - Module outlines in `publishing-house/spec/modules/` drive the writing phase — invest time making them good
+- Human edits to content, specs, and automation are expected and respected by all agents
 - If RCARS API isn't available, you can skip vetting and come back to it later
+- The automation phase includes a testing gate — deploy and verify your automation works before moving to security review

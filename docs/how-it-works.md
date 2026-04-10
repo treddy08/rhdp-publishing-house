@@ -30,7 +30,8 @@ Each agent is a separate skill file -- focused, testable, independently iterable
 
 ```
 Intake* --> Vetting --> Spec Refinement --> [Approval*] --> Writing --> Editing*
-  --> Automation --> Security Review* --> Final Review* --> Ready for Publishing
+  --> Automation (Catalog Item --> Requirements --> Code --> Testing)
+  --> Security Review* --> Final Review* --> Ready for Publishing
 
 * = required    (unmarked = optional, skip if handled another way)
 ```
@@ -52,7 +53,7 @@ Intake* --> Vetting --> Spec Refinement --> [Approval*] --> Writing --> Editing*
 | **Vetting** | Intake Agent | Checks against existing RHDP content via RCARS API | RCARS unavailable or uniqueness already validated |
 | **Spec Refinement** | Intake Agent | Cleans up spec for downstream agent consumption | Spec is already clean and detailed |
 | **Writing** | Writer Agent (Sonnet) | Wraps `showroom:create-lab` / `showroom:create-demo` to generate AsciiDoc | Content was written manually or with another tool |
-| **Automation** | Automation Agent (Opus) | Creates AgnosticV catalog + Ansible/Helm environment automation | Environment setup handled externally |
+| **Automation** | Automation Agent (Opus) | Creates AgnosticV catalog, generates automation requirements, writes code, and includes a testing gate | Environment setup handled externally |
 
 ## The Agents
 
@@ -99,7 +100,7 @@ Reviews content quality and spec alignment.
 Creates AgnosticV catalog configuration and environment automation.
 
 - **Model:** Opus 4.6
-- **Four sub-phases:**
+- **Five sub-phases:**
   - **7a: Catalog Item** -- wraps `agnosticv:catalog-builder` and `agnosticv:validator`
   - **7b: Automation Requirements** -- analyzes content to produce a reviewable automation manifest
   - **7c: Automation Code** -- writes Ansible collections or GitOps repos from approved requirements, runs its own code review cycle
@@ -167,12 +168,15 @@ New projects start from a GitHub template repo (`rhpds/rhdp-publishing-house-tem
 ```
 my-new-lab/
 ├── publishing-house/
-│   ├── manifest.yaml          # Pre-populated with empty phases
-│   ├── journal.md             # Work journal (experimental)
-│   ├── spec/                  # Design spec and module outlines
-│   ├── reviews/               # Agent review artifacts
-│   └── decisions/             # Decision records
-├── content/                   # Showroom AsciiDoc (writer agent output)
-├── automation/                # Ansible/Helm (automation agent output)
-└── CLAUDE.md                  # Points to manifest
+│   ├── manifest.yaml                    # Pre-populated with empty phases
+│   ├── journal.md                       # Work journal (experimental)
+│   ├── spec/
+│   │   ├── design.md                    # Master design spec
+│   │   ├── modules/                     # Per-module outlines
+│   │   └── automation-manifest.yaml     # Automation requirements (reviewable)
+│   ├── reviews/                         # Agent review artifacts
+│   └── decisions/                       # Decision records
+├── content/                             # Showroom AsciiDoc (writer agent output)
+├── automation/                          # Ansible/Helm (automation agent output)
+└── CLAUDE.md                            # Points to manifest
 ```
