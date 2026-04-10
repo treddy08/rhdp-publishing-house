@@ -11,11 +11,15 @@ Building an RHDP workshop today requires a content developer to juggle multiple 
 **RHDP Publishing House** is a Claude Code plugin that turns content developers into content architects. One command — `/rhdp-publishing-house` — provides a persistent, state-aware orchestrator that manages the entire content lifecycle through specialized AI agents.
 
 ```
-Intake → Vetting → Spec Refinement → [Approval] → Writing → Editing
-  → Automation → Security Review → Final Review → Ready for Publishing
+Intake* → Vetting → Spec Refinement → [Approval*] → Writing → Editing*
+  → Automation → Security Review* → Final Review* → Ready for Publishing
+
+* = required    (unmarked = optional, skip if handled another way)
 ```
 
 ### How It Works
+
+**Use What Helps You** — Publishing House doesn't require end-to-end adoption. Intake, editing, and security review are required quality gates. Writing and automation are optional — skip them if you've handled those steps manually or with another tool. Bring an existing spec to shortcut intake.
 
 **Single Entry Point** — Run `/rhdp-publishing-house` and the orchestrator picks up where you left off. "Welcome back — Module 1 is drafted, Module 2 is next." No skill memorization required.
 
@@ -39,12 +43,13 @@ Intake → Vetting → Spec Refinement → [Approval] → Writing → Editing
 
 | Today | With Publishing House |
 |-------|----------------------|
-| Write every AsciiDoc module by hand | Design the architecture, agents write the content |
-| Manually create AgnosticV configs | Agents handle catalog creation and validation |
-| Write all automation from scratch | Automation agent writes working Ansible/Helm |
+| Write every AsciiDoc module by hand | Design the architecture, agents write the content (or skip if you wrote it yourself) |
+| Manually create AgnosticV configs | Agents handle catalog creation and validation (or skip if handled externally) |
+| Write all automation from scratch | Automation agent writes working Ansible/Helm (or skip and bring your own) |
 | Remember which skills/tools to use when | One command, orchestrator knows what's next |
 | Track progress in your head or ad hoc notes | Manifest tracks everything automatically |
 | Context lost between sessions and handoffs | Pick up any day, hand off to anyone |
+| Quality review is manual and inconsistent | Editing + security review always run, regardless of how content was produced |
 
 ### Solo or Team — Works Either Way
 
