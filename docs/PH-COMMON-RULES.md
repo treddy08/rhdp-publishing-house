@@ -89,6 +89,21 @@ Publishing house project repos are private. However:
   - Module-level progress where applicable
 - Ask one question at a time when gathering information
 
+## Template Repo Sync
+
+The `template/` directory in this plugin repo is the source of truth for the project
+template at `rhpds/rhdp-publishing-house-template`. Any changes to files under
+`template/` must also be applied to the template repo, committed, and pushed.
+
+Template repo location: `~/devel/working/rhdp-publishing-house-template`
+
+After modifying any file under `template/`:
+1. Copy the changed files to the template repo
+2. Commit with a descriptive message
+3. Push to `main`
+
+Do not leave the template repo out of sync.
+
 ## Referencing Other Skills
 
 When dispatching to existing RHDP skills, inform the user which skill is being used:
