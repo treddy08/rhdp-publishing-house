@@ -1,0 +1,159 @@
+# Publishing House Automation Patterns
+
+Guidance for the automation agent when creating AgnosticV catalogs and developing
+environment automation. These supplement the agnosticv skill rules — do not duplicate them.
+
+## When Automation Runs
+
+The automation agent only runs when `lifecycle.phases.automation.needs_automation` is `true`
+in the manifest. This is set during intake based on the user's answer about environment
+automation needs.
+
+If `needs_automation` is `false` or `null`, the orchestrator skips automation entirely
+and marks the phase as `skipped`.
+
+## Sub-Phase Ordering
+
+Automation has three sub-phases tracked in the manifest:
+
+| Sub-Phase | Manifest Key | Status | Description |
+|-----------|-------------|--------|-------------|
+| 7a: Catalog | `substeps.catalog` | pending → completed | AgnosticV catalog configuration |
+| 7b: Environment | `substeps.environment` | pending → completed | Ansible/Helm automation code |
+| 7c: Grading | `substeps.grading` | deferred | ZT grading + health checks (future) |
+
+Sub-phases run in order: catalog first (provides infrastructure context), then environment
+automation (builds on catalog decisions).
+
+## Infrastructure Type Routing
+
+The automation agent determines infrastructure type from two sources:
+
+1. **Design spec** (`publishing-house/spec/design.md`) — infrastructure requirements section
+2. **User confirmation** — the catalog-builder skill asks detailed infrastructure questions
+
+| Infrastructure | AgnosticV Config | Automation Pattern |
+|---------------|-----------------|-------------------|
+| OCP cluster (CNV) | `config: openshift-workloads`, `cloud_provider: cnv` | OCP workloads via Ansible roles |
+| OCP cluster (AWS) | `config: openshift-workloads`, `cloud_provider: ec2` | OCP workloads via Ansible roles |
+| RHEL/AAP VMs | `config: cloud-vms-base` | Cloud VM provisioning + Ansible roles |
+| Sandbox (Cluster) | `config: openshift-cluster` | Namespace-scoped workloads |
+| Sandbox (Tenant) | `config: namespace` | Tenant-scoped workloads |
+
+## Catalog Creation (7a) — Wrapping agnosticv:catalog-builder
+
+### Input Mapping from PH Context
+
+The catalog-builder skill asks its own questions interactively. Pre-fill answers from
+the PH spec where possible:
+
+| Catalog-Builder Question | PH Source |
+|--------------------------|-----------|
+| Catalog type (lab/demo/sandbox) | `project.type` in manifest |
+| Event context | Ask user (not in PH spec) |
+| Technologies | Products from design.md |
+| Display name | `project.name` from manifest |
+| Short name | `project.id` from manifest |
+| Description | Problem statement from design.md |
+| Maintainer | `project.owner` from manifest |
+| Infrastructure type | Infrastructure requirements from design.md |
+
+Let the catalog-builder skill handle infrastructure-specific questions — it has
+detailed reference docs for OCP, VMs, and Sandbox configurations.
+
+### Post-Catalog Validation
+
+After catalog-builder generates files, immediately invoke `agnosticv:validator`
+at scope level 2 (Standard) to catch issues before moving to environment automation.
+
+If validation fails:
+- Present errors to user
+- Offer to fix and re-validate
+- Do not proceed to 7b until catalog validates cleanly
+
+### Catalog Output Tracking
+
+Record the AgnosticV catalog path in the manifest:
+
+```yaml
+automation:
+  substeps:
+    catalog: completed
+  catalog_path: "summit-2026/lb1234-short-name-cnv"  # AgV relative path
+  agv_repo: "/path/to/agnosticv"                      # Local AgV repo path
+```
+
+## Environment Automation (7b) — Writing Automation Code
+
+### Scope
+
+This sub-phase creates the automation that configures the lab/demo environment.
+The type of automation depends on the infrastructure:
+
+| Infrastructure | Automation Type | Output Location |
+|---------------|----------------|-----------------|
+| OCP (any) | Ansible roles as OCP workloads | `automation/roles/` |
+| RHEL/AAP VMs | Ansible roles for VM config | `automation/roles/` |
+| Sandbox | Minimal — namespace setup only | `automation/roles/` |
+
+### What Gets Automated
+
+Read the design spec and module outlines to determine what needs to be set up:
+
+- **Operators to install** — from infrastructure requirements
+- **Applications to deploy** — from module detailed steps
+- **User accounts and RBAC** — from multi-user configuration
+- **Sample data and repos** — from module prerequisites
+- **Network configuration** — from infrastructure notes
+
+### Automation Code Standards
+
+- Use Ansible roles following `agnosticd` patterns
+- Role naming: `ocp4_workload_<short-name>` for OCP workloads
+- Include `tasks/workload.yml` (install), `tasks/remove_workload.yml` (cleanup)
+- Use `become: false` unless root access is explicitly required
+- Parameterize everything — no hardcoded values
+- Sensitive values use `lookup('password', ...)` pattern, never static strings
+- Container images must use pinned tags, never `:latest`
+
+### Helm/Argo Patterns (GitOps)
+
+When the automation uses GitOps (Argo CD + Helm):
+
+- Helm charts go in `automation/helm/`
+- ArgoCD Application manifests go in `automation/argocd/`
+- Values files parameterized for multi-environment support
+- Use Helm, not Kustomize (per RHDP patterns)
+
+### Code Review Cycle
+
+After writing automation code, the automation agent runs its own review cycle:
+
+1. **Self-review** — check against automation standards above
+2. **Invoke `code-review:code-review`** — automated PR-based review
+3. **Fix issues** — address review findings
+4. **Re-validate catalog** — run `agnosticv:validator` again to ensure workload
+   references in common.yaml match the roles that were created
+
+This review cycle is separate from the content security review (Phase 8).
+
+## Human Modifications
+
+Automation files may be modified by a human at any time — the same principle from
+PH-COMMON-RULES applies here. A human may:
+
+- Edit common.yaml to add workloads or change configuration
+- Modify Ansible roles based on hands-on testing
+- Restructure Helm charts based on deployment experience
+
+Always read automation files fresh. Respect human edits. Flag divergence from the
+spec as informational, not errors.
+
+## What the Automation Agent Does NOT Do
+
+- Does not write Showroom content — that is the writer agent's job
+- Does not review content quality — that is the editor agent's job
+- Does not implement ZT grading or health checks — that is deferred (7c)
+- Does not manage the AgnosticV repository — it writes files, the user manages git
+- Does not deploy or test the catalog — deployment is outside Publishing House scope
+- Does not advance the lifecycle phase — only updates substep status
