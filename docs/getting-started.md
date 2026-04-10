@@ -9,53 +9,52 @@ nav_order: 3
 ## Prerequisites
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed
-- A GitHub account with access to the `rhpds` org (for creating project repos)
-
-## Installation
-
-The plugin is not yet published to a marketplace. Install it locally:
-
-### 1. Clone the plugin
-
-```bash
-git clone git@github.com:rhpds/rhdp-publishing-house.git
-```
-
-### 2. Start Claude Code with the plugin
-
-From your **project directory** (not the plugin directory), start Claude Code
-with the `--plugin-dir` flag pointing to where you cloned the plugin:
-
-```bash
-cd my-lab-project
-claude --plugin-dir /path/to/rhdp-publishing-house
-```
-
-This makes the `/rhdp-publishing-house` command available in your session.
+- A GitHub account with access to the `rhpds` org
 
 ## Quick Start
 
-### 1. Create a project repo
+The plugin is not yet published to a marketplace. Follow these steps to set up locally.
 
-Clone the template:
+### 1. Clone the plugin repo
+
+```bash
+git clone git@github.com:rhpds/rhdp-publishing-house.git ~/rhdp-publishing-house
+```
+
+### 2. Create a project repo from the template
 
 ```bash
 gh repo create my-new-lab \
   --template rhpds/rhdp-publishing-house-template \
   --private --clone
+```
+
+### 3. Clone and enter your project repo
+
+```bash
 cd my-new-lab
 ```
 
-### 2. Start the orchestrator
+### 4. Start Claude Code with the plugin
+
+From inside your project repo, start Claude Code with `--plugin-dir` pointing
+to where you cloned the plugin in step 1:
 
 ```bash
-# In Claude Code (started with --plugin-dir), from inside your project directory:
+claude --plugin-dir ~/rhdp-publishing-house
+```
+
+### 5. Start the orchestrator
+
+In the Claude Code session:
+
+```
 /rhdp-publishing-house
 ```
 
 The orchestrator detects a fresh project and walks you through intake.
 
-### 3. Follow the orchestrator
+### 6. Follow the orchestrator
 
 The orchestrator guides you through the content lifecycle. Not all phases are required —
 use what helps you, skip what doesn't.
@@ -76,7 +75,7 @@ use what helps you, skip what doesn't.
 Say "skip writing" or "I already have content" to jump ahead.
 Ask "what's next" at any point for guidance.
 
-### 4. Collaborate
+### 7. Collaborate
 
 Push your repo. A colleague clones it, runs `/rhdp-publishing-house`, and picks
 up exactly where you left off. The manifest tracks everything.
