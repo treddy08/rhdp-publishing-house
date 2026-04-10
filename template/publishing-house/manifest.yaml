@@ -42,6 +42,7 @@ lifecycle:
       needs_automation: null  # true | false — asked during intake
       substeps:
         catalog: pending
+        manifest: pending     # Automation manifest (reviewable scope document)
         environment: pending
         grading: deferred     # Future phase
     security_review:

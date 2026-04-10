@@ -18,6 +18,7 @@ See @rhdp-publishing-house/docs/PH-COMMON-RULES.md for shared rules.
 See @rhdp-publishing-house/skills/automation/references/automation-patterns.md for automation patterns.
 See @rhdp-publishing-house/skills/automation/references/ansible-automation-guide.md for Ansible collection structure.
 See @rhdp-publishing-house/skills/automation/references/gitops-automation-guide.md for GitOps (Helm + ArgoCD) patterns.
+See @rhdp-publishing-house/skills/automation/references/automation-manifest-format.md for the automation manifest format.
 
 ## Before Starting
 
@@ -131,59 +132,126 @@ automation:
 
 ## Phase 7b: Environment Automation
 
-### Step 7b-1: Read Context
+Phase 7b has three stages: generate the automation manifest, get it approved, then
+write the automation code. The manifest is the reviewable contract between content
+and automation.
 
-Read the completed catalog configuration to understand:
-- Infrastructure type (OCP, VMs, Sandbox)
-- Workloads already referenced in common.yaml
+See @rhdp-publishing-house/skills/automation/references/automation-manifest-format.md
+for the full manifest format and field reference.
+
+### Step 7b-1: Check for Existing Manifest
+
+Check if `publishing-house/spec/automation-manifest.yaml` already exists and has content.
+
+**If the user provided a manifest:**
+> "Found an automation manifest. Let me validate the format and review the requirements."
+
+Validate the YAML structure against the manifest format. Present a summary and
+proceed to Step 7b-3 (approval).
+
+**If no manifest exists:** Proceed to Step 7b-2 (generate one).
+
+### Step 7b-2: Generate Automation Manifest
+
+Read context to extract automation requirements:
+
+**From the design spec** (`publishing-house/spec/design.md`):
+- Infrastructure type and requirements → `infrastructure` section
+- Products and technologies → candidate `operators`
+- Multi-user configuration → `infrastructure.multi_user`
+
+**From module outlines** (`publishing-house/spec/modules/`):
+- Read each module's Detailed Steps section
+- For each step, determine: does the learner do this, or must it be pre-configured?
+  - "Navigate to the console and observe..." → pre-configured (automate it)
+  - "Run `oc apply -f deployment.yaml`" → learner does this (do NOT automate)
+  - "Open the application at https://..." → pre-configured (automate it)
+  - "Edit the deployment to add a sidecar" → base deployment pre-configured, sidecar is the exercise
+  - "Troubleshoot why the pod is failing" → broken state pre-configured (automate it as `broken_resources`)
+- Extract infrastructure requirements and operator dependencies
+- Note which module each requirement comes from (`source_module`)
+
+**From content files** (if they exist in `content/`):
+- Read AsciiDoc for any additional detail about pre-existing resources
+- Check for UserInfo variables that indicate provision data needs
+- Check for `{attribute}` placeholders that suggest deployed services
+
+**From the AgnosticV catalog** (if 7a is complete):
+- Infrastructure type is already determined
+- Operators already referenced in common.yaml
 - Multi-user configuration
-- Operators and applications listed
 
-Read module outlines and design spec to understand:
-- What the lab/demo environment needs pre-configured
-- What applications, data, or services learners will interact with
-- Any custom operators or CRDs needed
+**Determine approach:**
+- If the lab teaches GitOps concepts → `approach: gitops`
+- If the lab needs imperative setup or complex ordering → `approach: ansible`
+- If both patterns are needed → `approach: both`
+- When in doubt, ask the user
 
-Read any existing automation files in `automation/` — a human may have started
-writing automation code manually.
+Write the manifest to `publishing-house/spec/automation-manifest.yaml`.
 
-### Step 7b-2: Determine Automation Scope
+### Step 7b-3: Manifest Review (Gate)
 
-Present the automation scope to the user:
+Present the manifest to the user for review. This is always a gate, regardless
+of autonomy level — automation scope must be explicitly approved.
 
-> "Based on the spec and catalog configuration, the environment needs:
+> "Here's the automation manifest — what needs to be pre-configured for the lab:
 >
-> **Operators to install:** [list]
-> **Applications to deploy:** [list]
-> **User/RBAC setup:** [details]
-> **Sample data/repos:** [list]
-> **Network configuration:** [if any]
+> **Approach:** [ansible/gitops/both]
+> **Infrastructure:** [type], [multi_user], [users]
+> **Operators:** [count] — [names]
+> **Applications:** [count] — [names]
+> **RBAC:** [count entries]
+> **Seed data:** [count entries]
+> **Broken resources:** [count] (for troubleshooting exercises)
+> **Provision data:** [count keys]
 >
-> I'll create Ansible roles for these. Confirm or adjust?"
+> Full manifest: `publishing-house/spec/automation-manifest.yaml`
+>
+> Review and approve, or edit the manifest and tell me when ready."
 
-Wait for user confirmation before proceeding.
+Wait for explicit approval. The user may edit the manifest file directly — always
+re-read it from disk after they say "approved" or "looks good."
 
-### Step 7b-3: Write Automation Code
+### Step 7b-4: Write Automation Code
 
-Based on the infrastructure type, create automation code:
+After the manifest is approved, write the automation code based on `approach`:
 
-**For OCP workloads (most common):**
-- Create Ansible role: `automation/roles/ocp4_workload_<project-id>/`
-  - `tasks/workload.yml` — install/configure
-  - `tasks/remove_workload.yml` — cleanup
-  - `defaults/main.yml` — parameterized defaults
-  - `meta/main.yml` — role metadata
-- Follow `agnosticd` role patterns
-- Reference workloads in the AgnosticV common.yaml
+**For `approach: ansible`:**
 
-**For RHEL/AAP VMs:**
-- Create Ansible roles for VM configuration
-- Include package installation, service setup, user configuration
+See @rhdp-publishing-house/skills/automation/references/ansible-automation-guide.md.
 
-**For GitOps (Argo CD + Helm):**
-- Create Helm charts in `automation/helm/<chart-name>/`
-- Create ArgoCD Application manifests in `automation/argocd/`
-- Use Helm, not Kustomize
+- Create an Ansible collection: `automation/` with `galaxy.yml` and roles
+- Create one role per logical component (or one role for simple labs)
+- Role structure: `tasks/main.yml`, `tasks/workload.yml`, `tasks/remove_workload.yml`,
+  `defaults/main.yml`, `meta/main.yml`, `templates/*.yaml.j2`
+- Map manifest entries to Ansible tasks:
+  - `operators` → Subscription + OperatorGroup resources
+  - `applications` → Deployment + Service + Route templates
+  - `rbac` → Namespace + RoleBinding tasks
+  - `seed_data` → ConfigMap/Secret tasks or git clone tasks
+  - `broken_resources` → Resources with intentional misconfigurations
+  - `provision_data` → `agnosticd.core.agnosticd_user_info` task
+
+**For `approach: gitops`:**
+
+See @rhdp-publishing-house/skills/automation/references/gitops-automation-guide.md.
+
+- Clone from template: `gh repo create rhpds/<project-id>-gitops --template rhpds/ci-template-gitops --private --clone`
+- Create Helm charts for lab workloads under `tenant/labs/`
+- Add Application templates to `tenant/bootstrap/templates/`
+- Map manifest entries to Helm templates:
+  - `operators` → Infra layer operator charts (or use workloads_library)
+  - `applications` → Tenant Helm sub-charts (Pattern 2 or 3)
+  - `rbac` → Inline resources in bootstrap (Pattern 1)
+  - `seed_data` → ConfigMap/Secret templates in workload charts
+  - `broken_resources` → Templates with intentional misconfigurations
+  - `provision_data` → ConfigMap with `demo.redhat.com/tenant-*` label
+
+**For `approach: both`:**
+
+- Ansible for cluster-level setup (operators, auth, infra)
+- GitOps for application workloads (tenant-level, continuously reconciled)
+- Clearly document the boundary in the automation README
 
 ### Autonomy Behavior (7b Code Writing)
 
