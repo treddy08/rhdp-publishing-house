@@ -16,6 +16,8 @@ Publishing House context. Grading/health checks (7c) are deferred to a future ph
 
 See @rhdp-publishing-house/docs/PH-COMMON-RULES.md for shared rules.
 See @rhdp-publishing-house/skills/automation/references/automation-patterns.md for automation patterns.
+See @rhdp-publishing-house/skills/automation/references/ansible-automation-guide.md for Ansible collection structure.
+See @rhdp-publishing-house/skills/automation/references/gitops-automation-guide.md for GitOps (Helm + ArgoCD) patterns.
 
 ## Before Starting
 

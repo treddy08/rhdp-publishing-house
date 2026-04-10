@@ -108,22 +108,17 @@ Read the design spec and module outlines to determine what needs to be set up:
 
 ### Automation Code Standards
 
-- Use Ansible roles following `agnosticd` patterns
-- Role naming: `ocp4_workload_<short-name>` for OCP workloads
-- Include `tasks/workload.yml` (install), `tasks/remove_workload.yml` (cleanup)
-- Use `become: false` unless root access is explicitly required
-- Parameterize everything — no hardcoded values
-- Sensitive values use `lookup('password', ...)` pattern, never static strings
-- Container images must use pinned tags, never `:latest`
+Two automation approaches are supported. See the detailed guides:
 
-### Helm/Argo Patterns (GitOps)
+- **Ansible collections:** See `@rhdp-publishing-house/skills/automation/references/ansible-automation-guide.md`
+  for collection structure, role patterns, variable conventions, templates, and AgnosticV integration.
 
-When the automation uses GitOps (Argo CD + Helm):
+- **GitOps (Helm + ArgoCD):** See `@rhdp-publishing-house/skills/automation/references/gitops-automation-guide.md`
+  for the app-of-apps pattern, three deployment patterns, provision data, and AgnosticV integration.
+  Clone from template: `rhpds/ci-template-gitops`.
 
-- Helm charts go in `automation/helm/`
-- ArgoCD Application manifests go in `automation/argocd/`
-- Values files parameterized for multi-environment support
-- Use Helm, not Kustomize (per RHDP patterns)
+Both guides include a "What to Automate vs What the Learner Does" section for
+determining automation scope from lab content.
 
 ### Code Review Cycle
 
