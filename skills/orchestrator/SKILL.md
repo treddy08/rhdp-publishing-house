@@ -81,7 +81,7 @@ Map user phrases to agent dispatch:
 | "start intake", "gather requirements"          | Dispatch `rhdp-publishing-house:intake`                                |
 | "write module N", "draft content", "start writing" | Dispatch `rhdp-publishing-house:writer` with the module number |
 | "edit module N", "review content", "technical edit" | Dispatch `rhdp-publishing-house:editor` with the module number (or "all") |
-| "build automation", "create catalog"           | Dispatch `rhdp-publishing-house:automation` (Phase 3, not yet implemented) |
+| "build automation", "create catalog", "write ansible" | Dispatch `rhdp-publishing-house:automation` with sub-phase context |
 | "security review", "check for secrets"         | Dispatch `rhdp-publishing-house:security` (Phase 4, not yet implemented) |
 | "final review", "ready to publish"             | Dispatch `rhdp-publishing-house:review` (Phase 4, not yet implemented) |
 | "what's next", "status", "where are we"        | Re-read manifest and present status (Step 2)                           |
@@ -124,6 +124,8 @@ phase's status to `skipped` in the manifest. Confirm first: "Skip [phase]? This 
 doc, dispatch the intake agent — it validates and normalizes the doc rather than building
 from scratch. This is faster but still required.
 
+- **Automation gate:** Before dispatching the automation agent, check `lifecycle.phases.automation.needs_automation` in the manifest. If `false` or `null`, ask: "Automation was marked as not needed. Would you like to enable it and proceed, or skip the automation phase?" If the user skips, set the automation phase status to `skipped` and move to security review.
+
 - If user requests an agent that hasn't been implemented yet (security, review agents), inform them: "The <agent name> agent is not yet available. It will be built in a future phase of the Publishing House plugin. For now, you can complete <phase> manually and update the manifest when done."
 
 ## Dispatch Context
@@ -133,7 +135,7 @@ When dispatching an agent, provide the specific file paths it needs to read. Age
 - **Intake agent:** Provide path to any existing spec document the user referenced
 - **Writer agent:** Provide the module number to write. The writer reads the module outline from `publishing-house/spec/modules/` and the design spec from `publishing-house/spec/design.md`. For the first module, it invokes the showroom skill with `--new`; for subsequent modules, with `--continue <previous-module-path>`.
 - **Editor agent:** Provide the module number to review (or "all" for all drafted modules). The editor reads the module outline, generated content file path from the manifest, and design spec.
-- **Automation agent:** Provide path to the design spec and AgnosticV config if it exists
+- **Automation agent:** Provide the sub-phase to work on (catalog or environment). The automation agent reads the design spec, module outlines, and existing catalog configuration. It invokes agnosticv:catalog-builder for 7a and writes Ansible/Helm code for 7b, running agnosticv:validator and code-review:code-review as part of its own review cycle.
 
 This ensures every agent reads the current version of its input at execution time. See @rhdp-publishing-house/docs/PH-COMMON-RULES.md "Read Before You Act" section.
 
