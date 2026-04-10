@@ -1,15 +1,37 @@
 ---
 layout: default
 title: Getting Started
+nav_order: 3
 ---
 
 # Getting Started with RHDP Publishing House
 
 ## Prerequisites
 
-- Claude Code with the RHDP Skills Marketplace installed
-- The `rhdp-publishing-house` plugin enabled
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed
 - A GitHub account with access to the `rhpds` org (for creating project repos)
+
+## Installation
+
+The plugin is not yet published to a marketplace. Install it locally:
+
+### 1. Clone the plugin
+
+```bash
+git clone git@github.com:rhpds/rhdp-publishing-house.git
+```
+
+### 2. Start Claude Code with the plugin
+
+From your **project directory** (not the plugin directory), start Claude Code
+with the `--plugin-dir` flag pointing to where you cloned the plugin:
+
+```bash
+cd my-lab-project
+claude --plugin-dir /path/to/rhdp-publishing-house
+```
+
+This makes the `/rhdp-publishing-house` command available in your session.
 
 ## Quick Start
 
@@ -27,7 +49,7 @@ cd my-new-lab
 ### 2. Start the orchestrator
 
 ```bash
-# In Claude Code, from inside your project directory:
+# In Claude Code (started with --plugin-dir), from inside your project directory:
 /rhdp-publishing-house
 ```
 

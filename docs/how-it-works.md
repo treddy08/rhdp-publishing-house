@@ -1,6 +1,7 @@
 ---
 layout: default
 title: How It Works
+nav_order: 4
 ---
 
 # How It Works

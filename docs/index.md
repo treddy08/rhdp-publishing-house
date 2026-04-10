@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Home
+nav_order: 1
 ---
 
 # RHDP Publishing House
@@ -8,11 +9,3 @@ title: Home
 AI-powered content lifecycle management for Red Hat Demo Platform.
 
 One command. One manifest. Pick up where you left off, any day, any session.
-
----
-
-## Navigation
-
-- [Overview](executive-summary) -- What it is and why it matters
-- [Getting Started](getting-started) -- Quick start guide
-- [How It Works](how-it-works) -- Architecture, agents, and lifecycle details
