@@ -33,7 +33,16 @@ Content writing agent. Wraps `showroom:create-lab` (workshops) and `showroom:cre
 Technical editing agent. Wraps `showroom:verify-content` and adds Publishing House-specific
 spec alignment checks. Reviews content against Red Hat quality standards and the approved
 project spec. Produces review reports and offers interactive fix loops.
-### /rhdp-publishing-house:automation *(Phase 3)*
+### /rhdp-publishing-house:automation
+
+Automation agent. Two sub-phases:
+- **7a: Catalog** — Wraps `agnosticv:catalog-builder` and `agnosticv:validator` to create
+  and validate AgnosticV catalog configuration from the project spec.
+- **7b: Environment** — Writes Ansible roles/playbooks or Argo+Helm manifests for environment
+  setup, then runs its own code review cycle via `code-review:code-review`.
+
+Only runs when `needs_automation: true` in the manifest. Uses Opus 4.6.
+
 ### /rhdp-publishing-house:security *(Phase 4)*
 ### /rhdp-publishing-house:review *(Phase 4)*
 
