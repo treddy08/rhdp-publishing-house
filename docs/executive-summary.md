@@ -1,9 +1,3 @@
----
-layout: default
-title: Overview
-nav_order: 2
----
-
 # RHDP Publishing House
 
 ## AI-Powered Content Lifecycle Management for RHDP

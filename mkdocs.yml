@@ -1,0 +1,44 @@
+site_name: RHDP Publishing House
+site_description: AI-powered content lifecycle management for Red Hat Demo Platform
+site_author: Red Hat Demo Platform Team
+repo_url: https://github.com/rhpds/rhdp-publishing-house
+repo_name: rhpds/rhdp-publishing-house
+site_url: https://rhpds.github.io/rhdp-publishing-house/
+
+docs_dir: docs
+site_dir: site
+exclude_docs: |
+  superpowers/
+  PH-COMMON-RULES.md
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: custom
+    accent: custom
+  font: false
+  features:
+    - navigation.top
+    - navigation.sections
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - toc.follow
+
+extra_css:
+  - stylesheets/publishing-house.css
+
+nav:
+  - Home: index.md
+  - Overview: executive-summary.md
+  - Getting Started: getting-started.md
+  - How It Works: how-it-works.md
+
+markdown_extensions:
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
