@@ -83,36 +83,40 @@ When user provides an existing spec:
 
 When user has a rough concept, ask these questions **ONE at a time** in this order:
 
-1. **Main goal** — "What should someone be able to do after completing this lab/demo?"
+1. **Project owner** — "Who owns this project? (GitHub username)"
+   - This is who's accountable for the project end-to-end
+   - Stored in `project.owner` in the manifest
+
+2. **Main goal** — "What should someone be able to do after completing this lab/demo?"
    - Push for specific, concrete outcomes
    - Avoid vague "understand" or "learn about"
    - Use action verbs: Configure, Deploy, Create, Troubleshoot, Integrate
 
-2. **Target audience** — "Who is this for? (Role, experience level, background knowledge)"
+3. **Target audience** — "Who is this for? (Role, experience level, background knowledge)"
    - Get specifics: "cloud architects with basic Kubernetes knowledge"
    - Not: "developers"
 
-3. **Products/technologies** — "Which Red Hat products and technologies will be used?"
+4. **Products/technologies** — "Which Red Hat products and technologies will be used?"
    - Full product names and versions if known
    - Dependencies and integrations
 
-4. **Workshop or demo?**
+5. **Workshop or demo?**
    - Workshop: hands-on, step-by-step, user executes
    - Demo: show-and-tell, presenter drives
 
-5. **Total duration** — "How long should this take? (minutes or hours)"
+6. **Total duration** — "How long should this take? (minutes or hours)"
    - Validate against complexity
    - Suggest adjustments if mismatch
 
-6. **Module count/outline** — "How many modules? What rough titles?"
+7. **Module count/outline** — "How many modules? What rough titles?"
    - Propose structure based on complexity
    - Each module should be 15-45 minutes
    - Validate logical flow
 
-7. **Difficulty level** — "Beginner, intermediate, or advanced?"
+8. **Difficulty level** — "Beginner, intermediate, or advanced?"
    - Based on prerequisites and complexity
 
-8. **Automation needed?** — "Will this need infrastructure automation (Ansible, Terraform)?"
+9. **Automation needed?** — "Will this need infrastructure automation (Ansible, Terraform)?"
    - Based on environment complexity
    - Multi-VM, cloud resources, complex networking = likely yes
 
@@ -164,6 +168,7 @@ project:
   name: "Lab Title"
   id: "lab-short-id"
   created: "2026-04-09"
+  owner: "githubuser"  # GitHub username of project owner
   type: "workshop" # or demo
   autonomy: "supervised" # or semi, full
 

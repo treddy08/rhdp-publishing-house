@@ -39,7 +39,7 @@ See @rhdp-publishing-house/docs/PH-COMMON-RULES.md for common rules that apply t
 ## Step 2: Read State and Present Status
 
 Read the manifest and parse:
-- `project.name`, `project.id`, `project.type`, `project.autonomy`
+- `project.name`, `project.id`, `project.owner`, `project.type`, `project.autonomy`
 - `lifecycle.current_phase`
 - Status of all phases under `lifecycle.phases.*`
 
@@ -52,6 +52,7 @@ Read the manifest and parse:
 - Present concise status summary:
   ```
   Project: <name> (<type>)
+  Owner: <owner>
   Current Phase: <current_phase>
   Autonomy: <autonomy>
 
@@ -63,7 +64,7 @@ Read the manifest and parse:
   - Writing: <status> [X/Y modules if applicable]
   - Editing: <status>
   - Automation: <status> [substeps if in progress]
-  - Security Review: <status>
+  - Code & Security Review: <status>
   - Final Review: <status>
   - Ready for Publishing: <status>
 
@@ -100,7 +101,7 @@ Publishing House does not require end-to-end usage. Phases are either **required
 - **Intake** — required, but shortcuttable with a pre-existing design doc
 - **Approval** — always requires explicit human sign-off; never auto-advance
 - **Technical Editing** — always runs; quality gate regardless of how content was produced
-- **Security Review** — always runs; non-negotiable for publishing readiness
+- **Code & Security Review** — always runs; non-negotiable for publishing readiness
 - **Final Review** — holistic check before marking ready
 
 **Optional phases** (can be skipped):
