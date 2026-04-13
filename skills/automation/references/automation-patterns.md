@@ -83,7 +83,7 @@ Record the AgnosticV catalog path in the manifest:
 automation:
   substeps:
     catalog_item: completed
-  catalog_path: "summit-2026/lb1234-short-name-cnv"  # AgV relative path
+  catalog_path: "published/lb1234-my-lab-cnv"  # AgV relative path (set by catalog-builder)
   agv_repo: "/path/to/agnosticv"                      # Local AgV repo path
 ```
 
