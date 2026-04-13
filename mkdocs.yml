@@ -34,6 +34,8 @@ nav:
   - Overview: executive-summary.md
   - Getting Started: getting-started.md
   - How It Works: how-it-works.md
+  - Dashboard: dashboard.md
+  - Dashboard Deployment: dashboard-deployment.md
 
 markdown_extensions:
   - tables
