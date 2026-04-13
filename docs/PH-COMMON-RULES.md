@@ -7,7 +7,8 @@ Rules that apply to ALL Publishing House skills. Read this before working on any
 - Always read `publishing-house/manifest.yaml` before taking action
 - Update manifest after completing any phase or substep
 - Never modify manifest fields outside your agent's scope
-- Use ISO 8601 dates (YYYY-MM-DD) for all timestamps
+- Use ISO 8601 datetime (YYYY-MM-DD HH:mm) for all `completed_at` and status timestamps
+- Use ISO 8601 date (YYYY-MM-DD) for `project.created` (date-only is fine for creation date)
 
 ## Autonomy Levels
 

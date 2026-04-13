@@ -83,9 +83,10 @@ When user provides an existing spec:
 
 When user has a rough concept, ask these questions **ONE at a time** in this order:
 
-1. **Project owner** — "Who owns this project? (GitHub username)"
+1. **Project owner** — "Who owns this project?"
+   - Ask for **full name** (e.g., "Nate Stephany") — stored in `project.owner_name`
+   - Ask for **GitHub username** (e.g., "stencell") — stored in `project.owner_github`
    - This is who's accountable for the project end-to-end
-   - Stored in `project.owner` in the manifest
 
 2. **Main goal** — "What should someone be able to do after completing this lab/demo?"
    - Push for specific, concrete outcomes
@@ -168,7 +169,8 @@ project:
   name: "Lab Title"
   id: "lab-short-id"
   created: "2026-04-09"
-  owner: "githubuser"  # GitHub username of project owner
+  owner_name: "Full Name"    # Display name of project owner
+  owner_github: "githubuser" # GitHub username of project owner
   type: "workshop" # or demo
   autonomy: "supervised" # or semi, full
 
@@ -177,7 +179,7 @@ lifecycle:
   phases:
     intake:
       status: "completed"
-      completed_date: "2026-04-09"
+      completed_date: "2026-04-09 14:30"
       artifacts:
         - "publishing-house/spec/design.md"
         - "publishing-house/spec/modules/module-01-*.md"
@@ -238,7 +240,7 @@ curl -s -X POST "${RCARS_API}/recommend" \
 ```markdown
 # RCARS Vetting Report
 
-Date: YYYY-MM-DD
+Date: YYYY-MM-DD HH:mm
 Query: "<query string used>"
 
 ## Overlap Analysis
@@ -279,7 +281,7 @@ lifecycle:
   phases:
     vetting:
       status: "completed"
-      completed_date: "2026-04-09"
+      completed_date: "2026-04-09 14:30"
       result: "approved" # or revise, rejected
       artifacts:
         - "publishing-house/reviews/rcars-vetting.md"
@@ -336,7 +338,7 @@ lifecycle:
   phases:
     spec_refinement:
       status: "completed"
-      completed_date: "2026-04-09"
+      completed_date: "2026-04-09 14:30"
       changes:
         - "Incorporated RCARS differentiation guidance"
         - "Standardized module outline format"

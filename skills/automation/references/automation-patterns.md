@@ -59,7 +59,7 @@ the PH spec where possible:
 | Display name | `project.name` from manifest |
 | Short name | `project.id` from manifest |
 | Description | Problem statement from design.md |
-| Maintainer | `project.owner` from manifest |
+| Maintainer | `project.owner_name` / `project.owner_github` from manifest |
 | Infrastructure type | Infrastructure requirements from design.md |
 
 Let the catalog-builder skill handle infrastructure-specific questions — it has

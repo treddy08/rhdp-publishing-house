@@ -39,7 +39,7 @@ See @rhdp-publishing-house/docs/PH-COMMON-RULES.md for common rules that apply t
 ## Step 2: Read State and Present Status
 
 Read the manifest and parse:
-- `project.name`, `project.id`, `project.owner`, `project.type`, `project.autonomy`
+- `project.name`, `project.id`, `project.owner_name`, `project.owner_github`, `project.type`, `project.autonomy`
 - `lifecycle.current_phase`
 - Status of all phases under `lifecycle.phases.*`
 
@@ -62,8 +62,8 @@ Read the manifest and parse:
   - Spec Refinement: <status>
   - Approval: <status>
   - Writing: <status> [X/Y modules if applicable]
-  - Editing: <status>
   - Automation: <status> [substeps if in progress]
+  - Editing: <status>
   - Code & Security Review: <status>
   - Final Review: <status>
   - Ready for Publishing: <status>
@@ -113,9 +113,9 @@ Publishing House does not require end-to-end usage. Phases are either **required
 **Phase dependencies** (enforce these, not strict ordering):
 - Approval requires intake to be completed (need a spec to approve)
 - Writing requires approval (need an approved spec to write from)
-- Editing requires content to exist in `content/` (agent-generated or manual)
+- Automation runs after writing (recommended) — content often changes to accommodate infrastructure, so do automation before editing to avoid editing twice
+- Editing requires content to exist in `content/` (agent-generated or manual) — runs after automation so content is finalized
 - Security review requires content to exist
-- Automation can run in parallel with or after writing — no dependency between them
 
 **Skipping a phase:** When a user says "skip writing" or "skip automation", set that
 phase's status to `skipped` in the manifest. Confirm first: "Skip [phase]? This means
@@ -125,7 +125,17 @@ phase's status to `skipped` in the manifest. Confirm first: "Skip [phase]? This 
 doc, dispatch the intake agent — it validates and normalizes the doc rather than building
 from scratch. This is faster but still required.
 
-- **Automation gate:** Before dispatching the automation agent, check `lifecycle.phases.automation.needs_automation` in the manifest. If `false` or `null`, ask: "Automation was marked as not needed. Would you like to enable it and proceed, or skip the automation phase?" If the user skips, set the automation phase status to `skipped` and move to security review.
+- **Post-writing decision:** When all writing modules are `drafted` or `approved`, present the user with a choice:
+  > Writing is complete. The recommended next step is **automation** — infrastructure work often requires content changes (paths, hostnames, environment variables), so it's better to finalize content before editing.
+  >
+  > 1. **Automation** (recommended) — build infrastructure, then edit content once it's final
+  > 2. **Editing** — edit content now, but be aware you may need another editing pass after automation
+  >
+  > Which would you like to do next?
+
+  If automation `needs_automation` is `false` or the phase is already `skipped`, skip the choice and proceed directly to editing.
+
+- **Automation gate:** Before dispatching the automation agent, check `lifecycle.phases.automation.needs_automation` in the manifest. If `false` or `null`, ask: "Automation was marked as not needed. Would you like to enable it and proceed, or skip the automation phase?" If the user skips, set the automation phase status to `skipped` and move to editing.
 
 - If user requests an agent that hasn't been implemented yet (security, review agents), inform them: "The <agent name> agent is not yet available. It will be built in a future phase of the Publishing House plugin. For now, you can complete <phase> manually and update the manifest when done."
 
@@ -155,7 +165,7 @@ When an agent skill completes work:
    ```
 3. If the completed work was the last step in the current phase:
    - Mark the phase as `completed` in the manifest.
-   - Set `completed_at` to today's date (ISO 8601 format).
+   - Set `completed_at` to current date and time (ISO 8601 format: YYYY-MM-DD HH:mm).
    - If this is a gate phase (vetting, approval), pause for human decision before transitioning.
 4. If transitioning to a new phase, update `lifecycle.current_phase` in the manifest.
 
@@ -168,7 +178,7 @@ When updating the manifest:
   - `pending` → `in_progress` when work starts
   - `in_progress` → `completed` when work finishes
   - Use `skipped` only if user explicitly chooses to skip (e.g., no automation needed).
-- **Set `completed_at`** to ISO 8601 date when marking a phase `completed`.
+- **Set `completed_at`** to ISO 8601 datetime (YYYY-MM-DD HH:mm) when marking a phase `completed`.
 - **Add artifact paths** to phase-specific fields (e.g., `intake.artifacts`, `writing.modules`).
 - **Never delete completed phase data** — it's the project's audit trail.
 - **Preserve user-entered data** — don't overwrite fields unless the agent explicitly updated them.
@@ -180,7 +190,7 @@ lifecycle:
   phases:
     intake:
       status: completed
-      completed_at: 2026-04-09
+      completed_at: "2026-04-09 14:30"
       artifacts:
         - publishing-house/spec/design.md
         - publishing-house/spec/modules/module-01.md
@@ -194,7 +204,7 @@ Before ending a session:
 1. Ensure the manifest reflects the current state (all in-progress work is recorded).
 2. If a `publishing-house/journal.md` exists, append a brief entry:
    ```
-   ## <ISO 8601 Date>
+   ## <YYYY-MM-DD HH:mm>
    - <Summary of work completed this session>
    - <Next planned action>
    ```

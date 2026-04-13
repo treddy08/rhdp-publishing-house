@@ -84,7 +84,7 @@ from the PH context where possible:
   Ask user to confirm before proceeding.
 - **Display name:** `project.name` from manifest.
 - **Short name:** `project.id` from manifest.
-- **Maintainer:** `project.owner` from manifest. Ask for email.
+- **Maintainer:** `project.owner_name` and `project.owner_github` from manifest. Ask for email.
 
 For questions the catalog-builder asks that aren't covered by the PH spec, let
 the user answer directly. Do not guess infrastructure-specific configuration.

@@ -13,21 +13,22 @@ On submit, the dashboard fetches the manifest, parses lifecycle phases, and adds
 
 ## Pipeline View
 
-The **Pipeline** page shows a kanban board with 7 columns mapping to lifecycle phases:
+The **Pipeline** page shows a kanban board with 8 columns mapping to lifecycle phases:
 
 | Column | Manifest Phases |
 |--------|----------------|
 | Intake | intake, vetting, spec_refinement |
 | Approval | approval |
-| Content | writing, editing |
+| Writing | writing |
 | Automation | automation |
+| Editing | editing |
 | Code & Security | code_security_review |
 | Final Review | final_review |
 | Ready | ready_for_publishing |
 
 Each project appears as a card in the column of its furthest-along active phase. Cards show the project name, module count, and assignees.
 
-Content and automation phases can overlap in practice — a project may be in writing and automation concurrently. The card appears in the furthest-along column with a visual indicator when the other phase is also active.
+The recommended flow is writing → automation → editing. Automation often requires content changes (paths, environment variables, hostnames), so editing runs last to avoid editing twice.
 
 ## Projects Table
 
@@ -36,7 +37,7 @@ The **Projects** page shows a searchable table of all registered projects with:
 - **Project name** — clickable link to the detail page
 - **Module count** — number of writing modules
 - **Assignees** — everyone assigned across all phases
-- **Phase progress bar** — 7 colored segments showing which phases are complete, active, or pending
+- **Phase progress bar** — 8 colored segments showing which phases are complete, active, or pending
 - **Actions** — refresh (re-fetch manifest from GitHub), edit (change name/repo URL), delete (remove from dashboard)
 
 ## Project Detail
@@ -45,7 +46,7 @@ Click a project name to see the full detail view:
 
 ### Phase Progress Bar
 
-A labeled bar across the top showing all 7 phase groups with completion/active status.
+A labeled bar across the top showing all 8 phase groups with completion/active status.
 
 ### Phase Accordions
 
@@ -98,7 +99,7 @@ lifecycle:
   phases:
     <phase_name>:
       status: "pending"        # pending | in_progress | completed | skipped
-      completed_at: null       # ISO date when completed
+      completed_at: null       # ISO datetime when completed (YYYY-MM-DD HH:mm)
       assignees: []            # GitHub usernames working on this phase
       artifacts: []            # File paths (linked to GitHub in the dashboard)
 ```
