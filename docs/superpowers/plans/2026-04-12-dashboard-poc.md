@@ -398,7 +398,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    database_url: str = "postgresql://ph_dashboard:ph_dashboard@localhost:5433/ph_dashboard"
+    database_url: str  # Required — set via DATABASE_URL env var
     github_token: str = ""
     debug: bool = False
     refresh_hour: int = 2  # Nightly refresh at 2 AM
@@ -747,7 +747,7 @@ alembic init alembic
 Edit `src/backend/alembic.ini` — set the `sqlalchemy.url` line:
 
 ```ini
-sqlalchemy.url = postgresql://ph_dashboard:ph_dashboard@localhost:5433/ph_dashboard
+sqlalchemy.url =  # Set via DATABASE_URL env var — see alembic/env.py
 ```
 
 - [ ] **Step 7: Configure alembic/env.py**

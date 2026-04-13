@@ -84,8 +84,8 @@ When user provides an existing spec:
 When user has a rough concept, ask these questions **ONE at a time** in this order:
 
 1. **Project owner** — "Who owns this project?"
-   - Ask for **full name** (e.g., "Nate Stephany") — stored in `project.owner_name`
-   - Ask for **GitHub username** (e.g., "stencell") — stored in `project.owner_github`
+   - Ask for **full name** (e.g., "Jane Smith") — stored in `project.owner_name`
+   - Ask for **GitHub username** (e.g., "jsmith") — stored in `project.owner_github`
    - This is who's accountable for the project end-to-end
 
 2. **Main goal** — "What should someone be able to do after completing this lab/demo?"

@@ -84,7 +84,7 @@ Create `.claude-plugin/plugin.json`:
   "description": "AI-powered content lifecycle management for RHDP — from idea to ready-for-publishing",
   "author": {
     "name": "RHDP Team",
-    "email": "nstephan@redhat.com"
+    "email": "rhdp-team@redhat.com"
   }
 }
 ```
