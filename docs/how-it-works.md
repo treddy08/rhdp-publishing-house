@@ -103,19 +103,31 @@ Creates AgnosticV catalog configuration and environment automation.
 - **Determines infrastructure type** (OCP, RHEL/VMs, Sandbox) from the design spec
 - **Produces:** AgnosticV config + automation code in `automation/`
 
-### Security Agent *(Phase 4)*
+### Code & Security Review Agent *(not yet implemented)*
 
-Content-level security audit -- separate from automation code review.
+Code review of automation artifacts and security audit of both content and automation.
 
-- **Checks:** Credentials in docs, hardcoded URLs, sensitive info in public-facing content
-- **Produces:** `publishing-house/reviews/security-review.md`
+- **Checks:** Credentials in docs, hardcoded URLs, sensitive info in public-facing content, automation code quality
+- **Produces:** `publishing-house/reviews/code-security-review.md`
 
-### Review Agent *(Phase 4)*
+### Final Review Agent *(not yet implemented)*
 
 Holistic final check before marking ready for publishing.
 
 - **Checks:** Spec alignment, completeness, cross-module consistency, all prior review items addressed
 - **Produces:** Final review report
+
+## Dashboard
+
+The [RHDP Publishing House Dashboard](https://github.com/rhpds/rhdp-publishing-house-dashboard) provides cross-project visibility for managers and PMs. It reads `manifest.yaml` from each registered project's GitHub repo and presents:
+
+- **Pipeline kanban** — projects flowing through lifecycle phases
+- **Projects table** — searchable list with phase progress bars
+- **Project detail** — phase accordions with dates, assignees, artifacts linked to GitHub
+
+The dashboard is read-only — it never modifies the manifest. All state changes happen through the CLI skills.
+
+See [docs/dashboard.md](dashboard.md) for full details.
 
 ## State Management
 

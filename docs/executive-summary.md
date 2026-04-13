@@ -79,11 +79,16 @@ A thin orchestrator manages state and dispatches to specialized agent skills. Ea
  Intake    Writer   Editor   Automation  Security  Review
 ```
 
+### Cross-Project Visibility
+
+The [Publishing House Dashboard](https://github.com/rhpds/rhdp-publishing-house-dashboard) gives managers and PMs a single view across all active projects — a kanban pipeline, a searchable project table, and detailed phase-level status with completion dates, assignees, and artifact links. No CLI required. See [docs/dashboard.md](dashboard.md).
+
 ### Implementation Status
 
-- **Phase 1:** Plugin structure + orchestrator + intake agent -- **complete**
-- **Phase 2:** Writer + editor agents (wrapping showroom skills) -- **complete**
-- **Phase 3:** Automation agent (AgnosticV catalog + Ansible/GitOps code generation + testing gate) -- **complete**
-- **Phase 4:** Security + review agents -- in development
-- **Phase 5:** RCARS integration (when API is ready)
+- **Orchestrator + Intake agent** -- complete
+- **Writer + Editor agents** (wrapping showroom skills) -- complete
+- **Automation agent** (AgnosticV catalog + Ansible/GitOps code generation + testing gate) -- complete
+- **Dashboard** (cross-project visibility for PMs) -- deployed
+- **Code & Security Review + Final Review agents** -- not yet implemented
+- **RCARS integration** (when API is ready)
 - **Future:** Standalone automation-writing skills, E2E checks, `/rhdp` namespace consolidation
