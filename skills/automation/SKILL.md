@@ -33,118 +33,34 @@ See @rhdp-publishing-house/skills/automation/references/automation-manifest-form
 
 Check the manifest's `lifecycle.phases.automation.substeps`:
 
-- If `catalog_item` is `pending` → start with 7a (Catalog Item)
-- If `catalog_item` is `completed` and `requirements` is `pending` → start with 7b (Automation Requirements)
-- If `requirements` is `completed` and `automation_code` is `pending` → start with 7c (Automation Code)
+- If `requirements` is `pending` → start with 7a (Automation Requirements)
+- If `requirements` is `completed` and `catalog_item` is `pending` → start with 7b (Catalog Item)
+- If `catalog_item` is `completed` (or `skipped`) and `automation_code` is `pending` → start with 7c (Automation Code)
 - If `automation_code` is `completed` and `testing` is `pending` → present 7d (Testing gate)
 - If all are `completed` (or testing skipped) → inform user automation is done
 - If user requests a specific sub-phase, route to it (but warn if out of order)
 
 Check what the user requested:
 
-- **"create catalog" / "AgnosticV config" / "catalog item"** → 7a
-- **"automation requirements" / "what needs to be automated"** → 7b
+- **"automation requirements" / "what needs to be automated" / "automation manifest"** → 7a
+- **"create catalog" / "AgnosticV config" / "catalog item"** → 7b
 - **"write automation" / "create roles" / "write code"** → 7c
 - **"testing done" / "testing passed"** → complete 7d
 - **"skip testing"** → skip 7d (with confirmation)
 - **"automate" / "start automation"** → next pending sub-phase
 
-## Phase 7a: AgnosticV Catalog Creation
+## Phase 7a: Automation Requirements
 
-### Step 7a-1: Gather Context from PH Spec
-
-Read `publishing-house/spec/design.md` and extract:
-- **Project name** → catalog display name
-- **Project ID** → catalog short name
-- **Content type** (workshop/demo) → catalog type
-- **Products & technologies** → technology tags
-- **Infrastructure requirements** → infrastructure type routing
-- **Owner** → maintainer
-
-Also read module outlines from `publishing-house/spec/modules/` to understand:
-- What operators/applications need to be pre-installed
-- What user accounts or RBAC is needed
-- Multi-user requirements
-
-### Step 7a-2: Invoke agnosticv:catalog-builder
-
-Inform the user:
-> "Using `agnosticv:catalog-builder` to create the AgnosticV catalog for this project."
-
-Invoke `agnosticv:catalog-builder` in Mode 1 (Full Catalog Creation).
-
-The catalog-builder skill will ask its own questions interactively. Pre-fill answers
-from the PH context where possible:
-
-- **Catalog type:** Map from `project.type` — workshop → `lab_multi` or `lab_single`,
-  demo → `demo`. Ask user to confirm.
-- **Event context:** Ask the user — this is not in the PH spec.
-- **Technologies:** From design.md products & technologies list.
-- **Infrastructure type:** Infer from design.md infrastructure requirements.
-  Ask user to confirm before proceeding.
-- **Display name:** `project.name` from manifest.
-- **Short name:** `project.id` from manifest.
-- **Maintainer:** `project.owner_name` and `project.owner_github` from manifest. Ask for email.
-
-For questions the catalog-builder asks that aren't covered by the PH spec, let
-the user answer directly. Do not guess infrastructure-specific configuration.
-
-### Step 7a-3: Validate the Catalog
-
-After the catalog-builder generates files, immediately invoke validation:
-
-Inform the user:
-> "Running `agnosticv:validator` to check the catalog configuration."
-
-Invoke `agnosticv:validator` at scope level 2 (Standard).
-
-**If validation passes:**
-- Update manifest: `substeps.catalog_item: completed`
-- Record the catalog path and AgV repo path in the manifest
-- Proceed to autonomy-appropriate next step
-
-**If validation fails:**
-
-- **Supervised:** Present errors. Ask: "Would you like to fix these issues now?"
-  Walk through fixes one at a time. Re-validate after fixes.
-- **Semi:** Attempt to fix errors automatically. Present warnings for user decision.
-  Re-validate.
-- **Full:** Fix all fixable issues. Re-validate. Present any remaining blockers.
-
-Do not proceed to 7b until the catalog validates at least at Level 2 with no errors.
-
-### Step 7a-4: Update Manifest
-
-```yaml
-automation:
-  status: in_progress
-  substeps:
-    catalog_item: completed
-    requirements: pending
-    automation_code: pending
-    e2e_checks: deferred
-  catalog_path: "<agv-relative-path>"
-  agv_repo: "<local-agv-repo-path>"
-```
-
-### Autonomy Behavior (7a)
-
-- **Supervised:** Present the catalog-builder's output for review. Present validation
-  results. Ask before committing to the AgV repo.
-- **Semi:** Let catalog-builder and validator run. Present summary of what was created
-  and validation status. Pause only if validation errors need user input.
-- **Full:** Run catalog-builder and validator end-to-end. Present completed catalog
-  summary with validation status.
-
-## Phase 7b: Automation Requirements
-
-Phase 7b generates and reviews the automation manifest — the reviewable contract
-between content and automation. Phase 7c then writes the code from the approved manifest.
+Phase 7a generates and reviews the automation manifest — the reviewable contract
+between content and automation. Capturing all requirements first means we know
+exactly what to build before committing to any catalog or code structure. Phase 7b
+then creates the AgnosticV catalog informed by those requirements, and Phase 7c
+writes the automation code from the approved manifest.
 
 See @rhdp-publishing-house/skills/automation/references/automation-manifest-format.md
 for the full manifest format and field reference.
 
-### Step 7b-1: Check for Existing Manifest
+### Step 7a-1: Check for Existing Manifest
 
 Check if `publishing-house/spec/automation-manifest.yaml` already exists and has content.
 
@@ -152,11 +68,11 @@ Check if `publishing-house/spec/automation-manifest.yaml` already exists and has
 > "Found an automation manifest. Let me validate the format and review the requirements."
 
 Validate the YAML structure against the manifest format. Present a summary and
-proceed to Step 7b-3 (approval).
+proceed to Step 7a-3 (approval).
 
-**If no manifest exists:** Proceed to Step 7b-2 (generate one).
+**If no manifest exists:** Proceed to Step 7a-2 (generate one).
 
-### Step 7b-2: Generate Automation Manifest
+### Step 7a-2: Generate Automation Manifest
 
 Read context to extract automation requirements:
 
@@ -181,11 +97,6 @@ Read context to extract automation requirements:
 - Check for UserInfo variables that indicate provision data needs
 - Check for `{attribute}` placeholders that suggest deployed services
 
-**From the AgnosticV catalog** (if 7a is complete):
-- Infrastructure type is already determined
-- Operators already referenced in common.yaml
-- Multi-user configuration
-
 **Determine approach:**
 - If the lab teaches GitOps concepts → `approach: gitops`
 - If the lab needs imperative setup or complex ordering → `approach: ansible`
@@ -194,7 +105,7 @@ Read context to extract automation requirements:
 
 Write the manifest to `publishing-house/spec/automation-manifest.yaml`.
 
-### Step 7b-3: Manifest Review (Gate)
+### Step 7a-3: Manifest Review (Gate)
 
 Present the manifest to the user for review. This is always a gate, regardless
 of autonomy level — automation scope must be explicitly approved.
@@ -217,22 +128,114 @@ of autonomy level — automation scope must be explicitly approved.
 Wait for explicit approval. The user may edit the manifest file directly — always
 re-read it from disk after they say "approved" or "looks good."
 
-### Step 7b-4: Update Manifest
+### Step 7a-4: Update Manifest
 
 After requirements are approved:
 
 ```yaml
 automation:
+  status: in_progress
   substeps:
-    catalog_item: completed
     requirements: completed
+    catalog_item: pending
     automation_code: pending
     e2e_checks: deferred
 ```
 
+## Phase 7b: AgnosticV Catalog Creation
+
+With the automation requirements approved, we now know the full infrastructure
+scope — operators, multi-user config, provision data — needed to build the catalog.
+If the project uses an existing Field Source Content catalog item instead, this
+sub-phase can be skipped.
+
+### Step 7b-1: Gather Context from PH Spec and Automation Manifest
+
+Read `publishing-house/spec/design.md` and the approved `publishing-house/spec/automation-manifest.yaml` and extract:
+- **Project name** → catalog display name
+- **Project ID** → catalog short name
+- **Content type** (workshop/demo) → catalog type
+- **Products & technologies** → technology tags
+- **Infrastructure type and requirements** → infrastructure type routing
+- **Operators** from automation manifest → pre-install in common.yaml
+- **Multi-user configuration** from automation manifest → multi-user setup
+- **Owner** → maintainer
+
+### Step 7b-2: Invoke agnosticv:catalog-builder
+
+Inform the user:
+> "Using `agnosticv:catalog-builder` to create the AgnosticV catalog for this project."
+
+Invoke `agnosticv:catalog-builder` in Mode 1 (Full Catalog Creation).
+
+The catalog-builder skill will ask its own questions interactively. Pre-fill answers
+from the PH context where possible:
+
+- **Catalog type:** Map from `project.type` — workshop → `lab_multi` or `lab_single`,
+  demo → `demo`. Ask user to confirm.
+- **Event context:** Ask the user — this is not in the PH spec.
+- **Technologies:** From design.md products & technologies list.
+- **Infrastructure type:** Infer from design.md infrastructure requirements.
+  Ask user to confirm before proceeding.
+- **Display name:** `project.name` from manifest.
+- **Short name:** `project.id` from manifest.
+- **Maintainer:** `project.owner_name` and `project.owner_github` from manifest. Ask for email.
+- **Operators:** Pre-fill from automation manifest `operators` list.
+
+For questions the catalog-builder asks that aren't covered by the PH spec, let
+the user answer directly. Do not guess infrastructure-specific configuration.
+
+### Step 7b-3: Validate the Catalog
+
+After the catalog-builder generates files, immediately invoke validation:
+
+Inform the user:
+> "Running `agnosticv:validator` to check the catalog configuration."
+
+Invoke `agnosticv:validator` at scope level 2 (Standard).
+
+**If validation passes:**
+- Update manifest: `substeps.catalog_item: completed`
+- Record the catalog path and AgV repo path in the manifest
+- Proceed to autonomy-appropriate next step
+
+**If validation fails:**
+
+- **Supervised:** Present errors. Ask: "Would you like to fix these issues now?"
+  Walk through fixes one at a time. Re-validate after fixes.
+- **Semi:** Attempt to fix errors automatically. Present warnings for user decision.
+  Re-validate.
+- **Full:** Fix all fixable issues. Re-validate. Present any remaining blockers.
+
+Do not proceed to 7c until the catalog validates at least at Level 2 with no errors.
+
+### Step 7b-4: Update Manifest
+
+```yaml
+automation:
+  substeps:
+    requirements: completed
+    catalog_item: completed
+    automation_code: pending
+    e2e_checks: deferred
+  catalog_path: "<agv-relative-path>"
+  agv_repo: "<local-agv-repo-path>"
+```
+
+### Autonomy Behavior (7b)
+
+- **Supervised:** Present the catalog-builder's output for review. Present validation
+  results. Ask before committing to the AgV repo.
+- **Semi:** Let catalog-builder and validator run. Present summary of what was created
+  and validation status. Pause only if validation errors need user input.
+- **Full:** Run catalog-builder and validator end-to-end. Present completed catalog
+  summary with validation status.
+
 ## Phase 7c: Automation Code
 
-Write the automation code from the approved automation manifest.
+Write the automation code from the approved automation manifest. If the catalog item
+(7b) was skipped (Field Source Content path), proceed directly from approved requirements
+(7a) to code.
 
 ### Step 7c-1: Write Automation Code
 
@@ -325,8 +328,8 @@ After automation code is complete and review cycle passes:
 ```yaml
 automation:
   substeps:
-    catalog_item: completed
     requirements: completed
+    catalog_item: completed
     automation_code: completed
     testing: pending
     e2e_checks: deferred
@@ -376,8 +379,8 @@ When the user confirms testing:
 automation:
   status: in_progress  # Orchestrator sets to completed
   substeps:
-    catalog_item: completed
     requirements: completed
+    catalog_item: completed
     automation_code: completed
     testing: completed  # or skipped
     e2e_checks: deferred
@@ -390,18 +393,19 @@ Phase-level transitions are managed by the orchestrator.
 
 After completing each sub-phase, inform the user:
 
-**After 7a (Catalog Item):**
+**After 7a (Automation Requirements):**
+> "Automation requirements documented and approved.
+> Manifest: `publishing-house/spec/automation-manifest.yaml`
+>
+> Next: Create the AgnosticV catalog item (7b), or 'skip catalog item' if using an
+> existing Field Source Content catalog."
+
+**After 7b (Catalog Item):**
 > "AgnosticV catalog item created and validated.
 > Catalog path: `<agv-relative-path>`
 > Validation: [PASSED / PASSED WITH WARNINGS]
 >
-> Next: Generate automation requirements (7b)."
-
-**After 7b (Automation Requirements):**
-> "Automation requirements documented and approved.
-> Manifest: `publishing-house/spec/automation-manifest.yaml`
->
-> Next: Write automation code (7c), or 'skip automation code' if handled externally."
+> Next: Write automation code (7c)."
 
 **After 7c (Automation Code):**
 > "Automation code complete.
@@ -421,10 +425,12 @@ After completing each sub-phase, inform the user:
 
 Users can skip individual sub-phases:
 
-- **"skip catalog item"** — Set `substeps.catalog_item: skipped`. User manages AgV config
-  outside Publishing House.
 - **"skip requirements"** — Set `substeps.requirements: skipped`. User provides
-  automation code directly without a manifest.
+  automation code directly without a manifest. Not recommended — requirements drive
+  both catalog and code decisions.
+- **"skip catalog item"** — Set `substeps.catalog_item: skipped`. Project uses an
+  existing Field Source Content catalog item, or user manages AgV config outside
+  Publishing House. Automation code is built from the approved requirements manifest.
 - **"skip automation code"** — Set `substeps.automation_code: skipped`. Automation
   handled externally.
 - **"skip testing"** — Set `substeps.testing: skipped`. Not recommended — automation

@@ -52,8 +52,8 @@ lifecycle:
       agv_repo: null          # AgnosticV git repo
       agv_branch: null        # AgnosticV branch
       substeps:
-        catalog_item: pending       # AgnosticV catalog configuration
         requirements: pending       # Automation requirements (reviewable scope document)
+        catalog_item: pending       # AgnosticV catalog configuration
         automation_code: pending    # Ansible collection or GitOps repo
         testing: pending            # Deploy and verify automation works
         e2e_checks: deferred        # End-to-end validation (future)
