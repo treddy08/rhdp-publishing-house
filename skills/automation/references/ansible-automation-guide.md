@@ -204,7 +204,7 @@ ocp4_workload_my_lab_enable_feature: true
 | Container images | `*_image` | `ocp4_workload_my_lab_image: quay.io/org/app:v1.0` |
 | Feature flags | `*_enable_*` or `*_create_*` | `ocp4_workload_my_lab_enable_monitoring: true` |
 | Resource sizing | `*_cpu_*`, `*_memory` | `ocp4_workload_my_lab_memory: 2Gi` |
-| Credentials | `*_user`, `*_password` | `ocp4_workload_my_lab_admin_password: redhat` |
+| Credentials | `*_user`, `*_password` | `ocp4_workload_my_lab_admin_password: CHANGEME` |
 
 ### Defaults File
 

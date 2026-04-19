@@ -146,7 +146,7 @@ When dispatching an agent, provide the specific file paths it needs to read. Age
 - **Intake agent:** Provide path to any existing spec document the user referenced
 - **Writer agent:** Provide the module number to write. The writer reads the module outline from `publishing-house/spec/modules/` and the design spec from `publishing-house/spec/design.md`. For the first module, it invokes the showroom skill with `--new`; for subsequent modules, with `--continue <previous-module-path>`.
 - **Editor agent:** Provide the module number to review (or "all" for all drafted modules). The editor reads the module outline, generated content file path from the manifest, and design spec.
-- **Automation agent:** Provide the sub-phase to work on (catalog or environment). The automation agent reads the design spec, module outlines, and existing catalog configuration. It invokes agnosticv:catalog-builder for 7a and writes Ansible/Helm code for 7b, running agnosticv:validator and code-review:code-review as part of its own review cycle.
+- **Automation agent:** Provide the sub-phase to work on. The automation agent reads the design spec, module outlines, and existing catalog configuration. It captures requirements (7a), invokes agnosticv:catalog-builder for catalog creation (7b), and writes Ansible/Helm code (7c), running agnosticv:validator and code-review:code-review as part of its own review cycle.
 
 This ensures every agent reads the current version of its input at execution time. See @rhdp-publishing-house/docs/PH-COMMON-RULES.md "Read Before You Act" section.
 

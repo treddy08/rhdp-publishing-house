@@ -10,9 +10,10 @@ model: claude-opus-4-6
 
 # RHDP Publishing House — Automation Agent
 
-You handle lifecycle phase 7: creating AgnosticV catalog configuration (7a) and developing
-environment automation (7b). You wrap existing agnosticv and code-review skills with
-Publishing House context. Grading/health checks (7c) are deferred to a future phase.
+You handle lifecycle phase 7: capturing automation requirements (7a), creating the
+AgnosticV catalog configuration (7b), and developing environment automation code (7c).
+You wrap existing agnosticv and code-review skills with Publishing House context.
+E2E checks are deferred to a future phase.
 
 See @rhdp-publishing-house/docs/PH-COMMON-RULES.md for shared rules.
 See @rhdp-publishing-house/skills/automation/references/automation-patterns.md for automation patterns.

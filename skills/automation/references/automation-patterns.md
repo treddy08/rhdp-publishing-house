@@ -18,16 +18,16 @@ Automation has four sub-phases tracked in the manifest:
 
 | Sub-Phase | Manifest Key | Status | Description |
 |-----------|-------------|--------|-------------|
-| 7a: Catalog Item | `substeps.catalog_item` | pending → completed | AgnosticV catalog configuration |
-| 7b: Automation Requirements | `substeps.requirements` | pending → completed | Reviewable scope document (what to automate) |
+| 7a: Automation Requirements | `substeps.requirements` | pending → completed | Reviewable scope document (what to automate) |
+| 7b: Catalog Item | `substeps.catalog_item` | pending → completed | AgnosticV catalog configuration |
 | 7c: Automation Code | `substeps.automation_code` | pending → completed | Ansible collection or GitOps repo |
 | 7d: Testing | `substeps.testing` | pending → completed | Deploy and verify automation works |
 | 7e: E2E Checks | `substeps.e2e_checks` | deferred | End-to-end validation (future) |
 
-Sub-phases run in order: catalog item first (establishes infrastructure context and
-identifies what's already handled), then requirements (analyzes content to determine
-what's missing), then automation code (writes from the approved requirements), then
-testing (human deploys and verifies the automation works on a real environment).
+Sub-phases run in order: requirements first (captures the full automation scope upfront),
+then catalog item (creates the AgnosticV catalog informed by those requirements — skipped
+for field source deployments), then automation code (writes from the approved requirements),
+then testing (human deploys and verifies the automation works on a real environment).
 
 ## Infrastructure Type Routing
 
@@ -44,7 +44,7 @@ The automation agent determines infrastructure type from two sources:
 | Sandbox (Cluster) | `config: openshift-cluster` | Namespace-scoped workloads |
 | Sandbox (Tenant) | `config: namespace` | Tenant-scoped workloads |
 
-## Catalog Creation (7a) — Wrapping agnosticv:catalog-builder
+## Catalog Creation (7b) — Wrapping agnosticv:catalog-builder
 
 ### Input Mapping from PH Context
 
@@ -73,7 +73,7 @@ at scope level 2 (Standard) to catch issues before moving to environment automat
 If validation fails:
 - Present errors to user
 - Offer to fix and re-validate
-- Do not proceed to 7b until catalog validates cleanly
+- Do not proceed to 7c until catalog validates cleanly
 
 ### Catalog Output Tracking
 
@@ -87,7 +87,7 @@ automation:
   agv_repo: "/path/to/agnosticv"                      # Local AgV repo path
 ```
 
-## Automation Requirements (7b) and Automation Code (7c)
+## Automation Requirements (7a) and Automation Code (7c)
 
 ### Scope
 
@@ -152,7 +152,7 @@ spec as informational, not errors.
 
 - Does not write Showroom content — that is the writer agent's job
 - Does not review content quality — that is the editor agent's job
-- Does not implement ZT grading or health checks — that is deferred (7c)
+- Does not implement ZT grading or health checks — that is deferred (e2e_checks)
 - Does not manage the AgnosticV repository — it writes files, the user manages git
 - Does not deploy or test the catalog — deployment is outside Publishing House scope
 - Does not advance the lifecycle phase — only updates substep status

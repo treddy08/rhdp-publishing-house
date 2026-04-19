@@ -18,11 +18,10 @@ The manifest serves three roles:
 
 ## When It's Created
 
-The automation manifest is generated during phase 7b by analyzing:
+The automation manifest is generated during phase 7a (Requirements) by analyzing:
 - The design spec (`publishing-house/spec/design.md`)
 - Module outlines (`publishing-house/spec/modules/`)
 - Content files in `content/` (if they exist)
-- The AgnosticV catalog config (if 7a is complete)
 
 It can also be provided directly by the user if they already know their automation
 requirements. In that case, the agent validates the format and proceeds.
