@@ -81,14 +81,14 @@ A thin orchestrator manages state and dispatches to specialized agent skills. Ea
 
 ### Cross-Project Visibility
 
-The [Publishing House Dashboard](https://github.com/rhpds/rhdp-publishing-house-dashboard) gives managers and PMs a single view across all active projects — a kanban pipeline, a searchable project table, and detailed phase-level status with completion dates, assignees, and artifact links. No CLI required. See [docs/dashboard.md](dashboard.md).
+The [Publishing House Portal](https://github.com/rhpds/rhdp-publishing-house-portal) gives managers and PMs a single view across all active projects — a kanban pipeline, a searchable project table, and detailed phase-level status with completion dates, assignees, and artifact links. No CLI required. See [docs/dashboard.md](dashboard.md).
 
 ### Implementation Status
 
 - **Orchestrator + Intake agent** -- complete
 - **Writer + Editor agents** (wrapping showroom skills) -- complete
 - **Automation agent** (AgnosticV catalog + Ansible/GitOps code generation + testing gate) -- complete
-- **Dashboard** (cross-project visibility for PMs) -- deployed
+- **Portal** (cross-project visibility for PMs) -- deployed
 - **Code & Security Review + Final Review agents** -- not yet implemented
 - **RCARS integration** (when API is ready)
 - **Future:** Standalone automation-writing skills, E2E checks, `/rhdp` namespace consolidation

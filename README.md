@@ -51,9 +51,9 @@ Only runs when `needs_automation: true` in the manifest. Uses Opus 4.6.
 ### /rhdp-publishing-house:security *(not yet implemented)*
 ### /rhdp-publishing-house:review *(not yet implemented)*
 
-## Dashboard
+## Portal
 
-The [RHDP Publishing House Dashboard](https://github.com/rhpds/rhdp-publishing-house-dashboard) provides cross-project visibility for managers and PMs. Register projects by repo URL and see all content flowing through the pipeline — kanban board, project table, and phase-level detail with artifacts and dates.
+The [RHDP Publishing House Portal](https://github.com/rhpds/rhdp-publishing-house-portal) provides cross-project visibility for managers and PMs. Register projects by repo URL and see all content flowing through the pipeline — kanban board, project table, and phase-level detail with artifacts and dates.
 
 See [docs/dashboard.md](docs/dashboard.md).
 

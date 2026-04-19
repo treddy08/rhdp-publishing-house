@@ -117,15 +117,15 @@ Holistic final check before marking ready for publishing.
 - **Checks:** Spec alignment, completeness, cross-module consistency, all prior review items addressed
 - **Produces:** Final review report
 
-## Dashboard
+## Portal
 
-The [RHDP Publishing House Dashboard](https://github.com/rhpds/rhdp-publishing-house-dashboard) provides cross-project visibility for managers and PMs. It reads `manifest.yaml` from each registered project's GitHub repo and presents:
+The [RHDP Publishing House Portal](https://github.com/rhpds/rhdp-publishing-house-portal) provides cross-project visibility for managers and PMs. It reads `manifest.yaml` from each registered project's GitHub repo and presents:
 
 - **Pipeline kanban** — projects flowing through lifecycle phases
 - **Projects table** — searchable list with phase progress bars
 - **Project detail** — phase accordions with dates, assignees, artifacts linked to GitHub
 
-The dashboard is read-only — it never modifies the manifest. All state changes happen through the CLI skills.
+The portal is read-only — it never modifies the manifest. All state changes happen through the CLI skills.
 
 See [docs/dashboard.md](dashboard.md) for full details.
 

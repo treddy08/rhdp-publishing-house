@@ -1,6 +1,6 @@
-# Dashboard
+# Portal
 
-The RHDP Publishing House Dashboard provides cross-project visibility into the content lifecycle. While individual authors interact with the CLI skills, the dashboard gives managers and PMs a single view across all active projects.
+The RHDP Publishing House Portal provides cross-project visibility into the content lifecycle. While individual authors interact with the CLI skills, the portal gives managers and PMs a single view across all active projects.
 
 ## Registering a Project
 

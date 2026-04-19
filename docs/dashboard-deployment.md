@@ -1,6 +1,6 @@
-# Dashboard Deployment
+# Portal Deployment
 
-The Publishing House Dashboard is deployed to OpenShift using Ansible with Jinja2-templated manifests, following the same pattern as RCARS.
+The Publishing House Portal is deployed to OpenShift using Ansible with Jinja2-templated manifests, following the same pattern as RCARS.
 
 ## Architecture
 
@@ -49,7 +49,7 @@ Fill in all `CHANGEME` values:
 | `oauth_client_secret` | OAuth client secret — generate with `openssl rand -hex 16` |
 | `oauth_cookie_secret` | OAuth cookie secret — generate with `openssl rand -hex 16` |
 | `webhook_secret` | GitHub webhook secret — generate with `openssl rand -hex 16` |
-| `github_repo` | Repo in `owner/name` format (e.g., `rhpds/rhdp-publishing-house-dashboard`) |
+| `github_repo` | Repo in `owner/name` format (e.g., `rhpds/rhdp-publishing-house-portal`) |
 | `github_token` | GitHub PAT for fetching manifests from private repos |
 
 **NEVER commit `dev.yml` or `prod.yml`** — they are gitignored. Only `.example` files are tracked.
@@ -73,7 +73,7 @@ ansible-playbook ansible/deploy.yml -e env=dev --tags webhooks
 ```
 
 Configure both webhook URLs (backend + frontend) in the GitHub repo settings:
-`rhpds/rhdp-publishing-house-dashboard` → Settings → Webhooks → Add webhook.
+`rhpds/rhdp-publishing-house-portal` → Settings → Webhooks → Add webhook.
 Content type: `application/json`. Secret: your `webhook_secret` value.
 
 ## Playbook Tags
@@ -114,5 +114,5 @@ Two Containerfiles at the repo root:
 
 ## Repos
 
-- [rhdp-publishing-house-dashboard](https://github.com/rhpds/rhdp-publishing-house-dashboard) — the dashboard app and deployment manifests
+- [rhdp-publishing-house-portal](https://github.com/rhpds/rhdp-publishing-house-portal) — the portal app and deployment manifests
 - [rhdp-publishing-house](https://github.com/rhpds/rhdp-publishing-house) — the CLI skills and plugin
