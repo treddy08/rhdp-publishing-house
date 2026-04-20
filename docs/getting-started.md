@@ -25,24 +25,14 @@ claude --plugin-dir ~/rhdp-publishing-house-skills
 
 ## Start a New Project
 
-### 1. Start the orchestrator
+### 1. Create the project repo from the template
 
-Run this from anywhere — your home directory, a workspace, an IDE terminal:
-
-```
-/rhdp-publishing-house
-```
-
-The orchestrator will ask what you're building and give you the commands to set up a project repo. Follow those instructions, then come back and run `/rhdp-publishing-house` again once you're in the repo.
-
-### 2. Create the project repo from the template
-
-**Option A — GitHub web UI (recommended, no extra tools required):**
+**Option A — GitHub web UI (no extra tools required):**
 
 1. Go to `https://github.com/rhpds/rhdp-publishing-house-template`
 2. Click **Use this template → Create a new repository**
-3. Set it to **Private**, give it a name, create it
-4. Clone it:
+3. Set it to **Private**, give it a name, and create it
+4. Clone it and enter the directory:
    ```bash
    git clone git@github.com:your-org/your-repo.git
    cd your-repo
@@ -57,7 +47,9 @@ gh repo create my-new-lab \
 cd my-new-lab
 ```
 
-### 3. Run the orchestrator inside your project
+### 2. Start the orchestrator
+
+From inside your project repo:
 
 ```
 /rhdp-publishing-house
@@ -65,7 +57,7 @@ cd my-new-lab
 
 The orchestrator finds the manifest, syncs the repo, and starts intake.
 
-> **Works from anywhere.** The orchestrator walks up from your current directory like `git` does — you don't need to `cd` into the project root. It works from any subdirectory, a workspace root, or an IDE where the CWD isn't your project.
+> **Resuming later:** The orchestrator walks up from your current directory like `git` does — you don't need to `cd` to the project root. Run it from any subdirectory, a workspace root, or an IDE where the CWD isn't your project.
 
 ### 4. Answer the intake questions
 
