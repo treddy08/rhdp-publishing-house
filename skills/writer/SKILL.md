@@ -14,7 +14,6 @@ You write Showroom content by wrapping existing showroom skills with Publishing 
 context. You do NOT write AsciiDoc directly — you invoke the appropriate showroom skill
 and provide it with the right inputs from the project's spec.
 
-See @rhdp-publishing-house/docs/PH-COMMON-RULES.md for shared rules.
 See @rhdp-publishing-house/skills/writer/references/writing-standards.md for writing standards.
 
 ## Before Starting

@@ -15,7 +15,6 @@ AgnosticV catalog configuration (7b), and developing environment automation code
 You wrap existing agnosticv and code-review skills with Publishing House context.
 E2E checks are deferred to a future phase.
 
-See @rhdp-publishing-house/docs/PH-COMMON-RULES.md for shared rules.
 See @rhdp-publishing-house/skills/automation/references/automation-patterns.md for automation patterns.
 See @rhdp-publishing-house/skills/automation/references/ansible-automation-guide.md for Ansible collection structure.
 See @rhdp-publishing-house/skills/automation/references/gitops-automation-guide.md for GitOps (Helm + ArgoCD) patterns.
@@ -29,6 +28,7 @@ See @rhdp-publishing-house/skills/automation/references/automation-manifest-form
      like to change this and proceed, or skip automation?"
 3. Check `project.autonomy` for behavior mode
 4. Read `publishing-house/spec/design.md` for infrastructure requirements
+5. Read `project.deployment_mode` from manifest — this determines automation approach options and whether AgnosticV catalog creation is needed
 
 ## Step 1: Determine Sub-Phase
 
@@ -99,9 +99,22 @@ Read context to extract automation requirements:
 - Check for `{attribute}` placeholders that suggest deployed services
 
 **Determine approach:**
-- If the lab teaches GitOps concepts → `approach: gitops`
-- If the lab needs imperative setup or complex ordering → `approach: ansible`
-- If both patterns are needed → `approach: both`
+
+Check `project.deployment_mode`:
+
+**If `self_published`:**
+- Approach is GitOps only. Inform the user:
+  > "Self-published projects use the Field Source CI, which expects a GitOps repo. Your automation approach is GitOps (Helm + ArgoCD). If you need Ansible tasks, they can run as Ansible Runner jobs within the GitOps framework."
+- Reference the field-sourced-content-template at `https://github.com/rhpds/field-sourced-content-template` for the starter pattern, including the `examples/ansible` path for Ansible Runner within GitOps.
+- Set `approach: gitops` in the automation manifest.
+
+**If `rhdp_published`:**
+- Ask the user: "How should the environment be automated?"
+  - **Ansible** — Ansible collections as AgnosticD workloads
+  - **GitOps** — Helm charts deployed by ArgoCD
+  - **Both** — Ansible for cluster-level setup, GitOps for application workloads
+- If the lab teaches GitOps concepts → recommend `approach: gitops`
+- If the lab needs imperative setup or complex ordering → recommend `approach: ansible`
 - When in doubt, ask the user
 
 Write the manifest to `publishing-house/spec/automation-manifest.yaml`.
@@ -145,10 +158,18 @@ automation:
 
 ## Phase 7b: AgnosticV Catalog Creation
 
-With the automation requirements approved, we now know the full infrastructure
-scope — operators, multi-user config, provision data — needed to build the catalog.
-If the project uses an existing Field Source Content catalog item instead, this
-sub-phase can be skipped.
+**Check deployment mode first:**
+
+When `deployment_mode: self_published`:
+- Automatically skip 7b: set `substeps.catalog_item: skipped`
+- Inform user: "No AgnosticV catalog item needed for self-published projects."
+- Proceed to 7c.
+
+When `deployment_mode: rhdp_published`:
+- 7b is required. Ask:
+  > "An AgnosticV catalog item is required for RHDP-published projects. Do you have AgnosticV access to create it, or does someone else need to handle this?"
+- **If user has access** → proceed with agnosticv:catalog-builder as documented below
+- **If user doesn't have access** → set `substeps.catalog_item: pending_handoff`. Write a worklog entry with the information needed for handoff (infrastructure type, operators, multi-user config from the approved automation manifest). Proceed to 7c.
 
 ### Step 7b-1: Gather Context from PH Spec and Automation Manifest
 
@@ -235,8 +256,8 @@ automation:
 ## Phase 7c: Automation Code
 
 Write the automation code from the approved automation manifest. If the catalog item
-(7b) was skipped (Field Source Content path), proceed directly from approved requirements
-(7a) to code.
+(7b) was skipped (self-published projects skip this step), proceed directly from
+approved requirements (7a) to code.
 
 ### Step 7c-1: Write Automation Code
 
@@ -289,38 +310,22 @@ See @rhdp-publishing-house/skills/automation/references/gitops-automation-guide.
 - **Full:** Write all automation code. Run the code review cycle automatically.
   Present final results.
 
-### Step 7c-2: Code Review Cycle
+### Step 7c-2: Safety Check
 
-After writing automation code, run a self-contained review cycle:
+After writing automation code, run a quick safety check before proceeding:
 
-**1. Self-Review:**
-- Check against automation standards in references/automation-patterns.md
-- Verify no hardcoded credentials or passwords
-- Verify container images use pinned tags
-- Check that common.yaml workload references match created roles
+**"Don't hurt yourself" checklist:**
+- [ ] No hardcoded credentials, passwords, or API keys (use variables or vault)
+- [ ] Container images use pinned tags (not `latest`)
+- [ ] Workload references in `common.yaml` match created roles/charts
+- [ ] Collection dependencies in `requirements_content` are satisfied
+- [ ] No secrets in plain text in templates or defaults
+- [ ] Variables follow naming conventions (`ocp4_workload_<project>_*`)
 
-**2. Code Review (if automation is in a PR-ready state):**
+**Re-validate catalog (if catalog item exists):**
+Re-run `agnosticv:validator` to verify workload references are consistent with the catalog configuration.
 
-If the automation code is committed to a branch with an open PR:
-> "Using `code-review:code-review` to review the automation code."
-
-Invoke `code-review:code-review` against the PR.
-
-If there is no PR yet (code is local only), skip the automated PR review and rely
-on the self-review + validation below.
-
-**3. Re-Validate Catalog Item:**
-> "Re-running `agnosticv:validator` to verify workload references are consistent."
-
-Run `agnosticv:validator` again to ensure:
-- Workloads referenced in common.yaml exist as roles
-- Collection dependencies are satisfied
-- No new issues were introduced
-
-**4. Fix Issues:**
-- Address code review findings
-- Fix validation errors
-- Re-run validation until clean
+**Note:** This is a safety check, not a full code review. The formal code review happens in the Code & Security Review phase — a separate gate with proper PR-based review. For `rhdp_published` projects, code review is required. For `self_published` projects, it is recommended but optional.
 
 ### Step 7c-3: Update Manifest
 
@@ -398,8 +403,8 @@ After completing each sub-phase, inform the user:
 > "Automation requirements documented and approved.
 > Manifest: `publishing-house/spec/automation-manifest.yaml`
 >
-> Next: Create the AgnosticV catalog item (7b), or 'skip catalog item' if using an
-> existing Field Source Content catalog."
+> Next: Create the AgnosticV catalog item (7b). Self-published projects skip this step
+> automatically."
 
 **After 7b (Catalog Item):**
 > "AgnosticV catalog item created and validated.
@@ -429,8 +434,8 @@ Users can skip individual sub-phases:
 - **"skip requirements"** — Set `substeps.requirements: skipped`. User provides
   automation code directly without a manifest. Not recommended — requirements drive
   both catalog and code decisions.
-- **"skip catalog item"** — Set `substeps.catalog_item: skipped`. Project uses an
-  existing Field Source Content catalog item, or user manages AgV config outside
+- **"skip catalog item"** — Set `substeps.catalog_item: skipped`. Project is
+  self-published (no catalog item needed), or user manages AgV config outside
   Publishing House. Automation code is built from the approved requirements manifest.
 - **"skip automation code"** — Set `substeps.automation_code: skipped`. Automation
   handled externally.

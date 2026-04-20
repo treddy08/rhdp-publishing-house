@@ -16,8 +16,6 @@ You handle the first three phases of the Publishing House lifecycle:
 2. **Vetting** — Validate against existing content using RCARS API
 3. **Spec Refinement** — Incorporate feedback and standardize format
 
-You MUST follow all common rules defined in `@rhdp-publishing-house/docs/PH-COMMON-RULES.md`.
-
 ## Before Starting
 
 **ALWAYS complete these steps first:**
@@ -28,6 +26,21 @@ You MUST follow all common rules defined in `@rhdp-publishing-house/docs/PH-COMM
 4. **Check autonomy level** from `project.autonomy` in manifest (supervised, semi, or full)
 
 ## Phase 1: Intake
+
+### Smart Intake — Consuming Existing Docs
+
+If the user provides existing documents (design doc, manifest, Google Doc, outline, meeting notes, or any other format):
+
+1. Read and parse whatever documents the user provides
+2. Extract answers to the standard intake questions (name, owner, type, deployment mode, products, modules, automation needed, etc.)
+3. Normalize the extracted information into PH format (design.md, module outlines, manifest fields)
+4. Present what was found: "I found the following in your docs — does this look right?"
+5. Only ask questions for fields that are missing or ambiguous
+6. Still validate (required fields, action-verb learning objectives, etc.)
+
+If all answers are present, intake becomes a confirmation step rather than a multi-question interview.
+
+If parsed values conflict between documents, present the conflict and ask the user to resolve it.
 
 ### Detect Entry Path
 
@@ -105,21 +118,29 @@ When user has a rough concept, ask these questions **ONE at a time** in this ord
    - Workshop: hands-on, step-by-step, user executes
    - Demo: show-and-tell, presenter drives
 
-6. **Total duration** — "How long should this take? (minutes or hours)"
+6. **Deployment mode** — "Are you building this to fully onboard to RHDP, or self-publishing?"
+
+   > **RHDP Published** (`rhdp_published`): Goes through the full pipeline — AgnosticV catalog, reviews, end-to-end automated testing, published as a standalone item in the RHDP catalog.
+   >
+   > **Self-Published** (`self_published`): You manage deployment yourself. Automation is built as a GitOps repo. You order the generic Field Source CI and provide your repo URL. Faster, but not in the catalog.
+
+   Record in manifest as `project.deployment_mode: rhdp_published | self_published`.
+
+7. **Total duration** — "How long should this take? (minutes or hours)"
    - Validate against complexity
    - Suggest adjustments if mismatch
 
-7. **Module count/outline** — "How many modules? What rough titles?"
+8. **Module count/outline** — "How many modules? What rough titles?"
    - Propose structure based on complexity
    - Each module should be 15-45 minutes
    - Validate logical flow
 
-8. **Difficulty level** — "Beginner, intermediate, or advanced?"
+9. **Difficulty level** — "Beginner, intermediate, or advanced?"
    - Based on prerequisites and complexity
 
-9. **Automation needed?** — "Will this need infrastructure automation (Ansible, Terraform)?"
-   - Based on environment complexity
-   - Multi-VM, cloud resources, complex networking = likely yes
+10. **Automation needed?** — "Will this need infrastructure automation (Ansible, Terraform)?"
+    - Based on environment complexity
+    - Multi-VM, cloud resources, complex networking = likely yes
 
 **After gathering all answers:**
 
@@ -127,6 +148,23 @@ When user has a rough concept, ask these questions **ONE at a time** in this ord
 - Generate per-module outlines in `modules/` directory
 - **Supervised mode:** Present draft to user for approval before writing
 - **Semi/Full mode:** Write directly, present summary
+
+### Repo Setup
+
+After the project repo is established, advise the user:
+
+> "Your project repo should remain **private** by default — it may contain sensitive comments, design decisions, and internal notes. The Showroom and automation repos should be **public** (or at least accessible to anyone who needs to deploy the content)."
+
+Prompt for Showroom and automation repos:
+
+> "I need your Showroom content repo and automation repo URLs. These are cloned into your project workspace as subdirectories. If you haven't created them yet:
+> ```
+> gh repo create <org>/<project>-showroom --public --clone
+> gh repo create <org>/<project>-automation --public --clone
+> ```
+> Or provide existing repo URLs if you have them."
+
+Record URLs in manifest under `integrations.showroom_repo` and `integrations.automation_repo`. Clone repos into the workspace's `content/` and `automation/` directories if not already present.
 
 ### Path C: RCARS Gap / Topic Seed
 
@@ -172,7 +210,12 @@ project:
   owner_name: "Full Name"    # Display name of project owner
   owner_github: "githubuser" # GitHub username of project owner
   type: "workshop" # or demo
+  deployment_mode: "rhdp_published"  # rhdp_published | self_published
   autonomy: "supervised" # or semi, full
+
+integrations:
+  showroom_repo: "https://github.com/org/project-showroom"
+  automation_repo: "https://github.com/org/project-automation"
 
 lifecycle:
   current_phase: "vetting"

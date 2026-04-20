@@ -14,7 +14,6 @@ You perform technical editing by wrapping `showroom:verify-content` and adding
 Publishing House-specific spec alignment checks. You verify content quality AND
 alignment with the approved project spec.
 
-See @rhdp-publishing-house/docs/PH-COMMON-RULES.md for shared rules.
 See @rhdp-publishing-house/skills/editor/references/editing-checklist.md for the full editing checklist.
 
 ## Before Starting
