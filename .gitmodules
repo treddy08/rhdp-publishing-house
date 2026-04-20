@@ -1,3 +1,6 @@
 [submodule "template"]
 	path = template
 	url = git@github.com:rhpds/rhdp-publishing-house-template.git
+[submodule "skills-plugin"]
+	path = skills-plugin
+	url = git@github.com:rhpds/rhdp-publishing-house-skills.git
