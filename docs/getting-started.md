@@ -2,37 +2,28 @@
 
 ## Prerequisites
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed
-- A GitHub account with access to the `rhpds` org
+### 1. Install Claude Code
 
-## Install the Plugin
+[Install Claude Code](https://docs.anthropic.com/en/docs/claude-code) if you haven't already.
 
-Clone the skills repo and point Claude Code at it. You only do this once.
+### 2. Install the Publishing House plugin
+
+Clone the skills repo. You only do this once.
 
 ```bash
 git clone git@github.com:rhpds/rhdp-publishing-house-skills.git ~/rhdp-publishing-house-skills
 ```
 
-Then start Claude Code with the plugin:
+Add the plugin to your Claude Code settings, or pass it at launch with `--plugin-dir ~/rhdp-publishing-house-skills`.
 
-```bash
-claude --plugin-dir ~/rhdp-publishing-house-skills
-```
-
-> **Tip:** Add `--plugin-dir ~/rhdp-publishing-house-skills` to your shell alias or Claude Code settings so you don't need the flag every time.
-
----
-
-## Start a New Project
-
-### 1. Create the project repo from the template
+### 3. Create your project repo from the template
 
 **Option A — GitHub web UI (no extra tools required):**
 
 1. Go to `https://github.com/rhpds/rhdp-publishing-house-template`
 2. Click **Use this template → Create a new repository**
 3. Set it to **Private**, give it a name, and create it
-4. Clone it and enter the directory:
+4. Clone it:
    ```bash
    git clone git@github.com:your-org/your-repo.git
    cd your-repo
@@ -47,9 +38,11 @@ gh repo create my-new-lab \
 cd my-new-lab
 ```
 
-### 2. Start the orchestrator
+---
 
-From inside your project repo:
+## Quick Start
+
+From inside your project repo, start Claude Code and run:
 
 ```
 /rhdp-publishing-house
