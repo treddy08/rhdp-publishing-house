@@ -29,7 +29,7 @@ Two deployment modes set during intake, stored in `project.deployment_mode`:
 
 | Mode | Meaning | Automation Approach | AgnosticV | Code Review |
 |------|---------|-------------------|-----------|-------------|
-| `rhdp_published` | Full RHDP onboarding. Published in catalog with its own CI. | Ansible, GitOps, or both (user chooses) | Required at 7b (access permitting) | Required (separate phase) |
+| `rhdp_published` | Full RHDP onboarding. Published in catalog with its own CI. Must be fully approved and have end-to-end automated testing of environment and all user activities. | Ansible, GitOps, or both (user chooses) | Required at 7b (access permitting) | Required (separate phase) |
 | `self_published` | Self-managed. Deployed via generic Field Source CI (`agd_v2/ocp-field-asset-cnv`). | GitOps only (Helm + ArgoCD). Ansible Runner jobs available within GitOps. | Skipped (no catalog item) | Recommended, not required |
 
 ## Changes by Skill
@@ -61,19 +61,38 @@ After the existing project type question (workshop/demo), add:
 
 Record in manifest as `project.deployment_mode: rhdp_published | self_published`.
 
-**Smart intake — consume existing docs:**
+**Repo setup guidance during intake:**
 
-When the user provides a `design.md`, `manifest.yaml`, or both:
+After the project repo is established (cloned from template), the intake skill should:
 
-1. Parse the provided documents
+1. Advise the user: "Your project repo should remain **private** by default — it may contain sensitive comments, design decisions, and internal notes. The Showroom and automation repos should be **public** (or at least accessible to anyone who needs to deploy the content)."
+
+2. Prompt the user to create or provide the Showroom and automation repos:
+   > "I need your Showroom content repo and automation repo URLs. These are cloned into your project workspace as subdirectories. If you haven't created them yet, you can do so now:
+   > ```
+   > gh repo create <org>/<project>-showroom --public --clone
+   > gh repo create <org>/<project>-automation --public --clone
+   > ```
+   > Or provide existing repo URLs if you have them."
+
+3. Record the URLs in the manifest under `integrations.showroom_repo` and `integrations.automation_repo`.
+
+4. Clone the repos into the workspace's `content/` and `automation/` directories if not already present.
+
+**Smart intake — consume whatever the user provides:**
+
+The user may provide a `design.md`, a `manifest.yaml`, a Google Doc, a rough outline, meeting notes, or anything else. The intake skill should handle whatever it gets:
+
+1. Read and parse whatever documents the user provides (any format)
 2. Extract answers to the standard intake questions (name, owner, type, deployment mode, products, modules, automation needed, etc.)
-3. Present what was found: "I found the following in your spec — does this look right?"
-4. Only ask questions for fields that are missing or ambiguous
-5. Still validate and normalize (consistent formatting, required fields present, learning objectives use action verbs)
+3. Normalize the extracted information into the proper PH format (design.md, module outlines, manifest fields)
+4. Present what was found: "I found the following in your docs — does this look right?"
+5. Only ask questions for fields that are missing or ambiguous
+6. Still validate (required fields present, learning objectives use action verbs, etc.)
 
-If all answers are present in the docs, intake becomes a confirmation step, not a 9+ question interview.
+If all answers are present in the provided docs, intake becomes a confirmation step, not a 9+ question interview.
 
-If parsed values conflict between documents (e.g., design.md says "workshop" but manifest says "demo"), present the conflict and ask the user to resolve it.
+If parsed values conflict between documents (e.g., one doc says "workshop" but another says "demo"), present the conflict and ask the user to resolve it.
 
 **Manifest output update:**
 
