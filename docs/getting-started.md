@@ -7,23 +7,48 @@
 
 ## Install the Plugin
 
-Point Claude Code at the Publishing House skills repo. You only do this once.
+Clone the skills repo and point Claude Code at it. You only do this once.
 
 ```bash
 git clone git@github.com:rhpds/rhdp-publishing-house-skills.git ~/rhdp-publishing-house-skills
 ```
 
-Then add the plugin directory to your Claude Code settings, or pass it at launch:
+Then start Claude Code with the plugin:
 
 ```bash
 claude --plugin-dir ~/rhdp-publishing-house-skills
 ```
 
-> **Tip:** Add `--plugin-dir ~/rhdp-publishing-house-skills` to your shell alias or Claude Code config so you don't need to pass it every time.
+> **Tip:** Add `--plugin-dir ~/rhdp-publishing-house-skills` to your shell alias or Claude Code settings so you don't need the flag every time.
+
+---
 
 ## Start a New Project
 
-### 1. Create a project repo from the template
+### 1. Start the orchestrator
+
+Run this from anywhere — your home directory, a workspace, an IDE terminal:
+
+```
+/rhdp-publishing-house
+```
+
+The orchestrator will ask what you're building and give you the commands to set up a project repo. Follow those instructions, then come back and run `/rhdp-publishing-house` again once you're in the repo.
+
+### 2. Create the project repo from the template
+
+**Option A — GitHub web UI (recommended, no extra tools required):**
+
+1. Go to `https://github.com/rhpds/rhdp-publishing-house-template`
+2. Click **Use this template → Create a new repository**
+3. Set it to **Private**, give it a name, create it
+4. Clone it:
+   ```bash
+   git clone git@github.com:your-org/your-repo.git
+   cd your-repo
+   ```
+
+**Option B — `gh` CLI:**
 
 ```bash
 gh repo create my-new-lab \
@@ -32,23 +57,21 @@ gh repo create my-new-lab \
 cd my-new-lab
 ```
 
-### 2. Start the orchestrator
-
-From inside your project repo (or anywhere — see note below):
+### 3. Run the orchestrator inside your project
 
 ```
 /rhdp-publishing-house
 ```
 
-The orchestrator finds your project, syncs the repo, and walks you through intake.
+The orchestrator finds the manifest, syncs the repo, and starts intake.
 
-> **Works from anywhere.** The orchestrator searches up from your current directory, like `git` does. You can run it from inside any subdirectory of your project, from a workspace root, or from an IDE where the CWD isn't your project. It will find the manifest.
+> **Works from anywhere.** The orchestrator walks up from your current directory like `git` does — you don't need to `cd` into the project root. It works from any subdirectory, a workspace root, or an IDE where the CWD isn't your project.
 
-### 3. Answer the intake questions
+### 4. Answer the intake questions
 
-The intake agent asks what you're building, what it's for, and how you plan to deploy it. If you already have a design doc, Google Doc, or rough outline, hand it over and the agent extracts answers from it instead of asking.
+The intake agent asks what you're building, what it's for, and how you plan to deploy it. If you already have a design doc, Google Doc, or rough outline, provide it and the agent extracts answers from it instead of asking every question.
 
-You'll be asked:
+You'll cover:
 
 - **What are you building?** — name, type (workshop or demo), target audience
 - **Deployment mode** — RHDP Published or Self-Published (see below)
@@ -56,22 +79,22 @@ You'll be asked:
 - **Modules** — how many, rough titles, estimated duration
 - **Automation** — whether the lab needs infrastructure pre-configured
 
-### 4. Approve the spec
+### 5. Approve the spec
 
 After intake, the agent produces `publishing-house/spec/design.md` and per-module outlines. Review and approve. This is the only hard gate before writing starts.
 
-### 5. Write, automate, edit
+### 6. Write, automate, edit
 
 From here, the orchestrator guides you. Say what you want to do and it routes to the right agent:
 
 - `"write module 1"` — writer agent generates AsciiDoc from the module outline
 - `"build automation"` — automation agent captures requirements, creates the catalog, writes code
 - `"edit all"` — editor agent reviews content against Red Hat standards and your spec
-- `"what's next"` — status summary from the manifest, no heavy loading
+- `"what's next"` — lightweight status summary, no heavy loading
 
-### 6. End the session
+### 7. End the session
 
-Say `"I'm done for today"` or `"session summary"`. The orchestrator writes a worklog entry, commits the manifest and worklog, and pushes. Next session, `git pull` and the worklog happens automatically.
+Say `"I'm done for today"` or `"session summary"`. The orchestrator writes a worklog entry, commits the manifest and worklog, and pushes. Next session, the pull happens automatically.
 
 ---
 
@@ -81,10 +104,10 @@ Set during intake. Determines the automation path and publishing target.
 
 | Mode | Description | Automation | Published In RHDP? |
 |------|-------------|------------|-------------------|
-| **RHDP Published** (`rhdp_published`) | Full pipeline. Goes through all review gates, creates its own AgnosticV catalog item. | Ansible, GitOps, or both | Yes — standalone catalog item |
-| **Self-Published** (`self_published`) | You manage deployment. Uses the generic Field Source CI (`agd_v2/ocp-field-asset-cnv`). | GitOps only (Helm + ArgoCD) | No — you order the Field Source CI with your repo URL |
+| **RHDP Published** (`rhdp_published`) | Full pipeline. Review gates, AgnosticV catalog, published as a standalone item. | Ansible, GitOps, or both | Yes |
+| **Self-Published** (`self_published`) | You manage deployment. Uses the generic Field Source CI with your GitOps repo URL. | GitOps only (Helm + ArgoCD) | No |
 
-You can run the full content pipeline (intake, writing, editing) regardless of mode. The fork is where the output lands, not how the work gets done.
+The content pipeline (intake, writing, editing) is the same for both modes. The fork is where the output lands.
 
 ---
 
@@ -117,7 +140,7 @@ Switch any time mid-session: `"switch to semi"`
 - **Writing** — skip if you wrote content manually
 - **Automation** — skip if environment setup is handled externally
 
-Say `"skip writing"`, `"I already have content"`, or `"skip automation"` to jump ahead. The orchestrator confirms before skipping anything.
+Say `"skip writing"`, `"I already have content"`, or `"skip automation"` to jump ahead.
 
 ---
 
@@ -125,7 +148,7 @@ Say `"skip writing"`, `"I already have content"`, or `"skip automation"` to jump
 
 The manifest is the source of truth. Push your repo; a colleague runs `/rhdp-publishing-house` and picks up exactly where you left off.
 
-The orchestrator **pulls before reading and pushes after writing** — session start syncs, session end commits. You don't need to remember to do this.
+The orchestrator **pulls at session start and pushes at session end** — you don't need to manage this manually.
 
 For async handoffs, use the worklog:
 
@@ -141,13 +164,13 @@ The worklog lives in `publishing-house/worklog.yaml` and is committed with every
 
 ## Resuming a Session
 
-Just run `/rhdp-publishing-house` from anywhere in your project. The orchestrator:
+Run `/rhdp-publishing-house` from anywhere. The orchestrator:
 
 1. Finds the manifest (walks up from CWD)
 2. Pulls latest changes
 3. Reads manifest and worklog
 4. Presents current status and open items
-5. Asks what you want to do
+5. Asks what you want to do next
 
 ---
 
@@ -157,4 +180,4 @@ Just run `/rhdp-publishing-house` from anywhere in your project. The orchestrato
 - **Human edits are expected.** Edit content, specs, and automation files freely between sessions. All agents read fresh and respect what's there.
 - **The worklog is for notes, not tasks.** Manifest tracks phases; worklog tracks decisions, handoffs, and context that doesn't fit in structured fields.
 - **RCARS not available?** Skip vetting and come back to it later — it's optional.
-- **Automation testing gate.** After the automation agent writes code, you deploy it yourself. Tell the agent `"testing done"` when you've verified it works on a real environment.
+- **Automation testing gate.** After the automation agent writes code, you deploy it yourself and confirm with `"testing done"`.
