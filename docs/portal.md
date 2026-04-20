@@ -1,0 +1,138 @@
+# Portal
+
+The RHDP Publishing House Portal provides cross-project visibility into the content lifecycle. While individual authors interact with the CLI skills, the portal gives managers, PMs, and stakeholders a single view across all active projects — without needing Claude Code.
+
+The portal is read-only. All state changes happen through the CLI skills. The manifest in git is the source of truth; the portal database is a cache.
+
+## Architecture
+
+```
+GitHub (manifest.yaml, worklog.yaml)
+        ↓  refresh engine (scheduled + on-demand)
+   PostgreSQL (cache)
+        ↓
+   FastAPI backend
+        ↓
+   Next.js frontend
+```
+
+The refresh engine checks each registered project's GitHub repo and syncs manifest and worklog data to the database. It runs on a schedule and on-demand when you trigger a manual refresh.
+
+## Registering a Project
+
+Navigate to the **Register** page and provide the GitHub repository URL. The portal fetches the manifest, reads project metadata (name, owner, type, deployment mode), parses lifecycle phases, and adds the project. You'll be redirected to the project detail page.
+
+Registration requires only a repo URL — all other metadata comes from the manifest.
+
+## Pipeline View
+
+The **Pipeline** page shows a kanban board with columns mapping to lifecycle phases:
+
+| Column | Phases |
+|--------|--------|
+| Intake | intake, vetting, spec_refinement |
+| Approval | approval |
+| Writing | writing |
+| Automation | automation |
+| Editing | editing |
+| Code & Security | code_security_review |
+| Final Review | final_review |
+| Ready | ready_for_publishing |
+
+Each project appears as a card in its current active phase column. Cards show the project name, module count, and assignees.
+
+## Projects Table
+
+The **Projects** page shows a searchable table of all registered projects:
+
+- **Project name** — clickable link to the detail page
+- **Type** — workshop or demo
+- **Deployment mode** — `rhdp_published` or `self_published`
+- **Module count** — number of writing modules
+- **Assignees** — everyone assigned across all phases
+- **Phase progress bar** — colored segments showing which phases are complete, active, or pending
+- **Actions** — refresh (re-fetch from GitHub), edit (update name or repo URL), delete
+
+## Project Detail
+
+Click a project name to see the full detail view.
+
+### Overview Tab
+
+**Phase accordions** — each lifecycle phase is an expandable section showing:
+
+- **Completion date** — when the phase was finished
+- **Assignees** — who worked on this phase
+- **Artifacts** — file paths linked directly to the file in the GitHub repo
+- **Phase-specific content:**
+  - **Writing** — module list with individual status and links to content and review files
+  - **Automation** — substep status (requirements, catalog item, automation code, testing), catalog path, AgnosticV repo/branch
+  - **Approval** — who approved it and when
+  - **Vetting** — RCARS result (approved, revise, rejected)
+
+Pending phases show a dependency hint explaining what must complete first.
+
+### Worklog Tab
+
+A chronological timeline of entries from `publishing-house/worklog.yaml`:
+
+- Decisions (open and resolved)
+- Action items
+- Handoff notes
+- Session summaries
+
+Open items are highlighted. Resolved items show who resolved them and when.
+
+### Artifacts Tab
+
+Aggregated list of all artifacts across all phases — specs, module outlines, review reports, automation files — with links to the files in the GitHub repo.
+
+### Launch Instructions Tab
+
+For deployed projects: how to order the environment and what users need to get started. Source: the automation manifest and catalog configuration. For `self_published` projects, includes the Field Source CI order instructions and the GitOps repo URL.
+
+## Sidebar
+
+Each project detail page shows a sidebar with:
+
+- **Project Info** — type, deployment mode, owner, autonomy level, created date
+- **Links** — GitHub repo, Showroom repo, automation repo
+- **Assignees** — listed with their phase assignment
+
+## Refreshing Data
+
+Data is refreshed in two ways:
+
+- **Scheduled** — the refresh engine checks all registered projects periodically
+- **Manual** — click the refresh button (⟳) on any project in the table or detail view
+
+The refresh engine is incremental: it checks the repo's last-push timestamp before fetching, so unchanged repos are skipped. Parallel fetching keeps refresh time low even at scale.
+
+## Manifest Requirements
+
+For a project to display correctly, its `publishing-house/manifest.yaml` must include:
+
+```yaml
+project:
+  name: "Project Title"
+  owner_name: "Jane Smith"
+  owner_github: "jsmith"
+  type: "workshop"              # workshop | demo
+  deployment_mode: "rhdp_published"  # rhdp_published | self_published
+  autonomy: "supervised"
+  created: "2026-04-01"
+
+lifecycle:
+  phases:
+    <phase_name>:
+      status: "pending"         # pending | in_progress | completed | skipped
+      completed_at: null        # ISO datetime when completed (YYYY-MM-DD HH:mm)
+      assignees: []             # GitHub usernames working on this phase
+      artifacts: []             # File paths (linked to GitHub in the portal)
+```
+
+The `completed_at`, `assignees`, and `artifacts` fields drive what appears in the phase accordions.
+
+## Deployment
+
+The portal runs on OpenShift. See [docs/dashboard-deployment.md](dashboard-deployment.md) for deployment instructions.

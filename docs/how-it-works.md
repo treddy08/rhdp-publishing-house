@@ -7,25 +7,24 @@ RHDP Publishing House uses a Hub + Spoke plugin architecture. A thin orchestrato
 ```
 /rhdp-publishing-house [supervised|semi|full]
          |
-    Orchestrator (reads manifest, determines phase, dispatches)
+    Orchestrator (discovers project, syncs repo, reads manifest, dispatches)
          |
-    +----+----+--------+----------+---------+--------+
-    |         |        |          |         |        |
- Intake    Writer   Editor   Automation  Security  Review
-    |         |        |          |
-  RCARS    showroom  showroom  agnosticv
-  API      :create-  :verify-  :catalog-
-           lab/demo  content   builder
+    +----+------+--------+----------+---------+--------+
+    |           |        |          |         |        |
+ Intake      Writer   Editor   Automation  Worklog  Security/Review
+    |           |        |          |                  (planned)
+  RCARS      showroom  showroom  agnosticv
+  API        :create-  :verify-  :catalog-
+             lab/demo  content   builder
 ```
 
-Each agent is a separate skill file -- focused, testable, independently iterable. Adding a new phase means adding a new spoke, not rewriting a monolith.
+Each agent is a separate skill file — focused, testable, independently iterable. Adding a new phase means adding a new spoke, not rewriting a monolith.
 
 ## Content Lifecycle
 
 ```
-Intake* --> Vetting --> Spec Refinement --> [Approval*] --> Writing --> Editing*
-  --> Automation (Catalog Item --> Requirements --> Code --> Testing)
-  --> Security Review* --> Final Review* --> Ready for Publishing
+Intake* → Vetting → Spec Refinement → [Approval*] → Writing → Automation
+  → Editing* → Code & Security Review* → Final Review* → Ready for Publishing
 
 * = required    (unmarked = optional, skip if handled another way)
 ```
@@ -35,10 +34,10 @@ Intake* --> Vetting --> Spec Refinement --> [Approval*] --> Writing --> Editing*
 | Phase | Agent | What It Does |
 |-------|-------|-------------|
 | **Intake** | Intake Agent (Opus) | Generates or ingests the project spec and module outlines. Shortcuttable with a pre-existing design doc. |
-| **Approval** | Human | Owner reviews and approves the spec. Hard gate -- never auto-advanced. |
+| **Approval** | Human | Owner reviews and approves the spec. Hard gate — never auto-advanced. |
 | **Technical Editing** | Editor Agent (Sonnet) | Wraps `showroom:verify-content` + spec alignment checks. Quality gate regardless of how content was produced. |
-| **Security Review** | Security Agent (Sonnet) | Content-level security audit. Checks for exposed credentials, hardcoded URLs, sensitive data. |
-| **Final Review** | Review Agent (Sonnet) | Holistic check: spec alignment, completeness, cross-module consistency. |
+| **Code & Security Review** | Security Agent (Sonnet) | Content-level security audit and automation code review. *(Not yet implemented.)* |
+| **Final Review** | Review Agent (Sonnet) | Holistic check: spec alignment, completeness, cross-module consistency. *(Not yet implemented.)* |
 
 ### Optional Phases
 
@@ -46,27 +45,33 @@ Intake* --> Vetting --> Spec Refinement --> [Approval*] --> Writing --> Editing*
 |-------|-------|-------------|------------|
 | **Vetting** | Intake Agent | Checks against existing RHDP content via RCARS API | RCARS unavailable or uniqueness already validated |
 | **Spec Refinement** | Intake Agent | Cleans up spec for downstream agent consumption | Spec is already clean and detailed |
-| **Writing** | Writer Agent (Sonnet) | Wraps `showroom:create-lab` / `showroom:create-demo` to generate AsciiDoc | Content was written manually or with another tool |
-| **Automation** | Automation Agent (Opus) | Creates AgnosticV catalog, generates automation requirements, writes code, and includes a testing gate | Environment setup handled externally |
+| **Writing** | Writer Agent (Sonnet) | Wraps `showroom:create-lab` / `showroom:create-demo` to generate AsciiDoc | Content was written manually |
+| **Automation** | Automation Agent (Opus) | Requirements, catalog, code, testing gate | Environment setup handled externally |
 
 ## The Agents
 
 ### Orchestrator
 
-The entry point. Reads the project manifest, presents current state, recommends the next action, and dispatches agent skills. Does not perform work itself -- purely state management and routing.
+The entry point. Discovers your project from any directory (walks up from CWD, scans subdirectories), syncs the repo, reads the manifest, presents current state, and dispatches agent skills. Does not perform work itself — purely state management and routing.
 
 - **Model:** Opus 4.6
 - **Invoked by:** `/rhdp-publishing-house [supervised|semi|full]`
+- **Session start:** `git pull --rebase --autostash`
+- **Session end:** commits manifest + worklog, pushes
+
+**Fast path:** For status queries ("what's next?", "where are we?"), reads `manifest.yaml` and `worklog.yaml` directly without loading reference docs. Cheap, fast.
 
 ### Intake Agent
 
-Handles the first three phases: intake, vetting, and spec refinement.
+Handles intake, vetting, and spec refinement.
 
 - **Model:** Opus 4.6
 - **Three entry paths:**
-  1. **Full spec provided** -- experienced content dev brings a detailed spec, agent validates and fills gaps
-  2. **Rough idea** -- "I need a lab on ServiceMesh." Agent builds the spec through conversation
-  3. **RCARS gap** -- a single sentence gap description becomes the seed for a new project
+  1. **Full spec provided** — validates and normalizes an existing design doc (any format)
+  2. **Rough idea** — builds the spec through conversation
+  3. **RCARS gap** — a gap description becomes the seed for a new project
+- **Smart intake:** If the user provides existing docs, extracts answers rather than asking every question
+- **Also handles:** Deployment mode selection, Showroom and automation repo setup
 - **Produces:** `publishing-house/spec/design.md` + per-module outlines in `publishing-house/spec/modules/`
 
 ### Writer Agent
@@ -75,8 +80,8 @@ Generates Showroom AsciiDoc content from approved module outlines.
 
 - **Model:** Sonnet 4.6
 - **Wraps:** `showroom:create-lab` (workshops) and `showroom:create-demo` (demos)
-- **Works module-by-module** -- owner triggers which module to write
-- **Respects human edits** -- if content was modified manually, builds on what exists
+- **Works module-by-module** — owner triggers which module to write
+- **Respects human edits** — if content was modified manually, builds on what exists
 - **Produces:** AsciiDoc files in `content/`
 
 ### Editor Agent
@@ -91,56 +96,60 @@ Reviews content quality and spec alignment.
 
 ### Automation Agent
 
-Creates AgnosticV catalog configuration and environment automation.
+Creates automation requirements, AgnosticV catalog configuration, and environment automation code. Constrained by deployment mode.
 
 - **Model:** Opus 4.6
-- **Five sub-phases:**
-  - **7a: Catalog Item** -- wraps `agnosticv:catalog-builder` and `agnosticv:validator`
-  - **7b: Automation Requirements** -- analyzes content to produce a reviewable automation manifest
-  - **7c: Automation Code** -- writes Ansible collections or GitOps repos from approved requirements, runs its own code review cycle
-  - **7d: Testing** -- human gate: deploy and verify the automation works on a real environment
-  - **7e: E2E Checks** -- end-to-end validation *(deferred)*
-- **Determines infrastructure type** (OCP, RHEL/VMs, Sandbox) from the design spec
+- **Sub-phases:**
+  - **7a: Automation Requirements** — analyzes content (outlines, AsciiDoc, design spec) to produce a reviewable `automation-manifest.yaml` describing what needs to be pre-configured. Always a human-approval gate.
+  - **7b: Catalog Item** — wraps `agnosticv:catalog-builder` + `agnosticv:validator`. `rhdp_published` only; automatically skipped for `self_published`. Handles the case where the user doesn't have AgnosticV access (sets `pending_handoff` and records a worklog entry).
+  - **7c: Automation Code** — writes Ansible collections or GitOps repos from the approved requirements manifest. Runs a safety checklist after writing (no hardcoded creds, pinned image tags, variable naming). The formal code review happens in Code & Security Review.
+  - **7d: Testing** — human gate: deploy to a dev environment and verify automation works
+- **Deployment mode behavior:**
+  - `self_published` → GitOps only (Helm + ArgoCD, using `field-sourced-content-template`)
+  - `rhdp_published` → user chooses: Ansible, GitOps, or both
 - **Produces:** AgnosticV config + automation code in `automation/`
+
+### Worklog Agent
+
+Manages the human-context layer between sessions.
+
+- **Model:** Sonnet 4.6
+- **Manages:** `publishing-house/worklog.yaml` — decisions, handoffs, action items, session summaries
+- **Not a task tracker** — the manifest handles structured phase progress; the worklog handles everything else
+- **Commits and pushes** after every read/write operation
+- **Auto-squashes** old resolved entries when the file grows large
 
 ### Code & Security Review Agent *(not yet implemented)*
 
 Code review of automation artifacts and security audit of both content and automation.
 
-- **Checks:** Credentials in docs, hardcoded URLs, sensitive info in public-facing content, automation code quality
-- **Produces:** `publishing-house/reviews/code-security-review.md`
-
 ### Final Review Agent *(not yet implemented)*
 
 Holistic final check before marking ready for publishing.
 
-- **Checks:** Spec alignment, completeness, cross-module consistency, all prior review items addressed
-- **Produces:** Final review report
+## Deployment Modes
 
-## Portal
+Set during intake. Determines the automation approach and publishing target. The content pipeline (intake, writing, editing) is identical for both modes.
 
-The [RHDP Publishing House Portal](https://github.com/rhpds/rhdp-publishing-house-portal) provides cross-project visibility for managers and PMs. It reads `manifest.yaml` from each registered project's GitHub repo and presents:
-
-- **Pipeline kanban** — projects flowing through lifecycle phases
-- **Projects table** — searchable list with phase progress bars
-- **Project detail** — phase accordions with dates, assignees, artifacts linked to GitHub
-
-The portal is read-only — it never modifies the manifest. All state changes happen through the CLI skills.
-
-See [docs/dashboard.md](dashboard.md) for full details.
+| Mode | Automation | AgnosticV Catalog | Code Review | Publishing |
+|------|------------|-------------------|-------------|------------|
+| `rhdp_published` | Ansible, GitOps, or both | Required at 7b | Required | Standalone RHDP catalog item |
+| `self_published` | GitOps only | Skipped | Recommended | Order Field Source CI with your repo URL |
 
 ## State Management
 
-All project state lives in `publishing-house/manifest.yaml` -- a structured YAML file that the orchestrator reads and writes every session. It tracks:
+All project state lives in `publishing-house/manifest.yaml` — a YAML file the orchestrator reads and writes every session. It tracks:
 
-- Project metadata (name, type, owner, autonomy level)
+- Project metadata (name, type, owner, autonomy level, deployment mode)
 - Current lifecycle phase
 - Status of every phase and sub-phase
 - Module-level progress (pending, in_progress, drafted, approved)
 - Artifact paths (specs, content files, review reports)
 - Integration URLs (RCARS, Showroom repo, automation repo)
 
-The manifest is the single source of truth. It enables collaboration without external coordination tools -- push your repo, a colleague picks up exactly where you left off.
+`publishing-house/worklog.yaml` is a companion file for human context. The manifest is structured state; the worklog is narrative context.
+
+Both files are committed and pushed at session end. The orchestrator pulls at session start. This makes collaboration seamless — push your repo, a colleague picks up exactly where you left off without any external coordination tool.
 
 ## Autonomy Levels
 
@@ -149,10 +158,10 @@ Control how much review you want at each step:
 | Level | Behavior |
 |-------|----------|
 | **supervised** (default) | Agent presents every artifact for approval before committing |
-| **semi** | Agent commits to WIP branch, pauses at phase gates and decision points only |
-| **full** | Agent works through entire phase, presents output at phase gate for review |
+| **semi** | Agent works ahead, pauses at phase gates and decision points |
+| **full** | Agent works through entire phase, presents output at phase completion |
 
-Switch mid-session by saying "switch to semi" or re-invoking with a different level.
+Switch mid-session: `"switch to semi"` or re-invoke with a different level.
 
 ## Existing Skills Reused
 
@@ -163,9 +172,8 @@ Publishing House wraps existing RHDP marketplace skills rather than reinventing 
 | `showroom:create-lab` | Writer Agent | Writing |
 | `showroom:create-demo` | Writer Agent | Writing |
 | `showroom:verify-content` | Editor Agent | Technical Editing |
-| `agnosticv:catalog-builder` | Automation Agent | Catalog Item (7a) |
-| `agnosticv:validator` | Automation Agent | Catalog Item (7a) |
-| `code-review:code-review` | Automation Agent | Automation Code (7c) |
+| `agnosticv:catalog-builder` | Automation Agent | Catalog Item (7b) |
+| `agnosticv:validator` | Automation Agent | Catalog Item (7b), Safety Check (7c) |
 
 ## Project Template
 
@@ -175,14 +183,32 @@ New projects start from a GitHub template repo (`rhpds/rhdp-publishing-house-tem
 my-new-lab/
 ├── publishing-house/
 │   ├── manifest.yaml                    # Pre-populated with empty phases
-│   ├── journal.md                       # Work journal (experimental)
+│   ├── worklog.yaml                     # Empty worklog
 │   ├── spec/
-│   │   ├── design.md                    # Master design spec
-│   │   ├── modules/                     # Per-module outlines
-│   │   └── automation-manifest.yaml     # Automation requirements (reviewable)
+│   │   ├── design.md                    # Master design spec (produced by intake)
+│   │   ├── modules/                     # Per-module outlines (produced by intake)
+│   │   └── automation-manifest.yaml     # Automation requirements (produced by 7a)
 │   ├── reviews/                         # Agent review artifacts
 │   └── decisions/                       # Decision records
 ├── content/                             # Showroom AsciiDoc (writer agent output)
 ├── automation/                          # Ansible/Helm (automation agent output)
-└── CLAUDE.md                            # Points to manifest
+└── CLAUDE.md                            # Points to manifest, tells Claude Code to run /rhdp-publishing-house
 ```
+
+`content/` and `automation/` are separate git repos cloned as subdirectories. Each has its own remote. The project repo (private) holds the manifest and spec; those repos (public) hold the deliverables.
+
+## Portal
+
+The [RHDP Publishing House Portal](https://github.com/rhpds/rhdp-publishing-house-portal)
+provides cross-project visibility for managers and PMs. It reads `manifest.yaml` and
+`worklog.yaml` from each registered project's GitHub repo and presents:
+
+- **Pipeline kanban** — projects flowing through lifecycle phases
+- **Projects table** — searchable list with phase progress bars
+- **Project detail** — phase accordions with dates, assignees, artifacts linked to GitHub
+- **Worklog timeline** — human-context entries from `worklog.yaml`
+- **Launch instructions** — how to order and use the deployed environment
+
+The portal is read-only — it never modifies the manifest. All state changes happen through the CLI skills.
+
+See [docs/portal.md](portal.md) for full details.
