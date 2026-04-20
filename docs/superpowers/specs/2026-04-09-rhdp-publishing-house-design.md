@@ -496,6 +496,26 @@ For simple 5-10 minute labs, Sonnet handles all phases well. For large multi-mod
 
 ## Open Items
 
+- [ ] **[PRIORITY] Self-service deployment pathway** — Publishing House must support content developers who don't have access to agnosticV (or prefer not to use it) by targeting the generic Field Source CI (`agd_v2/ocp-field-asset-cnv`). This CI provisions an OpenShift cluster with the gitops bootstrap role pre-installed and prompts the user to supply their GitOps repo at order time — no AgnosticV catalog item is needed.
+
+  **Intake change:** During the intake interview, the agent must ask: *"Are you building this to fully onboard to RHDP, or do you want to build self-service content?"* Record the answer in the manifest as `deployment_mode: onboarded | self_service`.
+
+  **Automation phase change:** When `deployment_mode: self_service` is set:
+  - **Skip substep 7b (Catalog Item)** — there is no AgnosticV catalog to create.
+  - **Run substeps 7a (requirements) and 7c (code) as normal** — produce the GitOps automation (Helm charts + ArgoCD manifests) in `automation/`.
+  - The completed GitOps repo is what the content developer provides when ordering the generic CI.
+  - Orchestrator should surface a reminder at the end of automation phase: *"Automation complete. Order the Field Source CI and provide your GitOps repo URL. Ensure your automation/ directory is pushed to a public or accessible Git remote."*
+
+  **Manifest schema additions:**
+  ```yaml
+  project:
+    deployment_mode: self_service  # onboarded | self_service
+  integrations:
+    field_source_ci: agd_v2/ocp-field-asset-cnv  # populated when self_service mode selected
+  ```
+
+  **Affected skills:** Intake agent (question + manifest write), Automation agent (7b skip logic + reminder), Orchestrator (route automation dispatch differently when self_service mode is active). See portal redesign spec for launch instructions design.
+
 - [ ] **GitHub template repo** — Create `rhpds/rhdp-publishing-house-template` with proper structure
 - [ ] **RCARS API contract** — Finalize endpoint spec when RCARS REST API is ready
 - [ ] **Automation skill sourcing** — Determine if existing Ansible/Helm generation tools exist or need full development
