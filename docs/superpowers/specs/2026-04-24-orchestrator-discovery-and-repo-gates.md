@@ -11,10 +11,7 @@ The orchestrator's current project discovery aggressively walks up the directory
 
 ### 1. Project Discovery
 
-When the orchestrator starts, it looks for `publishing-house/manifest.yaml` in:
-
-1. The current working directory
-2. Immediate subdirectories (one level deep)
+When the orchestrator starts, it checks for `publishing-house/manifest.yaml` in the current working directory only. No subdirectory scanning, no walking up.
 
 If found, read the manifest and proceed as normal.
 
@@ -135,5 +132,5 @@ Once the user provides the URL, the orchestrator:
 - **Orchestrator owns all repo setup.** Skills write into directories that already exist.
 - **Instructions over automation.** The orchestrator tells the user what to do, not does it for them. Repo creation involves decisions (name, org, visibility) that belong to the user.
 - **Manual steps are first-class.** `gh` CLI is a convenience shortcut, not the primary path. Not everyone uses GitHub.
-- **Discovery is shallow.** CWD + one level of subdirectories. If not found, ask — don't search the filesystem.
+- **Discovery is CWD only.** Check the current directory. If not found, ask — don't search subdirectories or the filesystem.
 - **Confirm before cloning.** Show the actual absolute path and get confirmation.

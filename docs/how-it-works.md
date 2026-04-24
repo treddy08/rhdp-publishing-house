@@ -52,7 +52,7 @@ Intake* → Vetting → Spec Refinement → [Approval*] → Writing → Automati
 
 ### Orchestrator
 
-The entry point. Discovers your project (checks current directory and immediate subdirectories), syncs the repo, reads the manifest, presents current state, and dispatches agent skills. If no project is found, offers three paths: point to a local clone, provide a remote URL to clone, or create a new project from the template. Also handles repo setup at phase gates — creates Showroom and automation repos as submodules before dispatching to the writer or automation agents. Does not perform content work itself — purely state management, repo setup, and routing.
+The entry point. Checks the current directory for a project manifest, syncs the repo, reads state, presents current status, and dispatches agent skills. If no project is found, offers three paths: point to a local clone, provide a remote URL to clone, or create a new project from the template. Also handles repo setup at phase gates — creates Showroom and automation repos as submodules before dispatching to the writer or automation agents. Does not perform content work itself — purely state management, repo setup, and routing.
 
 - **Model:** Opus 4.6
 - **Invoked by:** `/rhdp-publishing-house [supervised|semi|full]`

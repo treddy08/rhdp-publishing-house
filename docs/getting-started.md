@@ -50,7 +50,7 @@ From inside your project repo, start Claude Code and run:
 
 The orchestrator finds the manifest, syncs the repo, and starts intake.
 
-> **Resuming later:** Run `/rhdp-publishing-house` from your project directory or a parent that contains it. The orchestrator checks the current directory and immediate subdirectories. If it can't find your project, it'll ask for the path or repo URL.
+> **Resuming later:** Run `/rhdp-publishing-house` from your project directory. If the orchestrator can't find your project, it'll ask for the path or repo URL.
 
 ### 4. Answer the intake questions
 
@@ -150,7 +150,7 @@ The worklog lives in `publishing-house/worklog.yaml` and is committed with every
 
 Run `/rhdp-publishing-house` from your project directory. The orchestrator:
 
-1. Finds the manifest (checks current directory and immediate subdirectories)
+1. Finds the manifest in the current directory
 2. Pulls latest changes
 3. Reads manifest and worklog
 4. Presents current status and open items

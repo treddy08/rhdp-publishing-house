@@ -13,11 +13,11 @@ automation, and review.
 
 ### /rhdp-publishing-house (orchestrator)
 
-Entry point. Discovers your project (checks current directory and immediate subdirectories),
-syncs the repo, reads the manifest, presents current state, and dispatches agent skills.
-If no project is found, offers three paths: point to a local clone, provide a remote URL,
-or create a new one from the template. Handles Showroom and automation repo setup at phase
-gates. Supports three autonomy levels: supervised (default), semi, full.
+Entry point. Checks the current directory for a project manifest, syncs the repo, reads
+state, presents current status, and dispatches agent skills. If no project is found, offers
+three paths: point to a local clone, provide a remote URL, or create a new one from the
+template. Handles Showroom and automation repo setup at phase gates. Supports three
+autonomy levels: supervised (default), semi, full.
 
 ### /rhdp-publishing-house:intake
 
