@@ -52,7 +52,7 @@ Intake* → Vetting → Spec Refinement → [Approval*] → Writing → Automati
 
 ### Orchestrator
 
-The entry point. Discovers your project from any directory (walks up from CWD, scans subdirectories), syncs the repo, reads the manifest, presents current state, and dispatches agent skills. Does not perform work itself — purely state management and routing.
+The entry point. Discovers your project (checks current directory and immediate subdirectories), syncs the repo, reads the manifest, presents current state, and dispatches agent skills. If no project is found, offers three paths: point to a local clone, provide a remote URL to clone, or create a new project from the template. Also handles repo setup at phase gates — creates Showroom and automation repos as submodules before dispatching to the writer or automation agents. Does not perform content work itself — purely state management, repo setup, and routing.
 
 - **Model:** Opus 4.6
 - **Invoked by:** `/rhdp-publishing-house [supervised|semi|full]`
@@ -71,7 +71,7 @@ Handles intake, vetting, and spec refinement.
   2. **Rough idea** — builds the spec through conversation
   3. **RCARS gap** — a gap description becomes the seed for a new project
 - **Smart intake:** If the user provides existing docs, extracts answers rather than asking every question
-- **Also handles:** Deployment mode selection, Showroom and automation repo setup
+- **Also handles:** Deployment mode selection
 - **Produces:** `publishing-house/spec/design.md` + per-module outlines in `publishing-house/spec/modules/`
 
 ### Writer Agent
@@ -195,7 +195,7 @@ my-new-lab/
 └── CLAUDE.md                            # Points to manifest, tells Claude Code to run /rhdp-publishing-house
 ```
 
-`content/` and `automation/` are separate git repos cloned as subdirectories. Each has its own remote. The project repo (private) holds the manifest and spec; those repos (public) hold the deliverables.
+`content/` and `automation/` are separate git repos added as submodules by the orchestrator when their respective phases begin. Each has its own remote. The project repo (private) holds the manifest and spec; those repos (public) hold the deliverables.
 
 ## Portal
 

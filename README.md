@@ -13,9 +13,11 @@ automation, and review.
 
 ### /rhdp-publishing-house (orchestrator)
 
-Entry point. Discovers your project from any directory, syncs the repo, reads the manifest,
-presents current state, and dispatches agent skills. Supports three autonomy levels:
-supervised (default), semi, full.
+Entry point. Discovers your project (checks current directory and immediate subdirectories),
+syncs the repo, reads the manifest, presents current state, and dispatches agent skills.
+If no project is found, offers three paths: point to a local clone, provide a remote URL,
+or create a new one from the template. Handles Showroom and automation repo setup at phase
+gates. Supports three autonomy levels: supervised (default), semi, full.
 
 ### /rhdp-publishing-house:intake
 
@@ -25,7 +27,7 @@ Spec generation, RCARS vetting, and spec refinement. Three intake paths:
 - **Rough idea** — agent builds spec through conversation
 - **RCARS gap** — gap description becomes seed for new spec
 
-Also handles: deployment mode selection, Showroom and automation repo setup.
+Also handles: deployment mode selection.
 
 ### /rhdp-publishing-house:writer
 

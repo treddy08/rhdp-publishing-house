@@ -11,9 +11,8 @@ Building an RHDP workshop today requires a content developer to juggle multiple 
 **RHDP Publishing House** is a Claude Code plugin that turns content developers into content architects. One command — `/rhdp-publishing-house` — provides a persistent, state-aware orchestrator that manages the entire content lifecycle through specialized AI agents.
 
 ```
-Intake* → Vetting → Spec Refinement → [Approval*] → Writing → Editing*
-  → Automation (Catalog Item → Requirements → Code → Testing)
-  → Security Review* → Final Review* → Ready for Publishing
+Intake* → Vetting → Spec Refinement → [Approval*] → Writing → Automation
+  → Editing* → Code & Security Review* → Final Review* → Ready for Publishing
 
 * = required    (unmarked = optional, skip if handled another way)
 ```

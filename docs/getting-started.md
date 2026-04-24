@@ -50,7 +50,7 @@ From inside your project repo, start Claude Code and run:
 
 The orchestrator finds the manifest, syncs the repo, and starts intake.
 
-> **Resuming later:** The orchestrator walks up from your current directory like `git` does — you don't need to `cd` to the project root. Run it from any subdirectory, a workspace root, or an IDE where the CWD isn't your project.
+> **Resuming later:** Run `/rhdp-publishing-house` from your project directory or a parent that contains it. The orchestrator checks the current directory and immediate subdirectories. If it can't find your project, it'll ask for the path or repo URL.
 
 ### 4. Answer the intake questions
 
@@ -60,7 +60,6 @@ You'll cover:
 
 - **What are you building?** — name, type (workshop or demo), target audience
 - **Deployment mode** — RHDP Published or Self-Published (see below)
-- **Showroom and automation repos** — the agent helps you create them if needed
 - **Modules** — how many, rough titles, estimated duration
 - **Automation** — whether the lab needs infrastructure pre-configured
 
@@ -149,13 +148,15 @@ The worklog lives in `publishing-house/worklog.yaml` and is committed with every
 
 ## Resuming a Session
 
-Run `/rhdp-publishing-house` from anywhere. The orchestrator:
+Run `/rhdp-publishing-house` from your project directory. The orchestrator:
 
-1. Finds the manifest (walks up from CWD)
+1. Finds the manifest (checks current directory and immediate subdirectories)
 2. Pulls latest changes
 3. Reads manifest and worklog
 4. Presents current status and open items
 5. Asks what you want to do next
+
+If the orchestrator can't find your project, it offers to locate it by path, clone it from a remote, or walk you through creating a new one.
 
 ---
 
