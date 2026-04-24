@@ -9,15 +9,18 @@ Session notes and open items for the PH dev team.
 ### Session Summary
 
 Redesigned the orchestrator's project discovery and added phase-gate repo creation.
-Reviewed and aligned all docs with the current state.
+Reviewed and aligned all docs with the current state. Debugged and resolved a testing
+issue where the local skills clone was stale — all skill changes were being pushed to the
+remote but not pulled into the directory Claude Code was reading from.
 
 ### What Was Done
 
-- **Orchestrator discovery redesign:** Replaced aggressive walk-up-from-CWD with shallow check (CWD + immediate subdirectories only). When no project is found, presents three options: provide a local path, provide a remote git URL (any host) to clone, or create a new project from the template.
+- **Orchestrator discovery redesign:** Replaced aggressive walk-up-from-CWD with CWD check first, then one-level subdirectory scan. When multiple projects found, lists them with a "None of these" option. When no project is found, presents three options: provide a local path, provide a remote git URL (any host) to clone, or create a new project from the template. Git pull deferred until after project is found.
 - **Phase-gate repo creation:** Orchestrator now checks for Showroom and automation repos before dispatching to writer/automation skills. If repos don't exist, walks the user through creating them (manual steps first, `gh` CLI shortcut second), then handles `git submodule add`, manifest update, commit, and push. Skills never deal with repo setup — they receive ready-to-use directories.
 - **Intake cleanup:** Removed repo setup from the intake skill — this responsibility moved to the orchestrator's pre-dispatch gates. Showroom repo is created before writing starts, automation repo before automation code (7c) starts.
-- **Docs alignment:** Updated getting-started, how-it-works, executive-summary, README, skills-plugin README, and intake skill to reflect the new discovery behavior, phase order (automation before editing), and orchestrator-managed repo setup.
+- **Docs alignment:** Updated getting-started, how-it-works, executive-summary, README, skills-plugin README, and intake skill to reflect the new discovery behavior, phase order (automation before editing), and orchestrator-managed repo setup. Renamed `dashboard-deployment.md` → `portal-deployment.md` and updated mkdocs nav.
 - **Design decision:** Project repo naming is the user's choice. The project ID is defined during intake. Showroom and automation repos use the project ID for consistent naming (`<project-id>-showroom`, `<project-id>-automation`).
+- **Lesson learned:** The skills-plugin submodule pushes to the remote, but the local clone at `~/devel/publishing-house/rhdp-publishing-house-skills` is separate. Always pull the local clone after pushing submodule changes.
 
 ### Open Items for Next Session
 
