@@ -81,7 +81,7 @@ A thin orchestrator manages state and dispatches to specialized agent skills. Ea
 
 ### Cross-Project Visibility
 
-The [Publishing House Portal](https://github.com/rhpds/rhdp-publishing-house-portal) gives managers and PMs a single view across all active projects — a kanban pipeline, a searchable project table, and detailed phase-level status with completion dates, assignees, and artifact links. No CLI required. See [docs/dashboard.md](dashboard.md).
+The [Publishing House Portal](https://github.com/rhpds/rhdp-publishing-house-portal) gives managers and PMs a single view across all active projects — a kanban pipeline, a searchable project table, and detailed phase-level status with completion dates, assignees, and artifact links. No CLI required. See [docs/portal.md](portal.md).
 
 ### Implementation Status
 
