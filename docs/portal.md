@@ -135,4 +135,4 @@ The `completed_at`, `assignees`, and `artifacts` fields drive what appears in th
 
 ## Deployment
 
-The portal runs on OpenShift. See [docs/dashboard-deployment.md](dashboard-deployment.md) for deployment instructions.
+The portal runs on OpenShift. See [Portal Deployment](portal-deployment.md) for deployment instructions.

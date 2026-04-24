@@ -35,7 +35,7 @@ nav:
   - Getting Started: getting-started.md
   - How It Works: how-it-works.md
   - Portal: portal.md
-  - Dashboard Deployment: dashboard-deployment.md
+  - Portal Deployment: portal-deployment.md
 
 markdown_extensions:
   - tables
