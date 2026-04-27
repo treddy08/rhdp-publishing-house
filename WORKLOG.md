@@ -22,22 +22,41 @@ remote but not pulled into the directory Claude Code was reading from.
 - **Design decision:** Project repo naming is the user's choice. The project ID is defined during intake. Showroom and automation repos use the project ID for consistent naming (`<project-id>-showroom`, `<project-id>-automation`).
 - **Lesson learned:** The skills-plugin submodule pushes to the remote, but the local clone at `~/devel/publishing-house/rhdp-publishing-house-skills` is separate. Always pull the local clone after pushing submodule changes.
 
+### Additional Changes (late session)
+
+- **Empty projects in discovery:** Discovery now lists all projects with a manifest, including fresh ones that haven't started intake. Shows "(new project — needs intake)" for empty manifests.
+- **`current_phase` not deprecated:** Removed the deprecated comment from the template manifest. Field is actively used by the orchestrator; portal can derive state independently if it wants.
+- **RCARS vetting for all modes:** Fixed incorrect restriction that said vetting was unavailable for `self_published`. RCARS vetting is available for both deployment modes.
+- **Intake simplification (design only):** Agreed to simplify intake from 3 entry paths to 2: "I have a spec" and "I have an idea." Opening question should be conversational ("tell me about your idea") not structured. Not yet implemented.
+- **Backlog from Sha meeting:** Captured four long-term items — prototype deployment mode, RCARS-driven prototyping, customizable skills with include mechanism, end-to-end build+deploy vision.
+
 ### Open Items for Next Session
 
-**1. DISCUSS: PH development team design**
+**1. Intake simplification** (priority)
+
+Simplify intake entry paths from 3 to 2. Redesign the opening question flow to be
+conversational rather than structured. This is the first impression of the system.
+
+**2. Test phase-gate repo creation**
+
+Showroom repo gate (before writer) and automation repo gate (before 7c) are implemented
+but untested. Test with ex-ph-sample or by nulling `integrations.showroom_repo` on an
+existing project.
+
+**3. DISCUSS: PH development team design**
 
 Still open from 2026-04-21. Need a contributor spec that defines skill contracts,
 state management boundaries, blocker surfacing, and isolated testing.
 
-**2. LONGTERM: PH chatbot UI**
+**4. LONGTERM: PH chatbot UI**
 
 Unchanged from 2026-04-21. Future design effort.
 
-**3. AgnosticD: Split ocp4_workload_field_content**
+**5. AgnosticD: Split ocp4_workload_field_content**
 
 Unchanged from 2026-04-21. Separate workstream.
 
-**4. Subagent-per-module writing**
+**6. Subagent-per-module writing**
 
 Unchanged from 2026-04-21. Parked.
 
