@@ -64,6 +64,13 @@ Keep PH modular so skill ownership can be delegated. A contributor spec defines:
 
 Not blocking current work, but should inform design decisions now so we don't paint ourselves into a corner.
 
+### Evaluate AI Context Modules as PH foundation
+Investigate whether PH skills should be structured as an AI Context Module rather than standalone skills. An AI Context Module is a superset — it wraps one or more skills alongside `AGENTS.md`, `commands/`, and `mcp.json` inside a `module/` directory, providing module-level context that applies across all skills. Reference implementation: https://github.com/LobsterTrap/lola/blob/main/docs/guides/creating-modules.md
+
+PH currently uses standalone `SKILL.md` files in a plugin. A module structure could unify the orchestrator context (`AGENTS.md`), MCP server config (`mcp.json`), and slash commands (`commands/`) into a single coherent package — potentially replacing the current split across skills repo, portal backend, and manual MCP config.
+
+**Goal:** Not starting from scratch. Evaluate whether the module structure gives PH a more solid foundation and how to migrate to it if so. Connects to the contributor spec and MCP orchestrator items.
+
 ### Dashboard kanban — content + automation display
 Content and automation run concurrently and iterate together until both are done. The portal kanban needs a way to show this overlap without awkwardly duplicating cards or placing the project in the wrong column. Current approach (furthest-along active column) is functional but not ideal.
 
