@@ -7,45 +7,28 @@ Development backlog for the RHDP Publishing House skill suite. Session notes and
 ## Active / Near-term
 
 ### RCARS API integration for vetting
-The intake skill references `/recommend` which does not exist in RCARS v2. The real endpoint is `POST /api/v1/advisor/query` (async, returns a job_id) + `GET /api/v1/advisor/query/{job_id}/result` to poll results. Needs:
-- Update intake skill to use the real v2 API contract
-- Handle async job flow (submit → poll → present results)
-- Resolve internal auth: RCARS API has no external route; PH needs to call it cluster-internally. For now, direct service call to `rcars-api.rcars-dev.svc:8080` is simplest. Auth TBD (see access architecture item below).
+**Spec complete:** `docs/superpowers/specs/2026-04-27-rcars-integration-design.md`
 
-**Depends on:** RCARS v2 deployed (done as of 2026-04-26). No brainstorm needed — clear implementation task.
+Portal backend as single gateway. MCP tools (`ph_rcars_query`, `ph_rcars_catalog_search`, `ph_rcars_catalog_item`) wrap the RCARS v2 API. API key auth for CC users, SA token for cluster-internal PH→RCARS calls. External route for `/mcp` endpoint only. Needs implementation plan and build.
+
+**Depends on:** RCARS v2 deployed (done as of 2026-04-26).
 
 ---
 
 ## Needs Brainstorm
 
-### Prototype deployment mode + RCARS-driven prototyping
-A third deployment mode: **prototype**. No GitOps repo, no stored automation. PH uses RCARS to find the closest existing RHDP catalog item to what's being requested, learns how that item is built, orders it via Babylon, and customizes the running environment to match the demo need. Fast, disposable, no publishing overhead.
+### Express skill (cluster customization agent)
+The agent that powers Phase 3 (Customize) of express mode. Assesses an OpenShift cluster, plans customizations from the intake design doc, executes them live (`oc` commands, operator installs, app scaffolding), and produces a recap document. This is the substantial piece of agent engineering — its own brainstorm, spec, and implementation.
 
-This merges two originally separate backlog items (prototype mode + RCARS-driven prototyping) because they are the same thing — RCARS is the intelligence layer that makes prototype mode work.
+**Depends on:** Express mode architecture (spec complete: `docs/superpowers/specs/2026-04-28-express-mode-design.md`), RCARS integration (spec complete: `docs/superpowers/specs/2026-04-27-rcars-integration-design.md`).
 
-**Why:** Not everything needs to be a published catalog item. A working demo environment for a specific event or meeting should take hours, not weeks.
+### Portal user identity model
+Red Hat email as primary key for user ownership across all modes. GitHub ID tracked in manifests but secondary. Need email ↔ GitHub ID mapping for cross-referencing. Required for orchestrator "find projects by user" to work reliably across CC (GitHub identity) and portal (SSO/email identity).
 
-**Connects to:** End-to-end build+deploy vision (if prototype mode proves the model, full lifecycle is the natural extension).
+### Portal chatbot / hosted access path
+Portal chatbot for users without CC or Anthropic model access. Same PH capabilities, hosted instead of local. The portal backend already has MCP tools and RCARS integration (per the integration spec) — the chatbot consumes the same backend. Requires `oc` CLI baked into the chatbot container image for express mode.
 
-**Depends on:** RCARS integration working (PH can already call RCARS for vetting; prototype needs RCARS find-closest-match and eventually a Showroom live-read endpoint).
-
----
-
-### PH access architecture — MCP server + portal chatbot
-Two access modes for PH, same experience:
-
-| Mode | Who | How PH runs | How PH talks to RCARS |
-|------|-----|-------------|----------------------|
-| **Local** | Has Claude Code + Anthropic access | Skills plugin in CC/Cursor | MCP server handles RCARS calls transparently |
-| **Hosted** | Everyone else | PH portal chatbot | Portal backend calls RCARS directly (same cluster) |
-
-The MCP server (originally planned as a cheap status query layer) now also owns the RCARS integration and auth bridge for local users. Users should never see a token, API key, or endpoint URL — PH handles it.
-
-The portal chatbot moves from "LONGTERM" to near-term: it's the access path for users who don't have CC or Anthropic model access, not just a convenience UI.
-
-**Brainstorm scope:** MCP server design, what tools it exposes, how local and hosted modes differ at the transport layer (not the skill logic), auth model for RCARS in both contexts, what the chatbot needs from the portal backend.
-
-**Connects to:** RCARS integration, prototype deployment mode, end-to-end build+deploy.
+**Connects to:** Express mode, RCARS integration, end-to-end build+deploy.
 
 ---
 
