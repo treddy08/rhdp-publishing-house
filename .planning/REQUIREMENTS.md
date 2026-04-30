@@ -21,8 +21,8 @@ Requirements for this milestone. Each maps to a roadmap phase.
 ### RCARS Integration
 
 - [ ] **RCARS-01**: PH backend ServiceAccount token is re-read from filesystem on every RCARS request (not cached at startup)
-- [ ] **RCARS-02**: RCARS middleware validates SA token via Kubernetes TokenReview API (cross-repo change in `rcars-advisory`)
-- [ ] **RCARS-03**: PH backend ServiceAccount is added to `RCARS_SA_ALLOWLIST_STR` in RCARS Ansible vars (cross-repo change)
+- [x] **RCARS-02**: RCARS middleware validates SA token via Kubernetes TokenReview API (cross-repo change in `rcars-advisory`)
+- [x] **RCARS-03**: PH backend ServiceAccount is added to `RCARS_SA_ALLOWLIST_STR` in RCARS Ansible vars (cross-repo change)
 - [ ] **RCARS-04**: Cross-namespace connectivity from `publishing-house-dev` to `rcars-dev` is verified and unblocked (NetworkPolicy check + smoke test in Ansible deploy)
 - [ ] **RCARS-05**: Intake skill replaces broken `curl` call with `ph_rcars_query` MCP tool reference; vetting phase runs end-to-end for both deployment modes
 
@@ -113,8 +113,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MCP-07 | Phase 1 | Pending |
 | MCP-08 | Phase 1 | Pending |
 | RCARS-01 | Phase 1 | Pending |
-| RCARS-02 | Phase 1 | Pending |
-| RCARS-03 | Phase 1 | Pending |
+| RCARS-02 | Phase 1 | Complete (01-01) |
+| RCARS-03 | Phase 1 | Complete (01-01) |
 | RCARS-04 | Phase 1 | Pending |
 | RCARS-05 | Phase 1 | Pending |
 | EXPRESS-01 | Phase 2 | Pending |

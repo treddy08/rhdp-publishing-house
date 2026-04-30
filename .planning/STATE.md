@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 1 context gathered
-last_updated: "2026-04-30T10:27:13.143Z"
-last_activity: 2026-04-30 -- Phase 1 planning complete
+last_updated: "2026-04-30T10:43:51Z"
+last_activity: 2026-04-30 -- Completed plan 01-01 (RCARS SA token auth)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 7
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 14
 ---
 
 # Project State
@@ -21,30 +21,30 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-30)
 
 **Core value:** Content developers can create production-quality RHDP workshops and demos without juggling multiple tools, skills, or processes -- one entry point orchestrates the entire pipeline from idea to published catalog item.
-**Current focus:** Phase 1: RCARS MCP Gateway
+**Current focus:** Phase 01 — rcars-mcp-gateway
 
 ## Current Position
 
-Phase: 1 of 4 (RCARS MCP Gateway)
-Plan: 0 of 0 in current phase
-Status: Ready to execute
-Last activity: 2026-04-30 -- Phase 1 planning complete
+Phase: 01 (rcars-mcp-gateway) — EXECUTING
+Plan: 2 of 7
+Status: Executing Phase 01
+Last activity: 2026-04-30 -- Completed plan 01-01 (RCARS SA token auth)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 14%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
-- Average duration: -
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 6min
+- Total execution time: 0.1 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01-rcars-mcp-gateway | 1/7 | 6min | 6min |
 
 **Recent Trend:**
 
@@ -65,6 +65,8 @@ Recent decisions affecting current work:
 - SA token auth for RCARS cluster-internal calls (zero-config, K8s manages lifecycle)
 - Express state in portal DB not git manifest (ephemeral projects, git overhead not justified)
 - Jira and chatbot start as brainstorm+spec (design right before building)
+- RCARS API test files go in src/api/tests/ (API has own pyproject.toml with test config)
+- All RCARS auth functions are async (require_curator/require_admin cascade from async require_auth)
 
 ### Pending Todos
 
@@ -72,7 +74,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- RCARS SA token auth (RCARS_SA_ALLOWLIST_STR) exists in config but is not yet wired into RCARS auth middleware -- cross-repo dependency for Phase 1
+- ~~RCARS SA token auth (RCARS_SA_ALLOWLIST_STR) exists in config but is not yet wired into RCARS auth middleware~~ RESOLVED in plan 01-01 (commits a7bfa90, e1394e5 on rcars-advisory main)
 - Jira Cloud vs. Data Center auth model unconfirmed -- must resolve before Phase 3 build
 - Anthropic SDK issue #1020 (Vertex AI streaming+tools loses tool input params) -- affects Phase 4 chatbot UX
 
@@ -88,6 +90,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-04-30T09:19:19.934Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-rcars-mcp-gateway/01-CONTEXT.md
+Last session: 2026-04-30T10:43:51Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: .planning/phases/01-rcars-mcp-gateway/01-02-PLAN.md
