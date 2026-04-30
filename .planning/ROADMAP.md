@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01-PLAN.md — RCARS SA token auth middleware + Ansible allowlist wiring
-- [ ] 01-02-PLAN.md — RCARS HTTP client with retry, SA token, and config updates
+- [x] 01-02-PLAN.md — RCARS HTTP client with retry, SA token, and config updates
 - [ ] 01-03-PLAN.md — API key auth middleware + FastMCP 3.2+ server upgrade
 - [ ] 01-04-PLAN.md — RCARS MCP tools + health endpoint + main.py wiring
 - [ ] 01-05-PLAN.md — Ansible infrastructure (Route, Secret, volume mount)
@@ -99,7 +99,7 @@ Note: Phases 3 and 4 both depend on Phase 1 but are independent of each other. T
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. RCARS MCP Gateway | 1/7 | Executing | - |
+| 1. RCARS MCP Gateway | 2/7 | Executing | - |
 | 2. Express Mode Framework | 0/0 | Not started | - |
 | 3. Jira Integration | 0/0 | Not started | - |
 | 4. Portal Chatbot | 0/0 | Not started | - |
