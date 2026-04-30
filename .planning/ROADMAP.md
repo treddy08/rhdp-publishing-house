@@ -20,7 +20,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: RCARS MCP Gateway
-**Goal**: Claude Code users can query RCARS through authenticated MCP tools, and intake vetting works end-to-end again
+**Goal**: Claude Code users can query RCARS through authenticated MCP tools, and intake vetting works end-to-end again — with graceful degradation when MCP is unavailable
 **Depends on**: Nothing (first phase)
 **Requirements**: MCP-01, MCP-02, MCP-03, MCP-04, MCP-05, MCP-06, MCP-07, MCP-08, RCARS-01, RCARS-02, RCARS-03, RCARS-04, RCARS-05
 **Success Criteria** (what must be TRUE):
@@ -29,6 +29,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. An unauthenticated or invalid-key request to `/mcp` is rejected with 401 -- no tool execution occurs
   4. The `/health` endpoint reports RCARS connectivity status without requiring authentication
   5. Running intake with vetting on a new project successfully queries RCARS through the MCP tool (no more broken curl calls)
+  6. When the MCP server is unavailable or the user has no API key configured, intake notes the limitation and continues without vetting — no blocking, no crash
 **Plans**: TBD
 
 Plans:
@@ -36,11 +37,12 @@ Plans:
 - [ ] 01-02: TBD
 
 ### Phase 2: Express Mode Framework
-**Goal**: Users can create and track disposable demo environment projects through the orchestrator and portal without git repos
+**Goal**: The express mode plumbing exists — DB model, MCP tools, orchestrator awareness, portal tracking — so express projects can be created and tracked even before the express skill (cluster customization agent) is built
 **Depends on**: Phase 1
+**Note**: This phase delivers the framework only. The express skill (Phase 3 of the express mode, where the agent actually customizes the cluster) is a separate workstream outside this milestone. Express projects created here will sit at the "environment" gate awaiting the skill.
 **Requirements**: EXPRESS-01, EXPRESS-02, EXPRESS-03, EXPRESS-04, EXPRESS-05, EXPRESS-06, EXPRESS-07, EXPRESS-08, EXPRESS-09, EXPRESS-10, EXPRESS-11, EXPRESS-12
 **Success Criteria** (what must be TRUE):
-  1. A user can select express mode during intake, go through RCARS vetting, identify a base CI, and have their express project tracked in the portal DB
+  1. A user can select express mode during intake, go through RCARS vetting, identify a base CI, and have their express project created and tracked in the portal DB
   2. The orchestrator discovers existing projects by checking local manifest first, then querying portal via MCP -- no longer requires being in a repo directory
   3. Portal kanban shows express projects alongside full projects with a visually distinct card style
   4. Portal express project detail view displays intake data, base CI, current phase, and stored artifacts (recap, intake design)
@@ -53,11 +55,11 @@ Plans:
 - [ ] 02-02: TBD
 
 ### Phase 3: Jira Integration
-**Goal**: Stakeholders can follow project progress in Jira without leaving their existing workflow
+**Goal**: Stakeholders can follow project progress in Jira without leaving their existing workflow, and managers have enough visibility to assess timeline health
 **Depends on**: Phase 1
 **Requirements**: JIRA-01, JIRA-02, JIRA-03, JIRA-04, JIRA-05, JIRA-06
 **Success Criteria** (what must be TRUE):
-  1. A brainstorm document exists that resolves ticket structure, trigger points, field mapping, and write-back scope -- reviewed and approved before any build work begins
+  1. A brainstorm document exists that resolves ticket structure, trigger points, field mapping, write-back scope, and progress estimation model (how to calculate % complete vs expected at a given date for milestone tracking) -- reviewed and approved before any build work begins
   2. Creating a new PH project automatically creates a corresponding Jira ticket or epic with correct field mapping
   3. Phase transitions update the Jira ticket status and add a comment with a link to the portal project detail view
   4. The Jira issue key is stored in both the git manifest and portal DB record, enabling cross-referencing from either direction
@@ -68,7 +70,7 @@ Plans:
 - [ ] 03-02: TBD
 
 ### Phase 4: Portal Chatbot
-**Goal**: Users without Claude Code or Anthropic API access can use PH capabilities through the portal web UI
+**Goal**: Portal users without Claude Code or Anthropic API access get managed PH capabilities through a hosted web UI — PH holds the API keys and delivers Claude-as-a-Service, not a general AI assistant and not a recreation of Claude Code
 **Depends on**: Phase 1
 **Requirements**: CHAT-01, CHAT-02, CHAT-03, CHAT-04, CHAT-05, CHAT-06, CHAT-07, CHAT-08
 **Success Criteria** (what must be TRUE):
