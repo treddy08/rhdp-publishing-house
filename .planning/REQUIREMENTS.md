@@ -24,7 +24,7 @@ Requirements for this milestone. Each maps to a roadmap phase.
 - [x] **RCARS-02**: RCARS middleware validates SA token via Kubernetes TokenReview API (cross-repo change in `rcars-advisory`)
 - [x] **RCARS-03**: PH backend ServiceAccount is added to `RCARS_SA_ALLOWLIST_STR` in RCARS Ansible vars (cross-repo change)
 - [x] **RCARS-04**: Cross-namespace connectivity from `publishing-house-dev` to `rcars-dev` is verified and unblocked (NetworkPolicy check + smoke test in Ansible deploy)
-- [ ] **RCARS-05**: Intake skill replaces broken `curl` call with `ph_rcars_query` MCP tool reference; vetting phase runs end-to-end for both deployment modes
+- [x] **RCARS-05**: Intake skill replaces broken `curl` call with `ph_rcars_query` MCP tool reference; vetting phase runs end-to-end for both deployment modes
 
 ### Express Mode
 
@@ -116,7 +116,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RCARS-02 | Phase 1 | Complete (01-01) |
 | RCARS-03 | Phase 1 | Complete (01-01) |
 | RCARS-04 | Phase 1 | Complete (01-05) |
-| RCARS-05 | Phase 1 | Pending |
+| RCARS-05 | Phase 1 | Complete (01-06) |
 | EXPRESS-01 | Phase 2 | Pending |
 | EXPRESS-02 | Phase 2 | Pending |
 | EXPRESS-03 | Phase 2 | Pending |
