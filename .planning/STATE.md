@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 1 context gathered
-last_updated: "2026-04-30T10:58:07Z"
-last_activity: 2026-04-30 -- Completed plan 01-03 (API key auth middleware + FastMCP 3.2+)
+last_updated: "2026-04-30T11:05:52Z"
+last_activity: 2026-04-30 -- Completed plan 01-04 (RCARS MCP tools + health probe + FastMCP 3.2+ mount)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 7
-  completed_plans: 3
-  percent: 42
+  completed_plans: 4
+  percent: 57
 ---
 
 # Project State
@@ -26,25 +26,25 @@ See: .planning/PROJECT.md (updated 2026-04-30)
 ## Current Position
 
 Phase: 01 (rcars-mcp-gateway) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Executing Phase 01
-Last activity: 2026-04-30 -- Completed plan 01-03 (API key auth middleware + FastMCP 3.2+)
+Last activity: 2026-04-30 -- Completed plan 01-04 (RCARS MCP tools + health probe + FastMCP 3.2+ mount)
 
-Progress: [████░░░░░░] 42%
+Progress: [█████░░░░░] 57%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 3
+- Total plans completed: 4
 - Average duration: 4min
-- Total execution time: 0.2 hours
+- Total execution time: 0.3 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-rcars-mcp-gateway | 3/7 | 13min | 4min |
+| 01-rcars-mcp-gateway | 4/7 | 16min | 4min |
 
 **Recent Trend:**
 
@@ -71,6 +71,9 @@ Recent decisions affecting current work:
 - httpx.AsyncClient created per-request (not shared) to avoid connection pool issues across retries
 - FastMCP Middleware pattern for auth (subclass Middleware, override on_call_tool, get_http_headers with include={"authorization"})
 - Keycloak JWT scaffolding fully removed (never activated, replaced by API key auth)
+- RCARS MCP tools instantiate RCARSClient per-call (not shared) matching per-request httpx pattern
+- Health endpoint top-level status always "ok" -- RCARS is a sub-check (K8s probe compatibility)
+- FastMCP 3.2+ mount uses combine_lifespans + app re-creation pattern
 
 ### Pending Todos
 
@@ -94,6 +97,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-04-30T10:58:07Z
-Stopped at: Completed 01-03-PLAN.md
-Resume file: .planning/phases/01-rcars-mcp-gateway/01-04-PLAN.md
+Last session: 2026-04-30T11:05:52Z
+Stopped at: Completed 01-04-PLAN.md
+Resume file: .planning/phases/01-rcars-mcp-gateway/01-05-PLAN.md
