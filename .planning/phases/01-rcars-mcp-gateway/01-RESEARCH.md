@@ -636,31 +636,31 @@ The tool handles submission, polling, and structured result formatting.
 | A2 | Manual retry loop is preferable to tenacity for 3-retry backoff | Don't Hand-Roll | If more complex retry logic is needed later, tenacity could be added. No risk for Phase 1 scope. |
 | A3 | Volume-mounted Secret file path pitfall | Common Pitfalls | If the volume mount is configured differently than documented, file path will differ. Resolved during Ansible template implementation. |
 
-## Open Questions
+## Open Questions (ALL RESOLVED)
 
 1. **Exact PH backend ServiceAccount name**
    - What we know: Backend deployment exists in `publishing-house-dev` namespace. The deployment template does NOT specify a custom serviceAccountName for the backend container (only the frontend has one for OAuth proxy). This means it uses the `default` SA.
    - What's unclear: Is the default SA name `default` or was a custom SA created during initial setup?
    - Recommendation: Check with `oc get deployment ph-dashboard-backend -o jsonpath='{.spec.template.spec.serviceAccountName}'` in the cluster. The allowlist entry format is `system:serviceaccount:publishing-house-dev:<sa-name>`.
-   - [VERIFIED: codebase -- manifests-app.yaml.j2 shows no serviceAccountName for backend container]
+   - RESOLVED: Using `default` SA. Plan 01 sets allowlist to `system:serviceaccount:publishing-house-dev:default`. Checkpoint 05-T3 verifies at deployment.
 
 2. **RCARS SA Token Auth Middleware -- Build vs. Bypass**
    - What we know: RCARS has `sa_allowlist_str` in config but NO middleware that validates SA tokens. Current auth is `X-Forwarded-Email` from OAuth proxy.
    - What's unclear: How much new RCARS code is acceptable in Phase 1? Building TokenReview middleware is a meaningful RCARS code change.
    - Recommendation: Build a lightweight SA auth dependency in RCARS that checks `Authorization: Bearer` for SA tokens, validates via K8s TokenReview API, and checks against the allowlist. This is ~50 lines of code. Alternatively, use `RCARS_DEV_USER` env var as an interim bypass while SA auth is built.
-   - [VERIFIED: codebase -- no SA validation middleware exists]
+   - RESOLVED: Building TokenReview middleware in Plan 01 Task 1 (~50 lines). Accepted as in-scope cross-repo work.
 
 3. **RCARS QueryRequest `stages` parameter default behavior**
    - What we know: RCARS `QueryRequest` defaults to `stages: ["prod"]`. Design spec says `prod_only=False` (full catalog picture).
    - What's unclear: Should PH always send all stages, or should this be configurable?
    - Recommendation: Hard-code `stages: ["prod", "dev", "event"]` in the MCP tool to match design spec intent. This ensures vetting sees the full catalog.
-   - [VERIFIED: codebase -- advisor.py QueryRequest defaults to `["prod"]`]
+   - RESOLVED: Hard-coded `stages: ["prod", "dev", "event"]` in Plan 04 ph_rcars_query tool.
 
 4. **NetworkPolicy between publishing-house-dev and rcars-dev**
    - What we know: Both namespaces exist on the same cluster. RCARS API is ClusterIP service.
    - What's unclear: Whether restrictive NetworkPolicies block cross-namespace traffic.
    - Recommendation: Include a connectivity smoke test in the Ansible deploy or as a manual verification step. Cannot check from local machine.
-   - [ASSUMED]
+   - RESOLVED: Plan 05 checkpoint:human-verify includes NetworkPolicy check commands. Cannot verify from local machine.
 
 ## Environment Availability
 
