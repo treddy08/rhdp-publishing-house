@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 1 context gathered
-last_updated: "2026-04-30T11:05:52Z"
-last_activity: 2026-04-30 -- Completed plan 01-04 (RCARS MCP tools + health probe + FastMCP 3.2+ mount)
+last_updated: "2026-04-30T12:00:00Z"
+last_activity: 2026-04-30 -- Completed plan 01-05 (Ansible infrastructure -- Route, Secret, volume mount, cross-namespace verified)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 7
-  completed_plans: 4
-  percent: 57
+  completed_plans: 5
+  percent: 71
 ---
 
 # Project State
@@ -26,25 +26,25 @@ See: .planning/PROJECT.md (updated 2026-04-30)
 ## Current Position
 
 Phase: 01 (rcars-mcp-gateway) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Executing Phase 01
-Last activity: 2026-04-30 -- Completed plan 01-04 (RCARS MCP tools + health probe + FastMCP 3.2+ mount)
+Last activity: 2026-04-30 -- Completed plan 01-05 (Ansible infrastructure -- Route, Secret, volume mount, cross-namespace verified)
 
-Progress: [█████░░░░░] 57%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 4
-- Average duration: 4min
-- Total execution time: 0.3 hours
+- Total plans completed: 5
+- Average duration: 12min
+- Total execution time: 1.0 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-rcars-mcp-gateway | 4/7 | 16min | 4min |
+| 01-rcars-mcp-gateway | 5/7 | 61min | 12min |
 
 **Recent Trend:**
 
@@ -74,6 +74,10 @@ Recent decisions affecting current work:
 - RCARS MCP tools instantiate RCARSClient per-call (not shared) matching per-request httpx pattern
 - Health endpoint top-level status always "ok" -- RCARS is a sub-check (K8s probe compatibility)
 - FastMCP 3.2+ mount uses combine_lifespans + app re-creation pattern
+- MCP Route targets backend service with 180s timeout (120s RCARS advisor polling + overhead)
+- API key Secret uses stringData with sha256: prefix via Jinja2 dict2items
+- Webhook builds removed, replaced with per-component Ansible tags (build_backend, build_frontend)
+- Resource limits parameterized in common.yml defaults (not hardcoded in templates)
 
 ### Pending Todos
 
@@ -97,6 +101,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-04-30T11:05:52Z
-Stopped at: Completed 01-04-PLAN.md
-Resume file: .planning/phases/01-rcars-mcp-gateway/01-05-PLAN.md
+Last session: 2026-04-30T12:00:00Z
+Stopped at: Completed 01-05-PLAN.md
+Resume file: .planning/phases/01-rcars-mcp-gateway/01-06-PLAN.md
