@@ -30,11 +30,16 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. The `/health` endpoint reports RCARS connectivity status without requiring authentication
   5. Running intake with vetting on a new project successfully queries RCARS through the MCP tool (no more broken curl calls)
   6. When the MCP server is unavailable or the user has no API key configured, intake notes the limitation and continues without vetting — no blocking, no crash
-**Plans**: TBD
+**Plans**: 7 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — RCARS SA token auth middleware + Ansible allowlist wiring
+- [ ] 01-02-PLAN.md — RCARS HTTP client with retry, SA token, and config updates
+- [ ] 01-03-PLAN.md — API key auth middleware + FastMCP 3.2+ server upgrade
+- [ ] 01-04-PLAN.md — RCARS MCP tools + health endpoint + main.py wiring
+- [ ] 01-05-PLAN.md — Ansible infrastructure (Route, Secret, volume mount)
+- [ ] 01-06-PLAN.md — Intake skill vetting update (curl to MCP tool)
+- [ ] 01-07-PLAN.md — Documentation (5 deliverables)
 
 ### Phase 2: Express Mode Framework
 **Goal**: The express mode plumbing exists — DB model, MCP tools, orchestrator awareness, portal tracking — so express projects can be created and tracked even before the express skill (cluster customization agent) is built
@@ -94,7 +99,7 @@ Note: Phases 3 and 4 both depend on Phase 1 but are independent of each other. T
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. RCARS MCP Gateway | 0/0 | Not started | - |
+| 1. RCARS MCP Gateway | 0/7 | Planning complete | - |
 | 2. Express Mode Framework | 0/0 | Not started | - |
 | 3. Jira Integration | 0/0 | Not started | - |
 | 4. Portal Chatbot | 0/0 | Not started | - |
