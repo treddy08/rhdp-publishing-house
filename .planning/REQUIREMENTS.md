@@ -9,9 +9,9 @@ Requirements for this milestone. Each maps to a roadmap phase.
 
 ### MCP Gateway
 
-- [ ] **MCP-01**: External `/mcp` HTTPS endpoint is deployed with API key authentication (SHA-256 hashed keys, `hmac.compare_digest` comparison, Ansible-managed Secret)
-- [ ] **MCP-02**: FastMCP 3.2+ middleware validates API key on every tool call via `on_call_tool` hook
-- [ ] **MCP-03**: Invalid or missing API key returns 401; valid key proceeds to tool dispatch
+- [x] **MCP-01**: External `/mcp` HTTPS endpoint is deployed with API key authentication (SHA-256 hashed keys, `hmac.compare_digest` comparison, Ansible-managed Secret)
+- [x] **MCP-02**: FastMCP 3.2+ middleware validates API key on every tool call via `on_call_tool` hook
+- [x] **MCP-03**: Invalid or missing API key returns 401; valid key proceeds to tool dispatch
 - [ ] **MCP-04**: `ph_rcars_query(query)` tool submits RCARS advisor query, polls until complete (3s interval, 120s timeout), returns structured results with CI matches and relevance tiers
 - [ ] **MCP-05**: `ph_rcars_catalog_search(query, limit)` tool returns paginated RCARS catalog items
 - [ ] **MCP-06**: `ph_rcars_catalog_item(ci_name)` tool returns full metadata for a specific catalog item
@@ -104,9 +104,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MCP-01 | Phase 1 | Pending |
-| MCP-02 | Phase 1 | Pending |
-| MCP-03 | Phase 1 | Pending |
+| MCP-01 | Phase 1 | Complete (01-03) |
+| MCP-02 | Phase 1 | Complete (01-03) |
+| MCP-03 | Phase 1 | Complete (01-03) |
 | MCP-04 | Phase 1 | Pending |
 | MCP-05 | Phase 1 | Pending |
 | MCP-06 | Phase 1 | Pending |

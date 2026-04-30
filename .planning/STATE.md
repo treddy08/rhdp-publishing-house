@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 1 context gathered
-last_updated: "2026-04-30T10:51:36Z"
-last_activity: 2026-04-30 -- Completed plan 01-02 (RCARS HTTP client)
+last_updated: "2026-04-30T10:58:07Z"
+last_activity: 2026-04-30 -- Completed plan 01-03 (API key auth middleware + FastMCP 3.2+)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 7
-  completed_plans: 2
-  percent: 28
+  completed_plans: 3
+  percent: 42
 ---
 
 # Project State
@@ -26,25 +26,25 @@ See: .planning/PROJECT.md (updated 2026-04-30)
 ## Current Position
 
 Phase: 01 (rcars-mcp-gateway) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Executing Phase 01
-Last activity: 2026-04-30 -- Completed plan 01-02 (RCARS HTTP client)
+Last activity: 2026-04-30 -- Completed plan 01-03 (API key auth middleware + FastMCP 3.2+)
 
-Progress: [██░░░░░░░░] 28%
+Progress: [████░░░░░░] 42%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 2
-- Average duration: 5min
+- Total plans completed: 3
+- Average duration: 4min
 - Total execution time: 0.2 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-rcars-mcp-gateway | 2/7 | 10min | 5min |
+| 01-rcars-mcp-gateway | 3/7 | 13min | 4min |
 
 **Recent Trend:**
 
@@ -69,6 +69,8 @@ Recent decisions affecting current work:
 - All RCARS auth functions are async (require_curator/require_admin cascade from async require_auth)
 - RCARSClient uses _SA_TOKEN_PATH class attribute for testability (patchable per instance)
 - httpx.AsyncClient created per-request (not shared) to avoid connection pool issues across retries
+- FastMCP Middleware pattern for auth (subclass Middleware, override on_call_tool, get_http_headers with include={"authorization"})
+- Keycloak JWT scaffolding fully removed (never activated, replaced by API key auth)
 
 ### Pending Todos
 
@@ -92,6 +94,6 @@ Items acknowledged and carried forward:
 
 ## Session Continuity
 
-Last session: 2026-04-30T10:51:36Z
-Stopped at: Completed 01-02-PLAN.md
-Resume file: .planning/phases/01-rcars-mcp-gateway/01-03-PLAN.md
+Last session: 2026-04-30T10:58:07Z
+Stopped at: Completed 01-03-PLAN.md
+Resume file: .planning/phases/01-rcars-mcp-gateway/01-04-PLAN.md
