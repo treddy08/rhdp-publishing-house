@@ -18,8 +18,8 @@ Create an MCP config file (e.g., `~/.config/rhdp-publishing-house/mcp.json`):
 {
   "mcpServers": {
     "publishing-house": {
-      "type": "streamableHttp",
-      "url": "https://ph-mcp.apps.<cluster-domain>/mcp",
+      "type": "sse",
+      "url": "https://ph-mcp.apps.<cluster-domain>/mcp/sse",
       "headers": {
         "Authorization": "Bearer <your-api-key>"
       }
