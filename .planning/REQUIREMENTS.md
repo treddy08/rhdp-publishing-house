@@ -36,7 +36,7 @@ Requirements for this milestone. Each maps to a roadmap phase.
 - [ ] **EXPRESS-06**: `ph_get_express_project(project_id)` MCP tool retrieves express project state for session continuity
 - [x] **EXPRESS-07**: `ph_store_intake_results(project_id, intake_data)` and `ph_get_intake_results(project_id)` MCP tools support session continuity for onboarded/self-published modes — COMPLETED (02-02-PLAN.md): 5 session tools + owner filter + manifest sync
 - [x] **EXPRESS-08**: Orchestrator checks local manifest first, then portal via `ph_list_projects` MCP tool, then offers new intake — no more "must be in repo directory" requirement
-- [ ] **EXPRESS-09**: Intake skill routes to express flow when user selects express mode; presents RCARS vetting, second RCARS base-finding query, and manual environment gate
+- [x] **EXPRESS-09**: Intake skill routes to express flow when user selects express mode; presents RCARS vetting, second RCARS base-finding query, and manual environment gate -- COMPLETED (02-04-PLAN.md): Intake SKILL.md updated with three-mode routing, express dead-end, session continuity
 - [ ] **EXPRESS-10**: Portal shows express projects in kanban alongside full projects (distinct card style or separate column)
 - [ ] **EXPRESS-11**: Portal express project detail view shows: intake data, base CI, current phase, artifacts
 - [ ] **EXPRESS-12**: Artifact viewer in portal renders recap document and intake design doc

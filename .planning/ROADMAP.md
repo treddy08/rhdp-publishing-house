@@ -13,7 +13,7 @@ This milestone extends the Publishing House from a local-only Claude Code workfl
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: RCARS MCP Gateway** - Authenticated MCP endpoint wrapping RCARS v2, fixing broken intake vetting
-- [ ] **Phase 2: Express Mode Framework** - Third deployment mode for disposable demo environments with portal-only state
+- [x] **Phase 2: Express Mode Framework** - Third deployment mode for disposable demo environments with portal-only state
 - [ ] **Phase 3: Jira Integration** - One-directional Jira sync for stakeholder visibility into project lifecycle
 - [ ] **Phase 4: Portal Chatbot** - Hosted access path giving users without Claude Code the same PH capabilities
 
@@ -58,7 +58,7 @@ Plans:
 - [x] 02-01-PLAN.md — DB models (IntakeSession, ExpressMetric, JSONBType DRY) + migration + tests
 - [x] 02-02-PLAN.md — Session continuity MCP tools + manifest sync + owner_email filter
 - [x] 02-03-PLAN.md — Orchestrator SKILL.md rewrite (MCP-aware startup, email ID, manifest sync)
-- [ ] 02-04-PLAN.md — Intake SKILL.md update (three-mode routing, express flow, session continuity)
+- [x] 02-04-PLAN.md — Intake SKILL.md update (three-mode routing, express flow, session continuity)
 
 ### Phase 3: Jira Integration
 **Goal**: Stakeholders can follow project progress in Jira without leaving their existing workflow, and managers have enough visibility to assess timeline health
@@ -101,6 +101,6 @@ Note: Phases 3 and 4 both depend on Phase 1 but are independent of each other. T
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. RCARS MCP Gateway | 7/7 | Complete | 2026-04-30 |
-| 2. Express Mode Framework | 3/4 | In progress | - |
+| 2. Express Mode Framework | 4/4 | Complete | 2026-05-04 |
 | 3. Jira Integration | 0/0 | Not started | - |
 | 4. Portal Chatbot | 0/0 | Not started | - |
