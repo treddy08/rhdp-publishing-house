@@ -28,7 +28,7 @@ Requirements for this milestone. Each maps to a roadmap phase.
 
 ### Express Mode
 
-- [ ] **EXPRESS-01**: Separate `ExpressProject` database model exists with fields: id, name, owner_email, base_ci, phase (intake/environment/customize/complete), status (in_progress/complete/abandoned), intake_data (JSONB), created_at, updated_at
+- [x] **EXPRESS-01**: Separate `ExpressProject` database model exists with fields: id, name, owner_email, base_ci, phase (intake/environment/customize/complete), status (in_progress/complete/abandoned), intake_data (JSONB), created_at, updated_at — RESTRUCTURED: Replaced with IntakeSession + ExpressMetric models per D-01 (02-01-PLAN.md)
 - [ ] **EXPRESS-02**: `ExpressArtifact` model stores artifacts per project (artifact_type: intake_design/recap/showroom, content as text)
 - [ ] **EXPRESS-03**: `ph_create_express_project(name, intake_data)` MCP tool creates an express project record in portal DB
 - [ ] **EXPRESS-04**: `ph_update_express_status(project_id, phase, status)` MCP tool updates express project phase and status
@@ -117,7 +117,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RCARS-03 | Phase 1 | Complete (01-01) |
 | RCARS-04 | Phase 1 | Complete (01-05) |
 | RCARS-05 | Phase 1 | Complete (01-06) |
-| EXPRESS-01 | Phase 2 | Pending |
+| EXPRESS-01 | Phase 2 | Complete (02-01) |
 | EXPRESS-02 | Phase 2 | Pending |
 | EXPRESS-03 | Phase 2 | Pending |
 | EXPRESS-04 | Phase 2 | Pending |

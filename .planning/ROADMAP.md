@@ -55,7 +55,7 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — DB models (IntakeSession, ExpressMetric, JSONBType DRY) + migration + tests
+- [x] 02-01-PLAN.md — DB models (IntakeSession, ExpressMetric, JSONBType DRY) + migration + tests
 - [ ] 02-02-PLAN.md — Session continuity MCP tools + manifest sync + owner_email filter
 - [ ] 02-03-PLAN.md — Orchestrator SKILL.md rewrite (MCP-aware startup, email ID, manifest sync)
 - [ ] 02-04-PLAN.md — Intake SKILL.md update (three-mode routing, express flow, session continuity)
@@ -101,6 +101,6 @@ Note: Phases 3 and 4 both depend on Phase 1 but are independent of each other. T
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. RCARS MCP Gateway | 7/7 | Complete | 2026-04-30 |
-| 2. Express Mode Framework | 0/4 | Not started | - |
+| 2. Express Mode Framework | 1/4 | In progress | - |
 | 3. Jira Integration | 0/0 | Not started | - |
 | 4. Portal Chatbot | 0/0 | Not started | - |
