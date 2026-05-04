@@ -41,7 +41,7 @@ Plans:
 - [x] 01-06-PLAN.md — Intake skill vetting update (curl to MCP tool)
 - [x] 01-07-PLAN.md — Documentation (5 deliverables)
 
-### Phase 2: Express Mode Framework
+### Phase 2: Express Mode Framework [completed 2026-05-04]
 **Goal**: Session continuity infrastructure and express intake routing -- portal DB mirrors manifest state for cross-session discovery, intake supports three deployment modes (express dead-ends at environment gate), and the orchestrator discovers projects from both local manifests and portal MCP queries
 **Depends on**: Phase 1
 **Note**: This phase was restructured during discuss-phase. Express projects are transient (D-01) -- no portal tracking, no kanban, no detail views. The phase focuses on orchestrator evolution, session continuity, and express intake routing. Requirements EXPRESS-02/04/05/06/10/11/12 are descoped per CONTEXT.md decisions.
