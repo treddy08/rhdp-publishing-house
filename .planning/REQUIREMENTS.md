@@ -35,7 +35,7 @@ Requirements for this milestone. Each maps to a roadmap phase.
 - [ ] **EXPRESS-05**: `ph_store_express_artifact(project_id, artifact_type, content)` MCP tool stores recap, intake design, and other artifacts
 - [ ] **EXPRESS-06**: `ph_get_express_project(project_id)` MCP tool retrieves express project state for session continuity
 - [x] **EXPRESS-07**: `ph_store_intake_results(project_id, intake_data)` and `ph_get_intake_results(project_id)` MCP tools support session continuity for onboarded/self-published modes — COMPLETED (02-02-PLAN.md): 5 session tools + owner filter + manifest sync
-- [ ] **EXPRESS-08**: Orchestrator checks local manifest first, then portal via `ph_list_projects` MCP tool, then offers new intake — no more "must be in repo directory" requirement
+- [x] **EXPRESS-08**: Orchestrator checks local manifest first, then portal via `ph_list_projects` MCP tool, then offers new intake — no more "must be in repo directory" requirement
 - [ ] **EXPRESS-09**: Intake skill routes to express flow when user selects express mode; presents RCARS vetting, second RCARS base-finding query, and manual environment gate
 - [ ] **EXPRESS-10**: Portal shows express projects in kanban alongside full projects (distinct card style or separate column)
 - [ ] **EXPRESS-11**: Portal express project detail view shows: intake data, base CI, current phase, artifacts
@@ -123,8 +123,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXPRESS-04 | Phase 2 | Pending |
 | EXPRESS-05 | Phase 2 | Pending |
 | EXPRESS-06 | Phase 2 | Pending |
-| EXPRESS-07 | Phase 2 | Pending |
-| EXPRESS-08 | Phase 2 | Pending |
+| EXPRESS-07 | Phase 2 | Complete (02-02) |
+| EXPRESS-08 | Phase 2 | Complete (02-03) |
 | EXPRESS-09 | Phase 2 | Pending |
 | EXPRESS-10 | Phase 2 | Pending |
 | EXPRESS-11 | Phase 2 | Pending |
