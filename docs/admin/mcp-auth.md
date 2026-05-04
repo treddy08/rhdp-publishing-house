@@ -45,7 +45,7 @@ The key name (e.g., `nate`) is an admin identifier for bookkeeping -- it tells y
 Run the Ansible deployer to update the Secret and restart the backend pod:
 
 ```bash
-cd rhdp-publishing-house-portal/ansible && ansible-playbook deploy.yml -e @vars/dev.yml --tags update
+cd rhdp-publishing-house-portal && ansible-playbook ansible/deploy.yml -e env=dev --tags deploy
 ```
 
 The deployer updates the `ph-mcp-api-keys` Secret and the backend pod restarts to pick up the new key file (D-01: no hot-reload in Phase 1).
@@ -63,7 +63,7 @@ To revoke a user's API key:
 1. Remove the user's entry from `mcp_api_keys` in `ansible/vars/dev.yml`
 2. Redeploy:
    ```bash
-   cd rhdp-publishing-house-portal/ansible && ansible-playbook deploy.yml -e @vars/dev.yml --tags update
+   cd rhdp-publishing-house-portal && ansible-playbook ansible/deploy.yml -e env=dev --tags deploy
    ```
 3. The backend pod restarts and loads the updated key file. The revoked key is immediately invalid.
 
@@ -153,7 +153,7 @@ Compare the output with the value stored in `ansible/vars/dev.yml`.
    ```
 2. Verify the file exists inside the pod:
    ```bash
-   oc exec deployment/ph-dashboard-backend -n publishing-house-dev -- cat /etc/ph/mcp-api-keys/keys.yaml
+   oc exec deployment/ph-portal-backend -n publishing-house-dev -- cat /etc/ph/mcp-api-keys/keys.yaml
    ```
 3. Verify `mcp_api_keys` is not empty in `ansible/vars/dev.yml`
 
@@ -163,7 +163,7 @@ Compare the output with the value stored in `ansible/vars/dev.yml`.
 
 **Fix:** The backend reads the key file at startup only (D-01). After updating keys and redeploying, verify the pod restarted:
 ```bash
-oc get pods -l app=ph-dashboard,component=backend -n publishing-house-dev
+oc get pods -l app=ph-portal,component=backend -n publishing-house-dev
 ```
 The pod age should be recent (seconds/minutes, not hours/days).
 

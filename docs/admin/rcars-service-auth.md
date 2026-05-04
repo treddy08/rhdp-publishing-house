@@ -77,7 +77,7 @@ This is the RCARS API ClusterIP Service in the `rcars-dev` namespace. No externa
 From the PH backend pod, test that RCARS is reachable:
 
 ```bash
-oc exec deployment/ph-dashboard-backend -n publishing-house-dev -- \
+oc exec deployment/ph-portal-backend -n publishing-house-dev -- \
   curl -s http://rcars-api.rcars-dev.svc.cluster.local:8080/api/v1/health
 ```
 
@@ -90,7 +90,7 @@ Expected response:
 ### Verify SA token is being mounted
 
 ```bash
-oc exec deployment/ph-dashboard-backend -n publishing-house-dev -- \
+oc exec deployment/ph-portal-backend -n publishing-house-dev -- \
   cat /var/run/secrets/kubernetes.io/serviceaccount/token | head -c 50
 ```
 
@@ -101,7 +101,7 @@ This should print the first 50 characters of a JWT-formatted token.
 Check what SA the backend pod is running as:
 
 ```bash
-oc get deployment ph-dashboard-backend -n publishing-house-dev \
+oc get deployment ph-portal-backend -n publishing-house-dev \
   -o jsonpath='{.spec.template.spec.serviceAccountName}'
 ```
 
@@ -120,7 +120,7 @@ The output should include `system:serviceaccount:publishing-house-dev:default`.
 From the PH backend pod, test authentication end-to-end:
 
 ```bash
-oc exec deployment/ph-dashboard-backend -n publishing-house-dev -- \
+oc exec deployment/ph-portal-backend -n publishing-house-dev -- \
   bash -c 'TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token) && \
   curl -s -H "Authorization: Bearer $TOKEN" \
   http://rcars-api.rcars-dev.svc.cluster.local:8080/api/v1/health'
@@ -173,7 +173,7 @@ If restrictive policies exist, ensure they allow ingress from the `publishing-ho
 oc get svc rcars-api -n rcars-dev
 
 # Test DNS resolution from PH pod
-oc exec deployment/ph-dashboard-backend -n publishing-house-dev -- \
+oc exec deployment/ph-portal-backend -n publishing-house-dev -- \
   nslookup rcars-api.rcars-dev.svc.cluster.local
 ```
 

@@ -51,7 +51,7 @@ Fill in all `CHANGEME` values:
 | `oauth_cookie_secret` | OAuth cookie secret — generate with `openssl rand -hex 16` |
 | `github_repo` | Repo in `owner/name` format (e.g., `rhpds/rhdp-publishing-house-portal`) |
 | `github_token` | GitHub PAT for fetching manifests from private repos |
-| `mcp_route_host` | Hostname for the MCP endpoint Route (e.g., `ph-mcp.apps.<cluster-domain>`) |
+| `mcp_route_host` | Hostname for the MCP endpoint Route (e.g., `ph-mcp-dev.apps.<cluster-domain>`) |
 | `mcp_api_keys` | Dict of `name: sha256-hash` pairs for MCP API key auth. See [MCP Auth Admin Guide](admin/mcp-auth.md) |
 
 **NEVER commit `dev.yml` or `prod.yml`** — they are gitignored. Only `.example` files are tracked.
@@ -64,20 +64,19 @@ ansible-playbook ansible/deploy.yml -e env=dev -e kubeconfig=~/.kube/config --ta
 
 # 2. Update dev.yml with the generated mgmt kubeconfig path
 
-# 3. Full deploy (infra + builds + app manifests + migrations)
-ansible-playbook ansible/deploy.yml -e env=dev --tags update
+# 3. Full deploy (infra + app + builds + migrations)
+ansible-playbook ansible/deploy.yml -e env=dev --tags deploy
 ```
 
-The `update` tag runs bootstrap, builds, app manifests, and database migrations in one pass.
+The `deploy` tag runs infra manifests, app manifests, builds, and database migrations in one pass.
 
 ## Playbook Tags
 
 | Tag | What It Does | When to Use |
 |-----|-------------|-------------|
 | `mgmt-rbac` | Bootstrap management SA, ClusterRole, generate kubeconfig | One-time setup |
-| `bootstrap` | Namespace + infra manifests (PG, BuildConfigs, Secrets, OAuth, MCP Route) | First deploy or infra changes |
-| `apply` | App manifests (Deployments, Services, Route) + migrate | Config-only changes |
-| `update` | bootstrap + builds + apply + migrate | Normal deployment |
+| `deploy` | Full deploy: infra + app + builds + migrate | Normal deployment |
+| `apply` | App manifests only (Deployments, Services, Route) | Config-only changes |
 | `builds` | Trigger builds + wait for rollout | Code changes only |
 | `build-backend` | Build backend only + rollout | Backend code changes |
 | `build-frontend` | Build frontend only + rollout | Frontend code changes |
@@ -87,10 +86,13 @@ The `update` tag runs bootstrap, builds, app manifests, and database migrations 
 
 ```bash
 # Full redeploy
-ansible-playbook ansible/deploy.yml -e env=dev --tags update
+ansible-playbook ansible/deploy.yml -e env=dev --tags deploy
 
 # Rebuild only (after code push)
 ansible-playbook ansible/deploy.yml -e env=dev --tags builds
+
+# App manifests only (no build)
+ansible-playbook ansible/deploy.yml -e env=dev --tags apply
 
 # Schema migration only
 ansible-playbook ansible/deploy.yml -e env=dev --tags migrate

@@ -105,7 +105,7 @@ The PH backend and RCARS API are deployed in separate OpenShift namespaces on th
 ```
 publishing-house-dev namespace              rcars-dev namespace
 +----------------------------+              +----------------------------+
-| ph-dashboard-backend       |   HTTP       | rcars-api                  |
+| ph-portal-backend       |   HTTP       | rcars-api                  |
 | (FastAPI + MCP)            | -----------> | (FastAPI)                  |
 | Service: ClusterIP :8080   |              | Service: ClusterIP :8080   |
 +----------------------------+              +----------------------------+

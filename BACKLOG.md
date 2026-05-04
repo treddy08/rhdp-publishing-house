@@ -39,6 +39,9 @@ The agent that powers Phase 3 (Customize) of express mode. Assesses an OpenShift
 
 **Depends on:** Express mode orchestration, RCARS integration.
 
+### Express admin view in portal
+Basic read-only section in the portal for express sessions — not on the kanban, but visible to admins and power users. List express intake sessions with owner, date, base CI, status. Allow peek into intake data, and cleanup (delete stale sessions). Lightweight — table view, not full detail pages. Came up during phase 2 testing: express projects are transient but someone needs visibility into what's been created and the ability to tidy up.
+
 ### Portal user identity model
 Red Hat email as primary key for user ownership across all modes. GitHub ID tracked in manifests but secondary. Need email ↔ GitHub ID mapping for cross-referencing. Required for orchestrator "find projects by user" to work reliably across CC (GitHub identity) and portal (SSO/email identity).
 
@@ -49,6 +52,13 @@ Keep PH modular so skill ownership can be delegated. Contributors have flexibili
 - What a skill MUST NOT touch (phase-level transitions belong to the orchestrator)
 - How a skill surfaces blockers (worklog entries)
 - How to test a skill in isolation
+
+---
+
+### RCARS express learning data
+Store express mode run data (selected Babylon base CI + customization steps performed) in RCARS so future express runs benefit from past experience. Needs careful design — this data must not pollute content search results (it's infrastructure/workflow data, not lab content). Could improve the base-finding query accuracy over time. Coordinate with RCARS backlog item for infrastructure-aware catalog metadata.
+
+**Depends on:** Express mode framework, RCARS infrastructure-aware metadata.
 
 ---
 
@@ -86,6 +96,8 @@ Split into `field_content_cluster` + `field_content_tenant` roles. Both deploy A
 
 ## Completed (recent)
 
+- **2026-05-04** — Express mode framework (Phase 2): DB models, MCP session tools, orchestrator MCP awareness, intake three-mode routing
+- **2026-05-01** — RCARS MCP gateway (Phase 1): portal as MCP gateway, API key auth, RCARS tools, Ansible deployment
 - **2026-04-28** — Express mode design spec
 - **2026-04-27** — RCARS integration design spec
 - **2026-04-27** — Intake simplification: 3 entry paths → 2, conversational opening for Path B, Path C merged
