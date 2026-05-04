@@ -51,6 +51,9 @@ Fill in all `CHANGEME` values:
 | `oauth_cookie_secret` | OAuth cookie secret — generate with `openssl rand -hex 16` |
 | `github_repo` | Repo in `owner/name` format (e.g., `rhpds/rhdp-publishing-house-portal`) |
 | `github_token` | GitHub PAT for fetching manifests from private repos |
+| `rcars_url` | RCARS external URL for frontend links (e.g., `https://rcars-dev.apps.<cluster-domain>/`) |
+| `rcars_internal_url` | RCARS cluster-internal URL (e.g., `http://rcars-api.rcars-dev.svc.cluster.local:8080`) |
+| `rcars_stages` | RCARS catalog stages to query. Default: `prod`. Set to `prod,zt` or `prod,event,zt` to include other stages. |
 | `mcp_route_host` | Hostname for the MCP endpoint Route (e.g., `ph-mcp-dev.apps.<cluster-domain>`) |
 | `mcp_api_keys` | Dict of `name: sha256-hash` pairs for MCP API key auth. See [MCP Auth Admin Guide](admin/mcp-auth.md) |
 
