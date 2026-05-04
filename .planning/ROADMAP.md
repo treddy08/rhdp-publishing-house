@@ -42,22 +42,23 @@ Plans:
 - [x] 01-07-PLAN.md — Documentation (5 deliverables)
 
 ### Phase 2: Express Mode Framework
-**Goal**: The express mode plumbing exists — DB model, MCP tools, orchestrator awareness, portal tracking — so express projects can be created and tracked even before the express skill (cluster customization agent) is built
+**Goal**: Session continuity infrastructure and express intake routing -- portal DB mirrors manifest state for cross-session discovery, intake supports three deployment modes (express dead-ends at environment gate), and the orchestrator discovers projects from both local manifests and portal MCP queries
 **Depends on**: Phase 1
-**Note**: This phase delivers the framework only. The express skill (Phase 3 of the express mode, where the agent actually customizes the cluster) is a separate workstream outside this milestone. Express projects created here will sit at the "environment" gate awaiting the skill.
+**Note**: This phase was restructured during discuss-phase. Express projects are transient (D-01) -- no portal tracking, no kanban, no detail views. The phase focuses on orchestrator evolution, session continuity, and express intake routing. Requirements EXPRESS-02/04/05/06/10/11/12 are descoped per CONTEXT.md decisions.
 **Requirements**: EXPRESS-01, EXPRESS-02, EXPRESS-03, EXPRESS-04, EXPRESS-05, EXPRESS-06, EXPRESS-07, EXPRESS-08, EXPRESS-09, EXPRESS-10, EXPRESS-11, EXPRESS-12
 **Success Criteria** (what must be TRUE):
-  1. A user can select express mode during intake, go through RCARS vetting, identify a base CI, and have their express project created and tracked in the portal DB
+  1. A user can select express mode during intake, go through RCARS vetting, identify a base CI, and have their express intake data stored in the portal DB (not as a tracked project)
   2. The orchestrator discovers existing projects by checking local manifest first, then querying portal via MCP -- no longer requires being in a repo directory
-  3. Portal kanban shows express projects alongside full projects with a visually distinct card style
-  4. Portal express project detail view displays intake data, base CI, current phase, and stored artifacts (recap, intake design)
+  3. ~~Portal kanban shows express projects alongside full projects with a visually distinct card style~~ DESCOPED per D-01 -- express has no portal presence
+  4. ~~Portal express project detail view displays intake data, base CI, current phase, and stored artifacts~~ DESCOPED per D-01 -- no express detail views
   5. Session continuity works for all modes -- intake results persist in portal DB and survive Claude Code restarts
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 4 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — DB models (IntakeSession, ExpressMetric, JSONBType DRY) + migration + tests
+- [ ] 02-02-PLAN.md — Session continuity MCP tools + manifest sync + owner_email filter
+- [ ] 02-03-PLAN.md — Orchestrator SKILL.md rewrite (MCP-aware startup, email ID, manifest sync)
+- [ ] 02-04-PLAN.md — Intake SKILL.md update (three-mode routing, express flow, session continuity)
 
 ### Phase 3: Jira Integration
 **Goal**: Stakeholders can follow project progress in Jira without leaving their existing workflow, and managers have enough visibility to assess timeline health
@@ -100,6 +101,6 @@ Note: Phases 3 and 4 both depend on Phase 1 but are independent of each other. T
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. RCARS MCP Gateway | 7/7 | Complete | 2026-04-30 |
-| 2. Express Mode Framework | 0/0 | Not started | - |
+| 2. Express Mode Framework | 0/4 | Not started | - |
 | 3. Jira Integration | 0/0 | Not started | - |
 | 4. Portal Chatbot | 0/0 | Not started | - |
