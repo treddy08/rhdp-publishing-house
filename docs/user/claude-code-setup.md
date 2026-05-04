@@ -18,8 +18,8 @@ Create an MCP config file (e.g., `~/.config/rhdp-publishing-house/mcp.json`):
 {
   "mcpServers": {
     "publishing-house": {
-      "type": "sse",
-      "url": "https://ph-mcp.apps.<cluster-domain>/mcp/sse",
+      "type": "http",
+      "url": "https://ph-mcp.apps.<cluster-domain>/mcp/",
       "headers": {
         "Authorization": "Bearer <your-api-key>"
       }
@@ -121,7 +121,7 @@ Claude will call `ph_rcars_catalog_item` and return the full metadata including 
 **Fix:**
 1. Verify the `headers` block exists in your MCP config with `"Authorization": "Bearer <your-api-key>"`
 2. Ensure there are no extra spaces or newlines in the API key value
-3. Confirm the `type` field is set to `"streamable-http"` (not `"sse"` or `"stdio"`)
+3. Confirm the `type` field is set to `"http"` (not `"sse"` or `"stdio"`)
 
 ### "Authentication failed" (invalid key)
 
