@@ -234,11 +234,13 @@ These tools manage Publishing House projects. They were available before the RCA
 
 ### ph_list_projects
 
-List all Publishing House projects with their current phase and status.
+List all Publishing House projects with their current phase and status. Supports filtering by owner email for portal project discovery.
 
 #### Parameters
 
-None.
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `owner_email` | `str` | No | `None` | Filter projects by owner email address. If omitted, returns all projects. |
 
 #### Return Shape
 
@@ -317,6 +319,160 @@ Retrieve stored validation results for a project.
 #### Return Shape
 
 Returns the previously stored validation results dict, or an error if none exist.
+
+---
+
+## Session Continuity Tools
+
+These tools persist intake data and manifest state in the portal DB, enabling session continuity across Claude Code restarts. Added in Phase 2.
+
+---
+
+### ph_store_intake_results
+
+Store intake interview results in the portal DB for session continuity. Creates an IntakeSession record. Used by all three deployment modes (onboarded, self_published, express).
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `owner_email` | `str` | Yes | Red Hat email of the project owner. |
+| `mode` | `str` | Yes | Deployment mode: `onboarded`, `self_published`, or `express`. |
+| `intake_data` | `dict` | Yes | Full intake data dict (mirrors manifest project + lifecycle shape). |
+| `project_name` | `str` | No | Optional project name for display. |
+
+#### Return Shape
+
+```json
+{
+  "session_id": "a1b2c3d4-...",
+  "owner_email": "user@redhat.com",
+  "mode": "express",
+  "project_name": "My Demo",
+  "status": "active",
+  "created_at": "2026-05-04T10:00:00+00:00"
+}
+```
+
+---
+
+### ph_get_intake_results
+
+Retrieve stored intake results by session ID. Returns the full intake data dict for resuming a previously started intake interview.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `session_id` | `str` | Yes | UUID string of the intake session to retrieve. |
+
+#### Return Shape
+
+```json
+{
+  "session_id": "a1b2c3d4-...",
+  "owner_email": "user@redhat.com",
+  "mode": "onboarded",
+  "project_name": "My Workshop",
+  "status": "active",
+  "intake_data": { ... },
+  "project_id": null,
+  "created_at": "2026-05-04T10:00:00+00:00",
+  "updated_at": "2026-05-04T10:05:00+00:00"
+}
+```
+
+#### Return Shape (not found)
+
+```json
+{
+  "error": "Session a1b2c3d4-... not found"
+}
+```
+
+---
+
+### ph_list_intake_sessions
+
+List intake sessions for a user, optionally filtered by status. Returns sessions ordered by creation date (newest first).
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `owner_email` | `str` | Yes | | Red Hat email to filter sessions by. |
+| `status` | `str` | No | `None` | Filter by status: `active`, `converted`, or `abandoned`. |
+
+#### Return Shape
+
+```json
+[
+  {
+    "session_id": "a1b2c3d4-...",
+    "mode": "express",
+    "project_name": "Quick Demo",
+    "status": "active",
+    "created_at": "2026-05-04T10:00:00+00:00"
+  }
+]
+```
+
+---
+
+### ph_sync_manifest
+
+Sync manifest YAML content from a skill to the portal DB. Called by skills after every manifest write to keep the portal in real-time sync. Sets `sync_source='mcp'` to prevent the refresh engine from overwriting MCP-pushed data.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `project_id` | `str` | Yes | UUID of the project whose manifest to update. |
+| `manifest_yaml` | `str` | Yes | Full manifest YAML content as a string. |
+
+#### Return Shape
+
+```json
+{
+  "manifest_id": "e5f6g7h8-...",
+  "project_id": "a1b2c3d4-...",
+  "synced_at": "2026-05-04T10:05:00+00:00"
+}
+```
+
+#### Return Shape (project not found)
+
+```json
+{
+  "error": "Project a1b2c3d4-... not found"
+}
+```
+
+---
+
+### ph_record_express_run
+
+Record a completed express mode run for aggregate metrics tracking.
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `owner_email` | `str` | Yes | | Red Hat email of the user who ran express mode. |
+| `base_ci` | `str` | No | `None` | RCARS catalog item used as the base environment. |
+| `automated` | `bool` | No | `false` | Whether the environment ordering was fully automated. |
+
+#### Return Shape
+
+```json
+{
+  "id": "i9j0k1l2-...",
+  "owner_email": "user@redhat.com",
+  "base_ci": "ocp4_getting_started",
+  "automated": false,
+  "created_at": "2026-05-04T12:00:00+00:00"
+}
+```
 
 ---
 

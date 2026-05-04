@@ -88,10 +88,11 @@ Set during intake. Determines the automation path and publishing target.
 
 | Mode | Description | Automation | Published In RHDP? |
 |------|-------------|------------|-------------------|
-| **RHDP Published** (`rhdp_published`) | Full pipeline. Review gates, AgnosticV catalog, published as a standalone item. | Ansible, GitOps, or both | Yes |
+| **RHDP Published** (`onboarded`) | Full pipeline. Review gates, AgnosticV catalog, published as a standalone item. | Ansible, GitOps, or both | Yes |
 | **Self-Published** (`self_published`) | You manage deployment. Uses the generic Field Source CI with your GitOps repo URL. | GitOps only (Helm + ArgoCD) | No |
+| **Express** (`express`) | Fast path for one-off demo environments. No git repo, no review gates. See [Express Mode](express-mode-overview.md). | Live cluster customization | No |
 
-The content pipeline (intake, writing, editing) is the same for both modes. The fork is where the output lands.
+The content pipeline (intake, writing, editing) is the same for onboarded and self-published modes. Express mode is a separate fast path — it runs through intake, identifies a base CI from the RCARS catalog, and then gates on environment provisioning. See [Express Mode](express-mode-overview.md) for the full lifecycle.
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Publishing House exposes MCP tools that let Claude Code query the RCARS content advisory system for content vetting, catalog browsing, and item lookup. This guide explains how to connect Claude Code to the Publishing House MCP server.
+Publishing House exposes MCP tools that let Claude Code query the RCARS content advisory system, persist intake data across sessions, sync manifest state to the portal, and track express mode usage. This guide explains how to connect Claude Code to the Publishing House MCP server.
 
 ## Prerequisites
 
@@ -12,13 +12,13 @@ Publishing House exposes MCP tools that let Claude Code query the RCARS content 
 
 ## MCP Server Configuration
 
-Add the Publishing House MCP server to your Claude Code configuration. Edit your MCP config file (`~/.claude/mcp.json` for global, or `.mcp.json` in your project directory for project-scoped):
+Create an MCP config file (e.g., `~/.config/rhdp-publishing-house/mcp.json`):
 
 ```json
 {
   "mcpServers": {
     "publishing-house": {
-      "type": "streamable-http",
+      "type": "streamableHttp",
       "url": "https://ph-mcp.apps.<cluster-domain>/mcp",
       "headers": {
         "Authorization": "Bearer <your-api-key>"
@@ -31,6 +31,15 @@ Add the Publishing House MCP server to your Claude Code configuration. Edit your
 Replace:
 - `<cluster-domain>` with the OpenShift cluster apps domain (ask your admin for the exact URL)
 - `<your-api-key>` with the raw API key provided by your admin
+
+Then launch Claude Code with both the MCP config and the skills plugin:
+
+```bash
+claude --mcp-config ~/.config/rhdp-publishing-house/mcp.json \
+       --plugin-dir ~/rhdp-publishing-house-skills
+```
+
+Alternatively, add the MCP server to your global config (`~/.claude/mcp.json`) or project-scoped config (`.mcp.json` in your project directory) to avoid passing `--mcp-config` every time.
 
 ## Verify Connection
 
@@ -57,8 +66,18 @@ Once connected, Claude Code can use the following MCP tools:
 
 | Tool | Description |
 |------|-------------|
-| `ph_list_projects` | List all Publishing House projects with their current phase and status. |
+| `ph_list_projects` | List all Publishing House projects with their current phase and status. Supports `owner_email` filter. |
 | `ph_get_launch_instructions` | Get launch instructions for a specific project, including deployment steps and URLs. |
+
+### Session Continuity Tools
+
+| Tool | Description |
+|------|-------------|
+| `ph_store_intake_results` | Persist intake interview data in the portal DB. Used by all three modes (onboarded, self-published, express). |
+| `ph_get_intake_results` | Retrieve previously stored intake data by session ID. Enables resuming intake across Claude Code restarts. |
+| `ph_list_intake_sessions` | List intake sessions for a user, optionally filtered by status. |
+| `ph_sync_manifest` | Sync manifest YAML to the portal DB after every manifest write. Keeps the portal in real-time sync. |
+| `ph_record_express_run` | Record a completed express mode run for aggregate metrics tracking. |
 
 For detailed parameter and return shape documentation, see the [MCP Tools Reference](../api/mcp-tools.md).
 

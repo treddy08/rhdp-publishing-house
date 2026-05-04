@@ -2,21 +2,24 @@
 
 The RHDP Publishing House Portal provides cross-project visibility into the content lifecycle. While individual authors interact with the CLI skills, the portal gives managers, PMs, and stakeholders a single view across all active projects — without needing Claude Code.
 
-The portal is read-only. All state changes happen through the CLI skills. The manifest in git is the source of truth; the portal database is a cache.
+The portal has two data paths: the **refresh engine** pulls project state from GitHub repos on a schedule, and **MCP tools** accept writes from Claude Code skills in real time. The manifest in git remains the source of truth for onboarded and self-published projects; the portal database also stores intake session data and express metrics that have no git representation.
 
 ## Architecture
 
 ```
 GitHub (manifest.yaml, worklog.yaml)
         ↓  refresh engine (scheduled + on-demand)
-   PostgreSQL (cache)
+   PostgreSQL
+        ↑  MCP tools (real-time writes from Claude Code)
         ↓
-   FastAPI backend
+   FastAPI backend ──── /mcp endpoint (API key auth)
         ↓
    Next.js frontend
 ```
 
 The refresh engine checks each registered project's GitHub repo and syncs manifest and worklog data to the database. It runs on a schedule and on-demand when you trigger a manual refresh.
+
+MCP tools provide a second write path: Claude Code skills call `ph_sync_manifest` after every manifest write (keeping the portal in sync without waiting for the next refresh cycle), `ph_store_intake_results` to persist intake session data across Claude Code restarts, and `ph_record_express_run` for lightweight express usage metrics.
 
 ## Registering a Project
 

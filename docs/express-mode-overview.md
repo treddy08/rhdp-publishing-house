@@ -70,9 +70,9 @@ There is a dependency here: RCARS currently indexes Showroom content (what a lab
 
 ## State and Visibility
 
-Express projects have no git repository. State lives in the PH portal database — intake data, phase tracking, and stored artifacts (recap documents, intake designs, optional Showroom content). Express projects appear on the portal kanban alongside standard projects, giving managers visibility into what's being built and why without requiring any action from the user beyond the initial intake conversation.
+Express projects have no git repository. State lives in the PH portal database — intake data is stored via `ph_store_intake_results` and express run metrics via `ph_record_express_run`. Express projects are transient: they do not appear on the portal kanban or have detail views. Aggregate metrics (how many express runs, which base CIs are popular) provide visibility into express usage patterns without per-project tracking overhead.
 
-This is a meaningful shift from the other PH modes, where a git manifest is the source of truth. For express, the portal is authoritative.
+This is a meaningful shift from the other PH modes, where a git manifest is the source of truth. For express, the portal stores intake data for session continuity, but the work itself is ephemeral.
 
 ## Who Uses It
 
@@ -85,12 +85,13 @@ Express mode is designed for field associates, SAs, and anyone who needs a tailo
 
 | Dependency | Status |
 |------------|--------|
-| PH MCP server with RCARS integration | Spec complete, not started |
-| Portal DB model for express projects + artifacts | Spec complete, not started |
-| Portal MCP tools for express state management | Spec complete, not started |
-| Orchestrator awareness of portal-based projects | Spec complete, not started |
+| PH MCP server with RCARS integration | Complete (Phase 1) |
+| Portal DB model for express (IntakeSession, ExpressMetric) | Complete (Phase 2) |
+| Portal MCP tools for session continuity | Complete (Phase 2) |
+| Orchestrator awareness of portal-based projects | Complete (Phase 2) |
+| Intake three-mode routing with express flow | Complete (Phase 2) |
 | Express skill (the cluster customization agent) | Needs its own design |
 | RCARS infrastructure-aware metadata (for base-finding accuracy) | Backlogged in RCARS |
 | Babylon ordering automation | Deferred (manual gate works) |
 
-The first four items are framework — extending the existing PH portal and MCP infrastructure. They can be built and verified independently. The express skill is the agent engineering effort that makes the mode actually useful, and it plugs into the framework when ready.
+The framework is in place — MCP server, DB models, session tools, orchestrator discovery, and intake routing are all built. The express skill is the agent engineering effort that makes the mode actually useful, and it plugs into the framework when ready.
