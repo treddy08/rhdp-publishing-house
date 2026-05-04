@@ -504,22 +504,19 @@ user:
 | A3 | `IntakeSession.intake_data` stores the full manifest-shaped dict | Architecture Patterns | Medium -- if the manifest shape is too large for JSONB or if specific fields need indexing, a hybrid approach may be needed. Current manifests are ~100 lines of YAML which serialize to small JSON dicts. |
 | A4 | The GitHub refresh job should defer to MCP-synced data when MCP sync is more recent | Pitfalls - Circular Sync Loop | Medium -- requires modifying the existing `refresh_project_service` logic to check sync timestamps. Alternative: separate the MCP-synced manifest from the GitHub-fetched manifest. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **How should `ph_sync_manifest` interact with the existing GitHub refresh job?**
+1. **How should `ph_sync_manifest` interact with the existing GitHub refresh job?** (RESOLVED)
    - What we know: The portal refreshes manifests from GitHub every 30 minutes (`refresh_interval_minutes`). Phase 2 adds MCP-based sync on every manifest write.
-   - What's unclear: Should MCP-synced data take precedence over GitHub-fetched data? Should the refresh job skip projects that were recently synced via MCP?
-   - Recommendation: Add a `sync_source` column to the Manifest model ('github' or 'mcp'). The refresh job checks: if `sync_source == 'mcp'` and `fetched_at` is within the last refresh interval, skip GitHub fetch. This prevents overwriting fresher MCP data with stale GitHub data.
+   - Resolution: Add a `sync_source` column to the Manifest model ('github' or 'mcp'). The refresh job checks: if `sync_source == 'mcp'` and `fetched_at` is within the last refresh interval, skip GitHub fetch. This prevents overwriting fresher MCP data with stale GitHub data. Adopted in Plan 02-01 (migration) and Plan 02-02 (ph_sync_manifest sets sync_source='mcp').
 
-2. **Should `ph_sync_manifest` create the project record if it does not exist?**
+2. **Should `ph_sync_manifest` create the project record if it does not exist?** (RESOLVED)
    - What we know: Currently, projects are created via the REST API (`POST /api/v1/projects`) which requires a GitHub repo URL. But session continuity means intake data should land in the portal BEFORE the repo exists.
-   - What's unclear: Does the sync tool also handle project creation, or does that stay with `ph_store_intake_results`?
-   - Recommendation: Keep them separate. `ph_store_intake_results` creates an `IntakeSession` (pre-project). `ph_sync_manifest` updates an existing `Project`'s manifest. Project creation (linking an `IntakeSession` to a new `Project`) happens when the user creates their repo and the orchestrator finds the intake data.
+   - Resolution: Keep them separate. `ph_store_intake_results` creates an `IntakeSession` (pre-project). `ph_sync_manifest` updates an existing `Project`'s manifest. Project creation (linking an `IntakeSession` to a new `Project`) happens when the user creates their repo and the orchestrator finds the intake data. Adopted in Plan 02-02 (separate tools).
 
-3. **How does the orchestrator link a new repo to a previously stored intake session?**
+3. **How does the orchestrator link a new repo to a previously stored intake session?** (RESOLVED)
    - What we know: User does intake (session stored in portal DB), creates repo, opens it in Claude Code, runs orchestrator.
-   - What's unclear: How does the orchestrator know which intake session belongs to this repo?
-   - Recommendation: The orchestrator queries `ph_get_intake_results(owner_email=...)` to find active sessions. If exactly one is found, use it. If multiple, present a list. The user confirms. Then the orchestrator writes the manifest locally and calls `ph_sync_manifest` to link the project.
+   - Resolution: The orchestrator queries `ph_get_intake_results(owner_email=...)` to find active sessions. If exactly one is found, use it. If multiple, present a list. The user confirms. Then the orchestrator writes the manifest locally and calls `ph_sync_manifest` to link the project. Adopted in Plan 02-03 (orchestrator startup flow section C).
 
 ## Environment Availability
 
