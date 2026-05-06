@@ -62,7 +62,7 @@ graph LR
 
 ### Orchestrator
 
-The entry point. Checks the current directory for a project manifest, syncs the repo, reads state, presents current status, and dispatches agent skills. If no project is found, offers three paths: point to a local clone, provide a remote URL to clone, or create a new project from the template. Also handles repo setup at phase gates — creates Showroom and automation repos as submodules before dispatching to the writer or automation agents. Does not perform content work itself — purely state management, repo setup, and routing.
+The entry point. Checks the current directory for a project manifest, syncs the repo, reads state, presents current status, and dispatches agent skills. If no project is found, offers three paths: point to a local clone, provide a remote URL to clone, or create a new project from the template. Does not perform content work itself — purely state management and routing.
 
 - **Model:** Opus 4.6
 - **Invoked by:** `/rhdp-publishing-house [supervised|semi|full]`
@@ -187,10 +187,19 @@ Publishing House wraps existing RHDP marketplace skills rather than reinventing 
 
 ## Project Template
 
-New projects start from a GitHub template repo (`rhpds/rhdp-publishing-house-template`) that provides:
+New projects start from a GitHub template repo (`rhpds/rhdp-publishing-house-template`) that provides a Showroom-ready project structure:
 
 ```
 my-new-lab/
+├── site.yml                             # Antora playbook (Showroom build config)
+├── ui-config.yml                        # Showroom split-pane UI config
+├── content/                             # Showroom AsciiDoc content
+│   ├── antora.yml                       # Antora component descriptor
+│   └── modules/ROOT/
+│       ├── nav.adoc                     # Sidebar navigation
+│       └── pages/
+│           └── index.adoc               # Placeholder index page
+├── automation/                          # Ansible/Helm (automation agent output)
 ├── publishing-house/
 │   ├── manifest.yaml                    # Pre-populated with empty phases
 │   ├── worklog.yaml                     # Empty worklog
@@ -200,12 +209,10 @@ my-new-lab/
 │   │   └── automation-manifest.yaml     # Automation requirements (produced by 7a)
 │   ├── reviews/                         # Agent review artifacts
 │   └── decisions/                       # Decision records
-├── content/                             # Showroom AsciiDoc (writer agent output)
-├── automation/                          # Ansible/Helm (automation agent output)
 └── CLAUDE.md                            # Points to manifest, tells Claude Code to run /rhdp-publishing-house
 ```
 
-`content/` and `automation/` are separate git repos added as submodules by the orchestrator when their respective phases begin. Each has its own remote. The project repo (private) holds the manifest and spec; those repos (public) hold the deliverables.
+Everything lives in one repo. The Showroom scaffold (`site.yml`, `ui-config.yml`, `content/antora.yml`) is included from the start so content agents can write AsciiDoc immediately. The writer agent places modules in `content/modules/ROOT/pages/` and the automation agent writes code to `automation/`.
 
 ## Portal
 
