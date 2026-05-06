@@ -2,7 +2,7 @@
 
 ## Initial Prompt
 
-> I need a workshop for my team on OpenShift cluster troubleshooting. It's internal — we'll deploy it ourselves using the Field Source CI. Not going through the RHDP catalog.
+I need a workshop for my team on OpenShift cluster troubleshooting. It's internal — we'll deploy it ourselves using the Field Source CI. Not going through the RHDP catalog.
 
 ## Follow-up Details (feed in when asked)
 

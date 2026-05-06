@@ -2,7 +2,7 @@
 
 ## Initial Prompt
 
-> Customer wants to see Red Hat OpenShift AI tomorrow. I need an environment with a model already deployed that I can run inference against and show the RHOAI dashboard. Express.
+Customer wants to see Red Hat OpenShift AI tomorrow. I need an environment with a model already deployed that I can run inference against and show the RHOAI dashboard. Express.
 
 ## Follow-up Details (feed in when asked)
 

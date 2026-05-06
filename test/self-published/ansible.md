@@ -2,7 +2,7 @@
 
 ## Initial Prompt
 
-> Building a workshop on Ansible Lightspeed with watsonx Code Assistant for a partner enablement session. They've seen the demos, now they need hands-on. Self-published, deploying via Field Source.
+Building a workshop on Ansible Lightspeed with watsonx Code Assistant for a partner enablement session. They've seen the demos, now they need hands-on. Self-published, deploying via Field Source.
 
 ## Follow-up Details (feed in when asked)
 

@@ -2,7 +2,7 @@
 
 ## Initial Prompt
 
-> I have a customer meeting Thursday and I need an OpenShift cluster with Virtualization set up so I can show VM migration. Don't need a full lab — just a working environment I can demo from.
+I have a customer meeting Thursday and I need an OpenShift cluster with Virtualization set up so I can show VM migration. Don't need a full lab — just a working environment I can demo from.
 
 ## Follow-up Details (feed in when asked)
 

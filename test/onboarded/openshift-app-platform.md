@@ -2,7 +2,7 @@
 
 ## Initial Prompt
 
-> I want to create a developer-focused workshop showing how to build and deploy a microservices application on OpenShift using Quarkus, Service Mesh, and GitOps. Developers should walk away understanding the inner loop and outer loop experience on OCP. RHDP Published.
+I want to create a developer-focused workshop showing how to build and deploy a microservices application on OpenShift using Quarkus, Service Mesh, and GitOps. Developers should walk away understanding the inner loop and outer loop experience on OCP. RHDP Published.
 
 ## Follow-up Details (feed in when asked)
 

@@ -2,7 +2,7 @@
 
 ## Initial Prompt
 
-> I want to build a workshop on OpenShift Virtualization for VM admins who are new to Kubernetes. The goal is to get them comfortable migrating and managing VMs on OpenShift. Should be RHDP Published, targeting Summit 2027.
+I want to build a workshop on OpenShift Virtualization for VM admins who are new to Kubernetes. The goal is to get them comfortable migrating and managing VMs on OpenShift. Should be RHDP Published, targeting Summit 2027.
 
 ## Follow-up Details (feed in when asked)
 

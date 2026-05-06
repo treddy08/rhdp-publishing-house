@@ -2,7 +2,7 @@
 
 ## Initial Prompt
 
-> Need a demo I can run for prospects showing Red Hat's AI story end to end. Self-published, I'll order a Field Source CI and point it at my repo.
+Need a demo I can run for prospects showing Red Hat's AI story end to end. Self-published, I'll order a Field Source CI and point it at my repo.
 
 ## Follow-up Details (feed in when asked)
 

@@ -2,11 +2,9 @@
 
 ## Initial Prompt
 
-> I wrote this for an internal tech talk and now my manager wants it as a hands-on lab. Self-published, we'll run it ourselves.
->
-> "Strangler Fig in Practice: Incrementally Migrating Java Monoliths to OpenShift Microservices"
->
-> Everyone talks about breaking up monoliths but nobody shows you how to do it safely in production. This session walks through the strangler fig pattern using a real (simulated) legacy Java application. We'll extract services one at a time, route traffic between old and new with OpenShift, and keep everything running throughout the migration. No big-bang rewrites. No downtime. Just steady, measurable progress from monolith to microservices.
+I wrote this for an internal tech talk and now my manager wants it as a hands-on lab. Self-published, we'll run it ourselves.
+"Strangler Fig in Practice: Incrementally Migrating Java Monoliths to OpenShift Microservices"
+Everyone talks about breaking up monoliths but nobody shows you how to do it safely in production. This session walks through the strangler fig pattern using a real (simulated) legacy Java application. We'll extract services one at a time, route traffic between old and new with OpenShift, and keep everything running throughout the migration. No big-bang rewrites. No downtime. Just steady, measurable progress from monolith to microservices.
 
 ## Follow-up Details (feed in when asked)
 

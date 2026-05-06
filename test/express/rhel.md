@@ -2,7 +2,7 @@
 
 ## Initial Prompt
 
-> I need a RHEL 9 environment with Satellite connected for a remediation demo. Customer wants to see how we handle CVE patching at scale.
+I need a RHEL 9 environment with Satellite connected for a remediation demo. Customer wants to see how we handle CVE patching at scale.
 
 ## Follow-up Details (feed in when asked)
 

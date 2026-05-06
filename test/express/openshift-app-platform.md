@@ -2,7 +2,7 @@
 
 ## Initial Prompt
 
-> Need a quick demo environment showing OpenShift Dev Spaces and GitOps for a developer audience at a lunch-and-learn next week.
+Need a quick demo environment showing OpenShift Dev Spaces and GitOps for a developer audience at a lunch-and-learn next week.
 
 ## Follow-up Details (feed in when asked)
 

@@ -2,7 +2,7 @@
 
 ## Initial Prompt
 
-> Got asked to do an impromptu AAP demo for a prospect. Need a working Ansible Automation Platform environment I can show job templates, workflows, and maybe EDA if it's there.
+Got asked to do an impromptu AAP demo for a prospect. Need a working Ansible Automation Platform environment I can show job templates, workflows, and maybe EDA if it's there.
 
 ## Follow-up Details (feed in when asked)
 
