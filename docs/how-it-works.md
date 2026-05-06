@@ -4,30 +4,40 @@
 
 RHDP Publishing House uses a Hub + Spoke plugin architecture. A thin orchestrator (hub) manages project state and dispatches specialized agent skills (spokes) for each lifecycle phase.
 
-```
-/rhdp-publishing-house [supervised|semi|full]
-         |
-    Orchestrator (discovers project, syncs repo, reads manifest, dispatches)
-         |
-    +----+------+--------+----------+---------+--------+
-    |           |        |          |         |        |
- Intake      Writer   Editor   Automation  Worklog  Security/Review
-    |           |        |          |                  (planned)
-  RCARS      showroom  showroom  agnosticv
-  API        :create-  :verify-  :catalog-
-             lab/demo  content   builder
+```mermaid
+graph TD
+    CMD["/rhdp-publishing-house [supervised|semi|full]"] --> O["Orchestrator<br/>(discovers project, syncs repo, reads manifest, dispatches)"]
+    O --> I[Intake]
+    O --> W[Writer]
+    O --> Ed[Editor]
+    O --> Au[Automation]
+    O --> Wl[Worklog]
+    O -.-> SR["Security/Review<br/>(planned)"]
+
+    I --> RCARS[RCARS API<br/>via MCP]
+    W --> SL["showroom:create-lab<br/>showroom:create-demo"]
+    Ed --> SV[showroom:verify-content]
+    Au --> AV["agnosticv:catalog-builder<br/>agnosticv:validator"]
 ```
 
 Each agent is a separate skill file — focused, testable, independently iterable. Adding a new phase means adding a new spoke, not rewriting a monolith.
 
 ## Content Lifecycle
 
-```
-Intake* → Vetting → Spec Refinement → [Approval*] → Writing → Automation
-  → Editing* → Code & Security Review* → Final Review* → Ready for Publishing
+```mermaid
+graph LR
+    A["Intake*"] --> B[Vetting] --> C[Spec Refinement] --> D["Approval*"]
+    D --> E[Writing] --> F[Automation] --> G["Editing*"]
+    G --> H["Code & Security Review*"] --> I["Final Review*"] --> J[Ready for Publishing]
 
-* = required    (unmarked = optional, skip if handled another way)
+    style A fill:#1a73e8,color:#fff
+    style D fill:#1a73e8,color:#fff
+    style G fill:#1a73e8,color:#fff
+    style H fill:#1a73e8,color:#fff
+    style I fill:#1a73e8,color:#fff
 ```
+
+*\* = required (unmarked = optional, skip if handled another way)*
 
 ### Required Phases
 
@@ -211,4 +221,4 @@ provides cross-project visibility for managers and PMs. It reads `manifest.yaml`
 
 The portal is read-only — it never modifies the manifest. All state changes happen through the CLI skills.
 
-See [docs/portal.md](portal.md) for full details.
+See [Portal Architecture](architecture/portal.md) for full details.

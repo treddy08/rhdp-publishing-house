@@ -10,12 +10,20 @@ Building an RHDP workshop today requires a content developer to juggle multiple 
 
 **RHDP Publishing House** is a Claude Code plugin that turns content developers into content architects. One command — `/rhdp-publishing-house` — provides a persistent, state-aware orchestrator that manages the entire content lifecycle through specialized AI agents.
 
-```
-Intake* → Vetting → Spec Refinement → [Approval*] → Writing → Automation
-  → Editing* → Code & Security Review* → Final Review* → Ready for Publishing
+```mermaid
+graph LR
+    A["Intake*"] --> B[Vetting] --> C[Spec Refinement] --> D["Approval*"]
+    D --> E[Writing] --> F[Automation] --> G["Editing*"]
+    G --> H["Code & Security Review*"] --> I["Final Review*"] --> J[Ready for Publishing]
 
-* = required    (unmarked = optional, skip if handled another way)
+    style A fill:#1a73e8,color:#fff
+    style D fill:#1a73e8,color:#fff
+    style G fill:#1a73e8,color:#fff
+    style H fill:#1a73e8,color:#fff
+    style I fill:#1a73e8,color:#fff
 ```
+
+*\* = required (unmarked = optional, skip if handled another way)*
 
 ### How It Works
 
@@ -68,26 +76,33 @@ Publishing House doesn't replace existing tools — it orchestrates them. It wra
 
 A thin orchestrator manages state and dispatches to specialized agent skills. Each agent is its own skill — focused, testable, independently iterable.
 
-```
-/rhdp-publishing-house [supervised|semi|full]
-         |
-    Orchestrator (reads manifest, determines phase, dispatches)
-         |
-    +----+----+--------+----------+---------+--------+
-    |         |        |          |         |        |
- Intake    Writer   Editor   Automation  Security  Review
+```mermaid
+graph TD
+    CMD["/rhdp-publishing-house [supervised|semi|full]"] --> O[Orchestrator]
+    O --> |"reads manifest, determines phase, dispatches"| I[Intake]
+    O --> W[Writer]
+    O --> Ed[Editor]
+    O --> Au[Automation]
+    O --> Wl[Worklog]
+    O -.-> Se["Security (planned)"]
+    O -.-> Re["Review (planned)"]
 ```
 
 ### Cross-Project Visibility
 
-The [Publishing House Portal](https://github.com/rhpds/rhdp-publishing-house-portal) gives managers and PMs a single view across all active projects — a kanban pipeline, a searchable project table, and detailed phase-level status with completion dates, assignees, and artifact links. No CLI required. See [docs/portal.md](portal.md).
+The [Publishing House Portal](https://github.com/rhpds/rhdp-publishing-house-portal) gives managers and PMs a single view across all active projects — a kanban pipeline, a searchable project table, and detailed phase-level status with completion dates, assignees, and artifact links. No CLI required. See [Portal Architecture](architecture/portal.md).
 
 ### Implementation Status
 
-- **Orchestrator + Intake agent** -- complete
-- **Writer + Editor agents** (wrapping showroom skills) -- complete
-- **Automation agent** (AgnosticV catalog + Ansible/GitOps code generation + testing gate) -- complete
-- **Portal** (cross-project visibility for PMs) -- deployed
-- **Code & Security Review + Final Review agents** -- not yet implemented
-- **RCARS integration** (when API is ready)
-- **Future:** Standalone automation-writing skills, E2E checks, `/rhdp` namespace consolidation
+- **Orchestrator + Intake agent** — complete, MCP-aware with portal fallback
+- **Writer + Editor agents** (wrapping showroom skills) — complete
+- **Automation agent** (AgnosticV catalog + Ansible/GitOps code generation + testing gate) — complete
+- **Portal** (FastAPI backend + Next.js frontend, cross-project visibility) — deployed on OpenShift
+- **RCARS MCP gateway** (3 tools: query, catalog search, catalog item) — complete
+- **API key auth** for MCP endpoint (SHA-256 hashed keys, K8s Secret) — complete
+- **Express mode framework** (DB models, session tools, intake routing, manifest sync) — complete
+- **Session continuity** (5 MCP tools for intake persistence + manifest sync) — complete
+- **Code & Security Review + Final Review agents** — not yet implemented
+- **Jira integration** — spec complete, implementation next
+- **Portal chatbot** — needs design
+- **Express skill** (cluster customization agent) — unblocked, needs design

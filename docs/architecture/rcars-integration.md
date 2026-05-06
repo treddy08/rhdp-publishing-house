@@ -6,71 +6,32 @@ The Publishing House portal backend serves as a single MCP gateway to the RCARS 
 
 ## System Diagram
 
-```
-                                   +---------------------------+
-                                   |  Claude Code User         |
-                                   |  (with API key in         |
-                                   |   MCP config)             |
-                                   +-----------+---------------+
-                                               | Authorization: Bearer <raw-key>
-                                               | HTTPS (edge TLS)
-                                               v
-                                 +-------------------------------+
-                                 |  OpenShift Route (ph-mcp)     |
-                                 |  host: ph-mcp.apps.<domain>   |
-                                 |  path: /mcp                   |
-                                 +-----------+-------------------+
-                                             | HTTP (cluster-internal)
-                                             v
-                    +--------------------------------------------+
-                    |  PH Portal Backend (FastAPI)               |
-                    |  +--------------------------------------+  |
-                    |  |  FastMCP 3.2+ Server                 |  |
-                    |  |  mounted at /mcp                     |  |
-                    |  |                                      |  |
-                    |  |  +-------------------------------+   |  |
-                    |  |  |  ApiKeyAuth Middleware         |   |  |
-                    |  |  |  on_call_tool hook             |   |  |
-                    |  |  |  SHA-256 hash + compare        |   |  |
-                    |  |  |  Keys from volume-mount        |   |  |
-                    |  |  +-------------+-----------------+   |  |
-                    |  |                | authenticated        |  |
-                    |  |                v                      |  |
-                    |  |  +-------------------------------+   |  |
-                    |  |  |  MCP Tools                    |   |  |
-                    |  |  |  - ph_rcars_query             |   |  |
-                    |  |  |  - ph_rcars_catalog_search    |   |  |
-                    |  |  |  - ph_rcars_catalog_item      |   |  |
-                    |  |  |  - ph_list_projects           |   |  |
-                    |  |  |  - ph_get_launch_instructions |   |  |
-                    |  |  +-------------+-----------------+   |  |
-                    |  +----------------+---------------------+  |
-                    |                   |                         |
-                    |  +----------------v---------------------+  |
-                    |  |  RCARS HTTP Client (httpx)           |  |
-                    |  |  - Async with per-request client     |  |
-                    |  |  - Retry: 3x exponential backoff     |  |
-                    |  |  - SA token from filesystem          |  |
-                    |  |  - Timeout: 120s (advisor)           |  |
-                    |  +----------------+---------------------+  |
-                    |                   |                         |
-                    |  /health ---------+-- probes RCARS health  |
-                    +-------------------+------------------------+
-                                        | Authorization: Bearer <sa-token>
-                                        | HTTP (cross-namespace)
-                                        v
-                    +--------------------------------------------+
-                    |  RCARS API (rcars-dev namespace)            |
-                    |  rcars-api.rcars-dev.svc.cluster.local:8080 |
-                    |                                            |
-                    |  /api/v1/health                             |
-                    |  /api/v1/advisor/query         (POST)       |
-                    |  /api/v1/advisor/query/{id}/result (GET)    |
-                    |  /api/v1/catalog               (GET)        |
-                    |  /api/v1/catalog/{ci_name}      (GET)        |
-                    |                                            |
-                    |  Auth: SA token via TokenReview middleware  |
-                    +--------------------------------------------+
+```mermaid
+graph TD
+    CC["Claude Code User<br/>(API key in MCP config)"]
+    CC -->|"Authorization: Bearer raw-key<br/>HTTPS (edge TLS)"| Route
+
+    subgraph OpenShift
+        Route["OpenShift Route (ph-mcp)<br/>host: ph-mcp.apps.domain<br/>path: /mcp"]
+        Route -->|"HTTP (cluster-internal)"| BE
+
+        subgraph BE["PH Portal Backend (FastAPI)"]
+            MCP["FastMCP 3.2+ Server<br/>mounted at /mcp"]
+            Auth["ApiKeyAuth Middleware<br/>on_call_tool hook<br/>SHA-256 hash + hmac.compare_digest<br/>Keys from volume-mount"]
+            Tools["MCP Tools<br/>• ph_rcars_query<br/>• ph_rcars_catalog_search<br/>• ph_rcars_catalog_item<br/>• ph_list_projects<br/>• ph_get_launch_instructions<br/>• + 7 more"]
+            Client["RCARS HTTP Client (httpx)<br/>Async, 3x exponential backoff<br/>SA token from filesystem<br/>Timeout: 120s (advisor)"]
+            Health["/health endpoint<br/>probes RCARS health"]
+
+            MCP --> Auth --> Tools --> Client
+            Health --> Client
+        end
+
+        Client -->|"Authorization: Bearer sa-token<br/>HTTP (cross-namespace)"| RCARS
+
+        subgraph RCARS["RCARS API (rcars-dev namespace)"]
+            RAPI["rcars-api.rcars-dev.svc.cluster.local:8080<br/><br/>/api/v1/health<br/>/api/v1/advisor/query (POST)<br/>/api/v1/advisor/query/{id}/result (GET)<br/>/api/v1/catalog (GET)<br/>/api/v1/catalog/{ci_name} (GET)<br/><br/>Auth: SA token via TokenReview"]
+        end
+    end
 ```
 
 ## Auth Model
@@ -102,18 +63,19 @@ The PH backend authenticates to RCARS using its Kubernetes ServiceAccount token.
 
 The PH backend and RCARS API are deployed in separate OpenShift namespaces on the same cluster.
 
-```
-publishing-house-dev namespace              rcars-dev namespace
-+----------------------------+              +----------------------------+
-| ph-portal-backend       |   HTTP       | rcars-api                  |
-| (FastAPI + MCP)            | -----------> | (FastAPI)                  |
-| Service: ClusterIP :8080   |              | Service: ClusterIP :8080   |
-+----------------------------+              +----------------------------+
-        ^                                   DNS: rcars-api.rcars-dev.
-        |                                         svc.cluster.local:8080
-  OpenShift Route
-  ph-mcp.apps.<cluster-domain>
-  path: /mcp (TLS edge termination)
+```mermaid
+graph LR
+    ExtRoute["OpenShift Route<br/>ph-mcp.apps.cluster-domain<br/>path: /mcp (TLS edge)"] --> BE
+
+    subgraph NS1["publishing-house-dev namespace"]
+        BE["ph-portal-backend<br/>(FastAPI + MCP)<br/>Service: ClusterIP :8080"]
+    end
+
+    BE -->|"HTTP<br/>cross-namespace"| RCARS
+
+    subgraph NS2["rcars-dev namespace"]
+        RCARS["rcars-api<br/>(FastAPI)<br/>Service: ClusterIP :8080<br/>DNS: rcars-api.rcars-dev.svc.cluster.local:8080"]
+    end
 ```
 
 - **External access:** Only the `/mcp` path is exposed via the OpenShift Route. Internal backend APIs (`/api/v1/projects`, etc.) remain cluster-internal behind the existing OAuth-proxied Route
@@ -146,7 +108,7 @@ Step-by-step flow for a typical `ph_rcars_query` call from Claude Code to RCARS 
 7. **`ph_rcars_query` tool** is dispatched. It instantiates an `RCARSClient` and calls `query_advisor(query)`
 8. **RCARSClient** reads the SA token from `/var/run/secrets/kubernetes.io/serviceaccount/token` and sends `POST /api/v1/advisor/query` to `rcars-api.rcars-dev.svc.cluster.local:8080` with `Authorization: Bearer <sa-token>`
 9. **RCARS API** validates the SA token via TokenReview, checks the allowlist, and enqueues the advisor job. Returns `{"job_id": "<uuid>"}`
-10. **RCARSClient** polls `GET /api/v1/advisor/query/{job_id}/result` every 3 seconds until the status is `completed` or `failed`, or 120 seconds elapse
+10. **RCARSClient** polls `GET /api/v1/advisor/query/{job_id}/result` every 10 seconds until the status is `completed` or `failed`, or 120 seconds elapse
 11. **RCARS** returns structured results with matching catalog items, relevance tiers (green/yellow/white), and rationale text
 12. **`ph_rcars_query` tool** returns the structured result dict to the MCP server
 13. **FastMCP Server** sends the MCP response back to Claude Code

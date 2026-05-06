@@ -67,7 +67,9 @@ Once connected, Claude Code can use the following MCP tools:
 | Tool | Description |
 |------|-------------|
 | `ph_list_projects` | List all Publishing House projects with their current phase and status. Supports `owner_email` filter. |
-| `ph_get_launch_instructions` | Get launch instructions for a specific project, including deployment steps and URLs. |
+| `ph_get_launch_instructions` | Get step-by-step ordering instructions for deploying a project. |
+| `ph_store_validation_results` | Store validation results from `agnosticv:validator` or `showroom:verify-content`. |
+| `ph_get_validation_results` | Retrieve stored validation results for a project, optionally filtered by phase. |
 
 ### Session Continuity Tools
 

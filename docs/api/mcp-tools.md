@@ -31,13 +31,6 @@ Submit a content vetting query to the RCARS advisor. The tool submits the query,
         "stage": "prod",
         "tier": "green",
         "rationale": "Covers foundational OCP concepts including deployment, services, and routes."
-      },
-      {
-        "ci_name": "ocp4_advanced_networking",
-        "display_name": "OpenShift 4 Advanced Networking",
-        "stage": "dev",
-        "tier": "yellow",
-        "rationale": "Partial overlap in networking topics but focuses on SDN/OVN deep dive."
       }
     ]
   }
@@ -84,7 +77,7 @@ The tool queries RCARS with the content description and returns any existing cat
 #### Notes
 
 - The tool searches across all stages (`prod`, `dev`, `event`) to provide the full catalog picture during vetting
-- The advisor query is asynchronous internally -- the tool submits a job, polls every 3 seconds, and returns the final result
+- The advisor query is asynchronous internally -- the tool submits a job, polls every 10 seconds, and returns the final result
 - Timeout is 120 seconds. If the RCARS advisor takes longer, the tool returns a timeout response
 - If RCARS is unreachable, the tool retries 3 times with exponential backoff (1s, 2s, 4s) before returning an unavailable response
 
@@ -245,17 +238,18 @@ List all Publishing House projects with their current phase and status. Supports
 #### Return Shape
 
 ```json
-{
-  "projects": [
-    {
-      "id": 1,
-      "name": "OpenShift GitOps Workshop",
-      "status": "active",
-      "current_phase": "writing",
-      "deployment_mode": "rhdp_published"
-    }
-  ]
-}
+[
+  {
+    "id": "a1b2c3d4-...",
+    "name": "OpenShift GitOps Workshop",
+    "repo_url": "git@github.com:rhpds/ocp-gitops-workshop.git",
+    "deployment_mode": "rhdp_published",
+    "phases": [
+      {"phase_name": "intake", "status": "completed"},
+      {"phase_name": "writing", "status": "in_progress"}
+    ]
+  }
+]
 ```
 
 #### Example Usage
@@ -266,41 +260,51 @@ List all Publishing House projects with their current phase and status. Supports
 
 ### ph_get_launch_instructions
 
-Get launch instructions for a specific project.
+Get step-by-step ordering instructions for deploying a project, derived from the manifest's deployment mode.
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `project_id` | `int` | Yes | The project ID from `ph_list_projects`. |
+| `project_id` | `str` | Yes | UUID string of the project from `ph_list_projects`. |
 
 #### Return Shape
 
-Returns project-specific launch instructions including deployment steps and URLs.
+Returns project-specific launch instructions including deployment steps and URLs, based on `deployment_mode` (onboarded or self-published).
 
 #### Example Usage
 
-> "Get launch instructions for project 1"
+> "Get launch instructions for project a1b2c3d4-..."
 
 ---
 
 ### ph_store_validation_results
 
-Store validation results for a project's content.
+Store validation results from `agnosticv:validator` or `showroom:verify-content`.
 
 #### Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `project_id` | `int` | Yes | The project ID. |
-| `results` | `dict` | Yes | Validation results object. |
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `project_id` | `str` | Yes | | UUID string of the project. |
+| `phase` | `str` | Yes | | Lifecycle phase this validation applies to (e.g., `editing`, `automation`). |
+| `validator` | `str` | Yes | | Name of the validator tool (e.g., `agnosticv:validator`, `showroom:verify-content`). |
+| `status` | `str` | Yes | | Validation result: `passed`, `failed`, or `warning`. |
+| `summary` | `str` | Yes | | Human-readable summary of findings. |
+| `findings` | `list[dict]` | No | `None` | Detailed findings array. |
+| `run_by` | `str` | No | `None` | Who or what ran the validation. |
 
 #### Return Shape
 
 ```json
 {
-  "stored": true,
-  "project_id": 1
+  "id": "a1b2c3d4-...",
+  "project_id": "e5f6g7h8-...",
+  "phase": "editing",
+  "validator": "showroom:verify-content",
+  "status": "passed",
+  "run_at": "2026-05-04T10:00:00+00:00",
+  "summary": "All checks passed"
 }
 ```
 
@@ -308,17 +312,31 @@ Store validation results for a project's content.
 
 ### ph_get_validation_results
 
-Retrieve stored validation results for a project.
+Get validation results for a project, optionally filtered by phase. Returns results ordered by run date (newest first).
 
 #### Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `project_id` | `int` | Yes | The project ID. |
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `project_id` | `str` | Yes | | UUID string of the project. |
+| `phase` | `str` | No | `None` | Filter results to a specific lifecycle phase. |
 
 #### Return Shape
 
-Returns the previously stored validation results dict, or an error if none exist.
+```json
+[
+  {
+    "id": "a1b2c3d4-...",
+    "phase": "editing",
+    "validator": "showroom:verify-content",
+    "status": "passed",
+    "run_at": "2026-05-04T10:00:00+00:00",
+    "run_by": "editor-agent",
+    "summary": "All checks passed",
+    "findings": []
+  }
+]
+```
 
 ---
 

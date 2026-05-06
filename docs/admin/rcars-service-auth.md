@@ -202,4 +202,4 @@ The PH `RCARSClient` retries transient failures 3 times with exponential backoff
 
 - [RCARS Integration Architecture](../architecture/rcars-integration.md)
 - [MCP Auth Admin Guide](mcp-auth.md)
-- [Portal Deployment](../portal-deployment.md)
+- [Portal Deployment](portal-deployment.md)

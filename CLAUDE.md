@@ -83,6 +83,9 @@ rhdp-publishing-house-portal/src/backend/
 | Tool | Purpose |
 |------|---------|
 | `ph_list_projects` | List projects (with optional owner_email filter) |
+| `ph_get_launch_instructions` | Get step-by-step ordering instructions for a project |
+| `ph_store_validation_results` | Store validation results from agnosticv:validator or showroom:verify-content |
+| `ph_get_validation_results` | Retrieve stored validation results (optional phase filter) |
 | `ph_rcars_query` | Submit RCARS advisor query, poll until complete |
 | `ph_rcars_catalog_search` | Search RCARS catalog items |
 | `ph_rcars_catalog_item` | Get full metadata for a specific catalog item |

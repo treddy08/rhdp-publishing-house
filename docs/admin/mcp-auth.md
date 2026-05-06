@@ -171,4 +171,4 @@ The pod age should be recent (seconds/minutes, not hours/days).
 
 - [RCARS Integration Architecture](../architecture/rcars-integration.md)
 - [Claude Code Setup Guide](../user/claude-code-setup.md)
-- [Portal Deployment](../portal-deployment.md)
+- [Portal Deployment](portal-deployment.md)

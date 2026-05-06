@@ -4,16 +4,16 @@ The Publishing House Portal is deployed to OpenShift using Ansible with Jinja2-t
 
 ## Architecture
 
-```
-User → Route (TLS) → OAuth Proxy → Next.js Frontend (port 3000)
-                                         │
-                                    API proxy (/api/v1/*)
-                                         │
-                                   Backend Service (ClusterIP)
-                                         │
-                                    FastAPI (port 8080)
-                                         │
-                                    PostgreSQL (PVC)
+```mermaid
+graph LR
+    U[User] -->|HTTPS| R[Route - TLS]
+    R --> OA[OAuth Proxy]
+    OA --> FE["Next.js Frontend<br/>(port 3000)"]
+    FE -->|"API proxy<br/>(/api/v1/*)"| BE["FastAPI Backend<br/>(port 8080)"]
+    BE --> PG["PostgreSQL<br/>(PVC)"]
+
+    CC[Claude Code] -->|"HTTPS<br/>/mcp"| MR[MCP Route - TLS]
+    MR --> BE
 ```
 
 - **Frontend:** Next.js 16 + PatternFly 6. Exposed via OpenShift Route with OAuth proxy for SSO.
@@ -45,7 +45,7 @@ Fill in all `CHANGEME` values:
 |----------|-------------|
 | `cluster_domain` | OpenShift apps domain (e.g., `apps.mycluster.example.com`) |
 | `kubeconfig` | Path to the management SA kubeconfig (after bootstrap) |
-| `git_ref` | Git branch to build from (e.g., `main`, `gsd-project`) |
+| `git_ref` | Git branch to build from (e.g., `main`) |
 | `pg_password` | PostgreSQL password — generate with `openssl rand -hex 16` |
 | `oauth_client_secret` | OAuth client secret — generate with `openssl rand -hex 16` |
 | `oauth_cookie_secret` | OAuth cookie secret — generate with `openssl rand -hex 16` |
@@ -103,7 +103,7 @@ ansible-playbook ansible/deploy.yml -e env=dev --tags migrate
 
 ## Build Triggers
 
-Builds are triggered manually via Ansible tags (`--tags builds`, `--tags build-backend`, `--tags build-frontend`). The BuildConfigs use the `git_ref` from vars (e.g., `gsd-project` for dev, `production` for prod) to determine which branch to build from.
+Builds are triggered manually via Ansible tags (`--tags builds`, `--tags build-backend`, `--tags build-frontend`). The BuildConfigs use the `git_ref` from vars (e.g., `main`) to determine which branch to build from.
 
 ## Container Images
 

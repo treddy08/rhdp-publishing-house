@@ -6,15 +6,13 @@ The portal has two data paths: the **refresh engine** pulls project state from G
 
 ## Architecture
 
-```
-GitHub (manifest.yaml, worklog.yaml)
-        ↓  refresh engine (scheduled + on-demand)
-   PostgreSQL
-        ↑  MCP tools (real-time writes from Claude Code)
-        ↓
-   FastAPI backend ──── /mcp endpoint (API key auth)
-        ↓
-   Next.js frontend
+```mermaid
+graph TD
+    GH["GitHub<br/>(manifest.yaml, worklog.yaml)"] -->|"refresh engine<br/>(scheduled + on-demand)"| PG[(PostgreSQL)]
+    MCP["MCP tools<br/>(real-time writes from Claude Code)"] -->|"ph_sync_manifest,<br/>ph_store_intake_results,<br/>ph_record_express_run"| PG
+    PG --> BE["FastAPI backend"]
+    BE -->|"/mcp endpoint<br/>(API key auth)"| CC[Claude Code]
+    BE --> FE["Next.js frontend"]
 ```
 
 The refresh engine checks each registered project's GitHub repo and syncs manifest and worklog data to the database. It runs on a schedule and on-demand when you trigger a manual refresh.
