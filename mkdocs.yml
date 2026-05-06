@@ -9,7 +9,6 @@ docs_dir: docs
 site_dir: site
 exclude_docs: |
   superpowers/
-  PH-COMMON-RULES.md
 
 theme:
   name: material
@@ -31,11 +30,24 @@ extra_css:
 
 nav:
   - Home: index.md
-  - Overview: executive-summary.md
-  - Getting Started: getting-started.md
-  - How It Works: how-it-works.md
-  - Portal: portal.md
-  - Portal Deployment: portal-deployment.md
+  - Overview:
+    - Executive Summary: executive-summary.md
+    - How It Works: how-it-works.md
+    - Getting Started: getting-started.md
+  - Architecture:
+    - Portal: architecture/portal.md
+    - RCARS Integration: architecture/rcars-integration.md
+    - Express Mode: architecture/express-mode-overview.md
+    - Jira Integration: architecture/jira-integration-overview.md
+  - User Guides:
+    - Claude Code Setup: user/claude-code-setup.md
+  - Admin Guides:
+    - Portal Deployment: admin/portal-deployment.md
+    - MCP Auth: admin/mcp-auth.md
+    - RCARS Service Auth: admin/rcars-service-auth.md
+    - Common Rules: admin/PH-COMMON-RULES.md
+  - API Reference:
+    - MCP Tools: api/mcp-tools.md
 
 markdown_extensions:
   - tables
