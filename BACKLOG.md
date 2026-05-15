@@ -38,24 +38,43 @@ Portal as MCP gateway, express mode, Jira visibility, hosted chatbot. MCP gatewa
 
 **Requirements:** JIRA-01 through JIRA-06
 
-### Phase 4: Portal Chatbot — NEEDS BRAINSTORM
+### Phase 4: Hosted Workspace (Dev Spaces) — SPEC COMPLETE
 
-**Goal:** Users without Claude Code or Anthropic API access get managed PH capabilities through a hosted web UI.
+**Goal:** Users without local Claude Code get full PH skill parity through a hosted Dev Spaces workspace launched from the portal.
 
-**Status:** Needs brainstorm. No spec yet.
+**Status:** Brainstorm complete. Design spec written ([2026-05-15-hosted-workspace-design.md](docs/superpowers/specs/2026-05-15-hosted-workspace-design.md)). Ready for team review and implementation planning.
 
-**Key questions to resolve:**
-- Execution model: direct Anthropic SDK tool-use loop vs Claude Agent SDK (research recommends direct SDK — ~50 lines, no framework overhead)
-- User auth: OAuth proxy headers provide identity, but tool-level authorization not designed
-- PatternFly ChatBot integration: evaluate @patternfly/chatbot v6.4.1 vs custom approach
-- Scope boundaries: PH workflows only, not a general AI assistant
-- Chatbot serves ALL modes (onboarded, self-published, express) — not just express
+**Architecture decided:**
+- OpenShift Dev Spaces with custom UDI (CC CLI, extension, PH skills, oc, Ansible)
+- Portal provisions workspaces via Dev Spaces API + MaaS keys via LiteLLM API
+- One workspace per project per user, opt-in (subtle "Open in Dev Spaces" button on project detail)
+- One-way integration: workspace → portal (MCP), portal never pushes to workspace
+- CC CLI updated at session start (not baked into image)
+- Git is the sync mechanism — pull on resume, push on commit
+- Base image: `registry.redhat.io/devspaces/udi-rhel9`, hosted on `quay.io/rhpds/ph-udi:latest`
+- Target audience: content developers first, broader audience later
 
-**Known blocker:** Anthropic SDK issue #1020 (Vertex AI streaming+tools loses tool input params). Workaround exists: disable streaming for tool-use requests. Monitor upstream.
+**Backend additions:**
+- `WorkspaceManager` service (create, resume, delete, status)
+- `LiteLLMClient` service (provision, validate, revoke, extend keys)
+- `DevSpacesClient` service (create, start, stop, delete workspaces)
+- `Workspace` DB model (project_id, user_id, workspace_id, workspace_url, maas_key_alias, maas_key_id)
+- 4 new API routes under `/api/v1/projects/{id}/workspace`
 
-**Requirements:** CHAT-01 through CHAT-08
+**MaaS key lifecycle:**
+- Provisioned at workspace creation via LiteLLM REST API (`POST /key/generate`)
+- Key duration configurable (env var, default TBD — 7d or 30d)
+- Validated on workspace resume — if expired, portal auto-provisions new key
+- Revoked on workspace deletion
+- User never sees or manages keys
 
-**Stack additions needed:** anthropic[vertex] >=0.97.0, @patternfly/chatbot >=6.4.1, sse-starlette >=2.0.0
+**Dog-fooding:** Chose Dev Spaces over lighter alternatives (web terminal, chat UI) partly for the Red Hat product dog-fooding story
+
+**Prerequisites:**
+- [ ] Dev Spaces operator installed on ocpv-infra01
+- [ ] LiteLLM endpoint accessible from portal namespace
+- [ ] Custom UDI image built and pushed to quay.io/rhpds
+- [ ] Dev Spaces API auth (service account or OAuth) configured
 
 ---
 
@@ -85,6 +104,9 @@ Skill contract spec for delegating ownership. Defines what a skill MUST read fro
 ### Regression detection
 PH detects that a commit touches automation or content files affecting a previously verified module and reopens the Verified task (manifest + Jira). Prevents silent regressions during multi-module development.
 
+### MCP auth rationalization
+MCP auth to portal backend is currently manual API key management. Needs a proper auth model — possibly tied to workspace identity or MaaS key. Separate design needed. Affects both local CC users and workspace users.
+
 ### CC user onboarding flow
 Self-service or scripted API key generation and distribution for Claude Code users connecting to the MCP server. Current process is entirely manual.
 
@@ -107,12 +129,16 @@ Deferred to a future milestone. Tracked but not in current roadmap.
 - Jira → PH write-back for manager annotations (scoped to specific fields, after one-directional sync is proven stable)
 - Automated Jira issue creation from RCARS gap analysis results
 
-### Chatbot
-- Multi-project context switching (start with single-project sessions)
-- `oc` CLI in chatbot container for express skill access
-- Token usage dashboard for "Claude-as-a-Service" tracking
-- Human-in-the-loop approval for destructive chatbot actions
-- Thinking/reasoning visibility (extended thinking, collapsible UI)
+### Workspace / Hosted Access
+- Lightweight express mode execution — Dev Spaces is heavy for quick one-off demos. Evaluate lighter options: code-server in a pod, headless CC container, or similar. Portal↔workspace interface designed to allow backend swap without portal changes. Especially important for express mode.
+- Broader audience UX — Phase 1 targets content developers. Phase 2: polish for solution architects, field engineers, PMMs. May need guided onboarding, simplified views, or a chat-like layer on top of the workspace.
+- MaaS key TTL tuning — start with configurable default (7d or 30d), tune based on actual usage patterns. If key expires mid-session, user restarts workspace from portal.
+- Mid-session key rotation — if usage patterns show keys expiring during active work frequently, build automated rotation. Phase 1 requires workspace restart from portal.
+- Custom UDI image rebuild pipeline — periodic (monthly) rebuild for security patches, Ansible collections, base image updates. Manual for now, automate if cadence demands it.
+- Multi-project workspace support (if demand emerges — currently one workspace per project)
+- Token usage dashboard for MaaS key tracking per user/project
+- Human-in-the-loop approval for destructive workspace actions
+- Dev Spaces API exploration — evaluate full API surface for workspace env var updates (needed for key injection on resume without workspace recreation)
 
 ### Express
 - RCARS express learning data — store run data (base CI + customization steps) for future accuracy improvement. Must not pollute content search results.
