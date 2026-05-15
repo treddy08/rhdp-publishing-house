@@ -78,12 +78,12 @@ The `deploy` tag runs infra manifests, app manifests, builds, and database migra
 | Tag | What It Does | When to Use |
 |-----|-------------|-------------|
 | `mgmt-rbac` | Bootstrap management SA, ClusterRole, generate kubeconfig | One-time setup |
-| `deploy` | Full deploy: infra + app + builds + migrate | Normal deployment |
-| `apply` | App manifests only (Deployments, Services, Route) | Config-only changes |
-| `builds` | Trigger builds + wait for rollout | Code changes only |
+| `deploy` | Full deploy: infra + app + builds + migrate | First deploy or major changes (code + config + schema) |
+| `apply` | App manifests only (Secrets, ConfigMaps, Deployments, Services, Route) | Config/secret changes (API keys, env vars, route config) |
+| `builds` | Trigger builds + wait for rollout | Code changes only (after `git push`) |
 | `build-backend` | Build backend only + rollout | Backend code changes |
 | `build-frontend` | Build frontend only + rollout | Frontend code changes |
-| `migrate` | Run Alembic migrations in backend pod | Schema changes |
+| `migrate` | Run Alembic migrations in backend pod | Schema changes only |
 
 ## Subsequent Deploys
 

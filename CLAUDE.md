@@ -194,13 +194,16 @@ Required phases: intake, writing, code_security_review, final_review. Optional p
 ```bash
 cd rhdp-publishing-house-portal
 
-# Backend only
+# Config/secret changes only (API keys, env vars, route config)
+ansible-playbook ansible/deploy.yml -e env=dev --tags apply
+
+# Backend code changes only
 ansible-playbook ansible/deploy.yml -e env=dev --tags build-backend
 
-# Frontend only
+# Frontend code changes only
 ansible-playbook ansible/deploy.yml -e env=dev --tags build-frontend
 
-# Full deploy (infra + app + builds + migrations)
+# Full deploy (infra + app + builds + migrations) — first deploy or major changes
 ansible-playbook ansible/deploy.yml -e env=dev --tags deploy
 
 # Just run migrations

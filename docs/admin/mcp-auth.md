@@ -45,10 +45,10 @@ The key name (e.g., `nate`) is an admin identifier for bookkeeping -- it tells y
 Run the Ansible deployer to update the Secret and restart the backend pod:
 
 ```bash
-cd rhdp-publishing-house-portal && ansible-playbook ansible/deploy.yml -e env=dev --tags deploy
+cd rhdp-publishing-house-portal && ansible-playbook ansible/deploy.yml -e env=dev --tags apply
 ```
 
-The deployer updates the `ph-mcp-api-keys` Secret and the backend pod restarts to pick up the new key file (D-01: no hot-reload in Phase 1).
+The `apply` tag updates manifests (Secrets, ConfigMaps, Deployments) without triggering a rebuild. The backend pod restarts to pick up the new key file (D-01: no hot-reload in Phase 1). Only use `--tags deploy` if you also need to rebuild code and run migrations.
 
 ### Step 5: Distribute the raw key
 
@@ -61,9 +61,9 @@ Give the **raw key** (from Step 1) to the user. They will add it to their Claude
 To revoke a user's API key:
 
 1. Remove the user's entry from `mcp_api_keys` in `ansible/vars/dev.yml`
-2. Redeploy:
+2. Apply the change:
    ```bash
-   cd rhdp-publishing-house-portal && ansible-playbook ansible/deploy.yml -e env=dev --tags deploy
+   cd rhdp-publishing-house-portal && ansible-playbook ansible/deploy.yml -e env=dev --tags apply
    ```
 3. The backend pod restarts and loads the updated key file. The revoked key is immediately invalid.
 
