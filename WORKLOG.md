@@ -6,6 +6,36 @@ Clear periodically — the backlog ([BACKLOG.md](BACKLOG.md)) is the persistent 
 
 ---
 
+## 2026-05-15 — Phase 4 brainstorm + design spec (Nate)
+
+### Hosted Workspace design (formerly "Portal Chatbot")
+- Brainstormed and designed the Phase 4 hosted access solution
+- Original concept was a portal chatbot calling MCP tools — evolved to a full hosted Dev Spaces workspace after determining full CC skill parity was required
+- Key architectural decisions:
+  - OpenShift Dev Spaces with custom UDI (RHEL9 base), hosted on `quay.io/rhpds/ph-udi:latest`
+  - Portal provisions workspaces via Dev Spaces API, MaaS keys via LiteLLM REST API
+  - One workspace per project per user, opt-in ("Open in Dev Spaces" button on project detail)
+  - One-way integration only: workspace → portal (MCP), portal never pushes to workspace
+  - CC CLI updated at every session start, not baked into image
+  - MaaS key lifecycle fully portal-managed — provision, validate on resume, revoke on delete
+  - Key duration configurable (env var), expired key = restart workspace from portal
+  - Chose Dev Spaces over lighter alternatives partly for Red Hat dog-fooding story
+- Design spec written: [2026-05-15-hosted-workspace-design.md](docs/superpowers/specs/2026-05-15-hosted-workspace-design.md)
+- BACKLOG.md updated: Phase 4 renamed and marked SPEC COMPLETE, new backlog items added
+
+### Backlog additions
+- MCP auth rationalization (near-term)
+- Lightweight express mode execution (future — Dev Spaces too heavy for one-off demos)
+- UDI image rebuild pipeline, mid-session key rotation, Dev Spaces API exploration (future)
+
+### What's next
+- **Phase 4 spec review** — share with team for feedback before implementation planning
+- **Phase 3: Jira integration** — spec done, blocked on Jira SA provisioning
+- **Express skill** — unblocked, needs brainstorm
+- See [BACKLOG.md](BACKLOG.md) for full roadmap
+
+---
+
 ## 2026-05-06 — Documentation overhaul + template restructuring (Nate, pre-PTO)
 
 ### Documentation accuracy review
