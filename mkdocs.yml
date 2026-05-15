@@ -38,7 +38,9 @@ nav:
     - Portal: architecture/portal.md
     - RCARS Integration: architecture/rcars-integration.md
     - Express Mode: architecture/express-mode-overview.md
+  - Proposed:
     - Jira Integration: architecture/jira-integration-overview.md
+    - Hosted Workspace: architecture/hosted-workspace-overview.md
   - User Guides:
     - Claude Code Setup: user/claude-code-setup.md
   - Admin Guides:
@@ -51,6 +53,8 @@ nav:
 
 markdown_extensions:
   - tables
+  - admonition
+  - pymdownx.details
   - toc:
       permalink: true
   - pymdownx.highlight:

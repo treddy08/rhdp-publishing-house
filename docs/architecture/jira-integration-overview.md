@@ -1,5 +1,8 @@
 # Jira Integration
 
+!!! info "Proposed"
+    This feature is designed but not yet implemented. The design spec is complete and awaiting team review. Prerequisites (Jira project creation, service account provisioning) are blocking deployment.
+
 ## The Problem
 
 Content development progress is invisible to leadership. During Summit 2026, we had checkpoints where projects were supposed to be at a certain percentage — but we had no data to assess that and no way to make cut decisions. Developers track everything in git-based manifests, which is great for the work but useless for management reporting.
