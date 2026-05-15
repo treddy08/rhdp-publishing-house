@@ -76,10 +76,10 @@ of truth for lifecycle state.
 ## Sensitive Content
 
 Publishing house project repos are private. However:
+
 - Never include real credentials, API keys, or tokens in any file
 - Use `<placeholder>` syntax for sensitive values
-- Content that will eventually move to a public Showroom repo must follow
-  Red Hat's public repository guidelines (no internal hostnames, customer data, etc.)
+- Content that will eventually move to a public Showroom repo must follow Red Hat's public repository guidelines (no internal hostnames, customer data, etc.)
 
 ## Communication Style
 
