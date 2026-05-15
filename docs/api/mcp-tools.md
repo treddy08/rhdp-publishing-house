@@ -1,6 +1,45 @@
-# MCP Tools Reference
+# MCP Server
 
-This document describes all MCP tools available on the Publishing House MCP server. Tools are organized by category: RCARS content advisory tools (new in Phase 1) and project management tools (existing).
+## Overview
+
+The Publishing House MCP server is the single gateway between Claude Code skills and all backend services. It runs inside the portal backend (FastAPI + FastMCP 3.2+), mounted at the `/mcp` endpoint. Every external integration — RCARS, project storage, validation, session continuity — flows through MCP tools. Skills never make raw HTTP calls to external services.
+
+### Why MCP
+
+Without the MCP server, every skill would need its own HTTP client, auth configuration, retry logic, and error handling for each backend service. The MCP server centralizes all of that: one endpoint, one auth model, one set of clients. Adding a new integration means adding a tool, not modifying every skill.
+
+### Where It Runs
+
+The MCP server is deployed on OpenShift as part of the portal backend pod in the `publishing-house-dev` namespace. It shares the FastAPI process — same deployment, same database, same service account.
+
+| Component | Detail |
+|-----------|--------|
+| **Framework** | FastMCP 3.2+ mounted on FastAPI |
+| **Endpoint** | `https://<mcp-route-host>/mcp` |
+| **Auth** | API key (Bearer token, SHA-256 hashed, see [MCP Auth](../admin/mcp-auth.md)) |
+| **Backend services accessed** | RCARS API (cluster-internal), PostgreSQL, GitHub API |
+
+### How Skills Connect
+
+Claude Code users configure the MCP endpoint in their Claude Code settings. The PH skills plugin ships with the endpoint pre-configured. Skills call MCP tools through standard Claude Code tool invocation — no SDK, no HTTP library, just `@mcp.tool()` decorated functions.
+
+For hosted workspaces (Dev Spaces), the MCP endpoint URL is injected as an environment variable at workspace creation.
+
+### Tool Categories
+
+The server exposes tools in three categories:
+
+| Category | Tools | Purpose |
+|----------|-------|---------|
+| **RCARS Content Advisory** | `ph_rcars_query`, `ph_rcars_catalog_search`, `ph_rcars_catalog_item` | Content vetting, catalog browsing, item detail lookup |
+| **Project Management** | `ph_list_projects`, `ph_get_launch_instructions`, `ph_store_validation_results`, `ph_get_validation_results`, `ph_sync_manifest` | Project CRUD, validation storage, manifest sync |
+| **Session Continuity** | `ph_store_intake_results`, `ph_get_intake_results`, `ph_list_intake_sessions`, `ph_record_express_run` | Intake persistence, express mode metrics |
+
+---
+
+## Tools Reference
+
+Detailed parameters, return shapes, and examples for each tool.
 
 ## RCARS Content Advisory Tools
 

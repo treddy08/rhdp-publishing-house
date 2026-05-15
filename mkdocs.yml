@@ -36,6 +36,7 @@ nav:
     - Getting Started: getting-started.md
   - Architecture:
     - Portal: architecture/portal.md
+    - MCP Server: api/mcp-tools.md
     - RCARS Integration: architecture/rcars-integration.md
     - Express Mode: architecture/express-mode-overview.md
   - Proposed:
@@ -48,8 +49,6 @@ nav:
     - MCP Auth: admin/mcp-auth.md
     - RCARS Service Auth: admin/rcars-service-auth.md
     - Common Rules: admin/PH-COMMON-RULES.md
-  - API Reference:
-    - MCP Tools: api/mcp-tools.md
 
 markdown_extensions:
   - tables
