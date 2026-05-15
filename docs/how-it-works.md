@@ -76,12 +76,11 @@ The entry point. Checks the current directory for a project manifest, syncs the 
 Handles intake, vetting, and spec refinement.
 
 - **Model:** Opus 4.6
-- **Three entry paths:**
-  1. **Full spec provided** — validates and normalizes an existing design doc (any format)
-  2. **Rough idea** — builds the spec through conversation
-  3. **RCARS gap** — a gap description becomes the seed for a new project
+- **Two entry paths:**
+  1. **"I have a spec"** — validates and normalizes an existing design doc (any format)
+  2. **"I have an idea"** — builds the spec through conversation
 - **Smart intake:** If the user provides existing docs, extracts answers rather than asking every question
-- **Also handles:** Deployment mode selection
+- **Also handles:** Deployment mode selection (onboarded, self-published, express), RCARS vetting
 - **Produces:** `publishing-house/spec/design.md` + per-module outlines in `publishing-house/spec/modules/`
 
 ### Writer Agent
@@ -139,16 +138,19 @@ Holistic final check before marking ready for publishing.
 
 ## Deployment Modes
 
-Set during intake. Determines the automation approach and publishing target. The content pipeline (intake, writing, editing) is identical for both modes.
+Set during intake. Determines the automation approach, publishing target, and state management. The content pipeline (intake, writing, editing) is identical for git-based modes.
 
-| Mode | Automation | AgnosticV Catalog | Code Review | Publishing |
-|------|------------|-------------------|-------------|------------|
-| `rhdp_published` | Ansible, GitOps, or both | Required at 7b | Required | Standalone RHDP catalog item |
-| `self_published` | GitOps only | Skipped | Recommended | Order Field Source CI with your repo URL |
+| Mode | Automation | AgnosticV Catalog | Code Review | State | Publishing |
+|------|------------|-------------------|-------------|-------|------------|
+| `rhdp_published` | Ansible, GitOps, or both | Required at 7b | Required | Git manifest | Standalone RHDP catalog item |
+| `self_published` | GitOps only | Skipped | Recommended | Git manifest | Order Field Source CI with your repo URL |
+| `express` | Live agent (`oc` commands) | N/A | N/A | Portal DB | Disposable one-off demo environment |
+
+**Express mode** is for transient demo environments — no git repo, no content pipeline. A user describes what they need, the system finds the closest existing base environment via RCARS, provisions it, and customizes it live. No Showroom content, no review gates, no Jira tracking. Express sessions are stored in the portal database and are disposable.
 
 ## State Management
 
-All project state lives in `publishing-house/manifest.yaml` — a YAML file the orchestrator reads and writes every session. It tracks:
+For git-based modes (`rhdp_published`, `self_published`), all project state lives in `publishing-house/manifest.yaml` — a YAML file the orchestrator reads and writes every session. It tracks:
 
 - Project metadata (name, type, owner, autonomy level, deployment mode)
 - Current lifecycle phase
@@ -160,6 +162,8 @@ All project state lives in `publishing-house/manifest.yaml` — a YAML file the 
 `publishing-house/worklog.yaml` is a companion file for human context. The manifest is structured state; the worklog is narrative context.
 
 Both files are committed and pushed at session end. The orchestrator pulls at session start. This makes collaboration seamless — push your repo, a colleague picks up exactly where you left off without any external coordination tool.
+
+For **express mode**, state lives in the portal database (intake sessions, express metrics). No git repo, no manifest file.
 
 ## Autonomy Levels
 
@@ -216,9 +220,9 @@ Everything lives in one repo. The Showroom scaffold (`site.yml`, `ui-config.yml`
 
 ## Portal
 
-The [RHDP Publishing House Portal](https://github.com/rhpds/rhdp-publishing-house-portal)
-provides cross-project visibility for managers and PMs. It reads `manifest.yaml` and
-`worklog.yaml` from each registered project's GitHub repo and presents:
+The [RHDP Publishing House Portal](https://github.com/rhpds/rhdp-publishing-house-portal) serves two roles: cross-project visibility for managers and PMs, and MCP gateway for Claude Code users and backend integrations.
+
+**Visibility features:**
 
 - **Pipeline kanban** — projects flowing through lifecycle phases
 - **Projects table** — searchable list with phase progress bars
@@ -226,6 +230,8 @@ provides cross-project visibility for managers and PMs. It reads `manifest.yaml`
 - **Worklog timeline** — human-context entries from `worklog.yaml`
 - **Launch instructions** — how to order and use the deployed environment
 
-The portal is read-only — it never modifies the manifest. All state changes happen through the CLI skills.
+**MCP gateway:** The portal backend hosts a FastMCP server (mounted at `/mcp`) that provides tools for project queries, RCARS integration, validation storage, manifest sync, and session management. Claude Code skills call these tools — they never make raw HTTP calls to external services. The portal is the single gateway for all backend integrations.
+
+**Express mode state:** For express projects (no git repo), the portal database stores intake sessions and metrics directly.
 
 See [Portal Architecture](architecture/portal.md) for full details.
