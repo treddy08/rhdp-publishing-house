@@ -82,6 +82,81 @@ Portal as MCP gateway, express mode, Jira visibility, hosted chatbot. MCP gatewa
 
 Items that are unblocked or nearly unblocked. Not on the current roadmap but high value.
 
+### [Prakhar Proposal] Showroom skills — agent-based refactor
+
+**What we see.** Both `verify-content` and `create-lab` run sequentially in a single Claude context. On a 6-module lab, `verify-content` makes 5 passes across all files one after the other — scaffold, structure, format, style, technical — roughly 8 minutes of wall time. `create-lab` is worse: 13 steps, one question at a time, one file at a time. Since PH's writer and editor agents wrap these skills, this slowness flows directly into the writing and editing phases.
+
+**The proposal.** Move both skills to an orchestrator + parallel subagent model.
+
+For `verify-content`:
+
+| Stage | Who | What |
+|---|---|---|
+| Pre-flight | Orchestrator (sequential) | Reads nav.adoc for module order, antora.yml for defined attributes, scans all .adoc for first-use acronym map. Outputs `shared_context` JSON. |
+| Scaffold check | 1 agent | site.yml, ui-config.yml, antora.yml, gh-pages workflow, supplemental-ui. |
+| Per-module review | N agents in parallel | Each gets one module + shared_context + rule prompt files. Runs B/C/D/E/F passes. Returns `[{id, module, line, severity, message}]`. |
+| Merge | Orchestrator | Flattens all findings, applies cross-module logic, deduplicates, sorts by severity. |
+
+Consistency across agents works through three mechanisms: every agent reads the same prompt files (no rule drift between agents), output must match a fixed JSON schema with a `Critical|High|Warning|Info` severity enum, and anything needing full-lab context — like "was AAP already expanded in an earlier module?" — lives in the pre-extracted `shared_context`, not in individual agent memory.
+
+For `create-lab`: all intake questions upfront in one grouped form, then parallel file generation — index.adoc, 01-overview.adoc, 02-details.adoc, and the first module written simultaneously by separate agents. Orchestrator handles nav merge and quality check after. Continue mode stays sequential since story continuity requires reading the previous module.
+
+On a 6-module lab, `verify-content` goes from ~8 minutes to ~90 seconds. `create-lab` for a new lab goes from a blocking multi-step conversation to a single planning exchange followed by parallel generation. The editing and writing phases in PH become realistic within a single session.
+
+**Note:** Supersedes "Subagent-per-module execution" in the Future Milestone Skills & Platform section.
+
+### [Prakhar Proposal] Showroom skills — headless mode for PH integration
+
+**What we see.** PH writer currently "invokes" `create-lab` by answering its interactive questions from the manifest in the same conversation. This isn't an interface — it's context bleeding. It works today, but once `create-lab` becomes agent-based, the question-answer flow breaks. We need a real contract between PH and the Showroom skills.
+
+**The proposal.** Both skills detect their caller. If a `ph_payload` is present, they skip interactive questions and run headless. If not, they behave exactly as they do today for a human at the terminal. Same subagents run in both modes.
+
+`verify-content` input (from PH editor):
+
+```yaml
+ph_payload:
+  content_path: content/modules/ROOT/pages/
+  modules: [03-module-01-pipelines.adoc]  # empty = all
+  lab_type: workshop
+  shared_context:
+    defined_attributes: [ocp_version, user, password]
+    nav_order: [index, 01-overview, 02-details, 03-module-01]
+    first_use_map: {AAP: 01-overview.adoc}
+```
+
+Returns `{findings: [{id, module, line, severity, message}]}` — ready to pass straight to `ph_store_validation_results`.
+
+`create-lab` input (from PH writer):
+
+```yaml
+ph_payload:
+  target_dir: content/modules/ROOT/pages/
+  mode: new | continue
+  previous_module: 03-module-01-pipelines.adoc
+  spec:
+    lab_name: ...
+    audience: ...
+    learning_objectives: [...]
+    business_scenario: ...
+    duration: 45min
+    module_outline: <full outline text>
+    env: {ocp_version: "4.18", attributes: {user: ..., password: ...}}
+```
+
+Returns `{files_created: [...], nav_updated: true, warnings: []}` — PH writer reads this to update the manifest.
+
+Skills become independently runnable and testable outside PH. The integration stops relying on conversation context flowing correctly and becomes something we can verify.
+
+**Depends on:** Showroom skills agent-based refactor above.
+
+### [Prakhar Proposal] PH editor — wire `ph_store_validation_results`
+
+**What we see.** The editor skill runs `showroom:verify-content`, captures findings in conversation context, and stops there. The `ph_store_validation_results` MCP tool exists and is live — it just isn't being called.
+
+**The fix.** One additional step in `skills/editor/SKILL.md`: after verify-content finishes, call `ph_store_validation_results` with the structured findings JSON. Portal kanban then shows per-module verification status without anyone having to ask what the results were.
+
+Unblocked. PH skills change only, no Showroom changes needed. Can ship before the agent refactor.
+
 ### Express skill (cluster customization agent)
 **UNBLOCKED** — both dependencies (RCARS integration + Express framework) are complete.
 
@@ -152,7 +227,7 @@ Deferred to a future milestone. Tracked but not in current roadmap.
 - PH test harness (fixture-based skill validation before releases)
 - Customizable skills (include/hook mechanism for user overrides — style, naming, review criteria)
 - AI Context Modules evaluation (skills as modules with AGENTS.md, commands/, mcp.json)
-- Subagent-per-module execution (for large 6+ module labs)
+- Subagent-per-module execution (for large 6+ module labs) — see Near-Term Prakhar Proposal above for the active version of this
 - Portal UI cleanup and refinement
 - End-to-end build + deploy + onboarding (full lifecycle, no manual steps)
 
