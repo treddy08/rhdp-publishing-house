@@ -157,6 +157,60 @@ Skills become independently runnable and testable outside PH. The integration st
 
 Unblocked. PH skills change only, no Showroom changes needed. Can ship before the agent refactor.
 
+### [Prakhar Proposal] Model cost reduction — right-size Claude now, OSS reasoning models in Phase 4
+
+**What we see.** PH runs entirely in Claude Code today, which calls Anthropic directly — LiteMaaS routing isn't possible in this path. The OSS model opportunity exists but only lands with the Phase 4 chatbot, where the backend is server-side. Until then, the quick win is fixing Claude model choices that are currently over-specified for what the tasks actually require.
+
+**LiteMaaS pricing confirmed 2026-05-19 (pulled from live MCP):**
+
+| Model | Input $/1M | Output $/1M | Reasoning |
+|---|---|---|---|
+| `claude-opus-4-6` | $5.00 | $25.00 | — |
+| `claude-sonnet-4-6` | $3.00 | $15.00 | — |
+| `claude-3-5-haiku` | $1.00 | $5.00 | — |
+| `qwen3-235b` | $0.22 | $0.88 | ✓ thinking mode |
+| `minimax-m2` | $0.30 | $1.20 | ✓ 1M context |
+| `gpt-oss-120b` | $0.09 | $0.36 | — |
+
+**Step 1 — Right-size Claude models (unblocked, frontmatter-only changes)**
+
+| Skill | Current | Proposed | Saving |
+|---|---|---|---|
+| PH orchestrator | `claude-opus-4-6` | `claude-sonnet-4-6` | ~1.7x |
+| `showroom:verify-content` | `claude-opus-4-6` | `claude-3-5-haiku` | ~5x |
+| `showroom:create-lab` | `claude-opus-4-6` | `claude-sonnet-4-6` | ~1.7x |
+
+Orchestrator reads YAML and routes — no frontier reasoning needed. `verify-content` runs rule classification and returns structured JSON — Haiku handles this fine.
+
+**Step 2 — Per-agent model routing with agent-based refactor (Phase 2)**
+
+Once verify-content and create-lab use parallel subagents, each agent declares its own model. Classification agents (B/C/D/E/F passes) use `claude-3-5-haiku`. Generation agents use `claude-sonnet-4-6`. No agent needs Opus.
+
+Combined with parallel execution, a verify-content run on a 6-module lab goes from ~$0.375 (Opus, sequential) to ~$0.03 (Haiku, parallel) — roughly 12x cheaper, all within Claude.
+
+**Step 3 — OSS reasoning models via LiteMaaS for Phase 4 chatbot**
+
+Phase 4 (Dev Spaces hosted workspace) introduces a chatbot backend PH controls server-side — not Claude Code. That process calls LiteMaaS directly. This is where OSS reasoning models apply.
+
+| Model | Input $/1M | Output $/1M | Context | Why |
+|---|---|---|---|---|
+| `qwen3-235b` | $0.22 | $0.88 | 128K | Best OSS reasoning quality, thinking mode, strong at structured writing and code |
+| `minimax-m2` | $0.30 | $1.20 | 1M | 1M context — handles large multi-module labs where Qwen's 128K is tight |
+
+Phase 4 routing: `qwen3-235b` thinking for verify passes and generation, `minimax-m2` for large-context orchestration (10+ modules).
+
+**Real cost per verify-content run on 6-module lab:**
+
+| Approach | Cost | vs today |
+|---|---|---|
+| Current — Opus, sequential | $0.375 | baseline |
+| Step 1+2 — Haiku, parallel | ~$0.03 | ~12x cheaper |
+| Phase 4 — Qwen3-235B via LiteMaaS | ~$0.015 | ~25x cheaper |
+
+**Future watch item.** If Anthropic adds base URL support to Claude Code, all interactive sessions can route through LiteMaaS — full cost tracking per project, per phase, budget caps. Worth revisiting if that ships.
+
+**Depends on:** Step 1 independent. Step 2 depends on Phase 2 agent-based refactor. Step 3 depends on Phase 4 chatbot.
+
 ### Express skill (cluster customization agent)
 **UNBLOCKED** — both dependencies (RCARS integration + Express framework) are complete.
 
