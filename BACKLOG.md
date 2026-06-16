@@ -82,13 +82,19 @@ Portal as MCP gateway, express mode, Jira visibility, hosted chatbot. MCP gatewa
 
 Items that are unblocked or nearly unblocked. Not on the current roadmap but high value.
 
-### [Prakhar Proposal] Showroom skills — agent-based refactor
+### Showroom skills — orchestrator + parallel subagent refactor
 
-**What we see.** Both `verify-content` and `create-lab` run sequentially in a single Claude context. On a 6-module lab, `verify-content` makes 5 passes across all files one after the other — scaffold, structure, format, style, technical — roughly 8 minutes of wall time. `create-lab` is worse: 13 steps, one question at a time, one file at a time. Since PH's writer and editor agents wrap these skills, this slowness flows directly into the writing and editing phases.
+**Origin:** Prakhar Srivastava proposal (2026-05-19). Reviewed and approved 2026-06-16.
 
-**The proposal.** Move both skills to an orchestrator + parallel subagent model.
+**Problem.** `verify-content` and `create-lab` both run sequentially in a single Claude context. On a 6-module lab, `verify-content` makes 5 passes across all files one after the other (~8 min wall time). `create-lab` is 13 sequential steps. Since PH's writer and editor agents wrap these skills, this slowness flows directly into the writing and editing phases.
 
-For `verify-content`:
+**How this differs from the original "subagent-per-module" idea.** The original Future Milestone item was narrow: "run each module's review in its own agent instead of sequentially." Pure parallelism, same logic. This proposal adds three things on top that make it actually work:
+
+1. **Pre-flight orchestrator stage** — before any agents run, extract cross-module context (nav order, defined Antora attributes, first-use acronym map) into a `shared_context` JSON. Without this, module 4's agent has no way to know AAP was already expanded in module 1. The original idea had no answer for cross-module dependencies.
+2. **Structured output contract** — every agent returns findings in a fixed JSON schema with a `Critical|High|Warning|Info` severity enum. The original idea said "parallel agents" with no spec for how results merge. This makes dedup and cross-module logic possible in a merge stage.
+3. **Applies to `create-lab` too**, not just `verify-content`. Original idea was review-only. This extends it to generation — all intake questions upfront, then parallel file creation (index, overview, details, first module simultaneously). Continue mode stays sequential since story continuity requires reading previous modules.
+
+**Proposed pipeline for `verify-content`:**
 
 | Stage | Who | What |
 |---|---|---|
@@ -97,37 +103,21 @@ For `verify-content`:
 | Per-module review | N agents in parallel | Each gets one module + shared_context + rule prompt files. Runs B/C/D/E/F passes. Returns `[{id, module, line, severity, message}]`. |
 | Merge | Orchestrator | Flattens all findings, applies cross-module logic, deduplicates, sorts by severity. |
 
-Consistency across agents works through three mechanisms: every agent reads the same prompt files (no rule drift between agents), output must match a fixed JSON schema with a `Critical|High|Warning|Info` severity enum, and anything needing full-lab context — like "was AAP already expanded in an earlier module?" — lives in the pre-extracted `shared_context`, not in individual agent memory.
+Consistency across agents: every agent reads the same prompt files (no rule drift), output must match the fixed JSON schema, and anything needing full-lab context lives in `shared_context`, not individual agent memory.
 
-For `create-lab`: all intake questions upfront in one grouped form, then parallel file generation — index.adoc, 01-overview.adoc, 02-details.adoc, and the first module written simultaneously by separate agents. Orchestrator handles nav merge and quality check after. Continue mode stays sequential since story continuity requires reading the previous module.
+**Expected impact:** 6-module `verify-content` from ~8 min → ~90 sec. `create-lab` for new lab from blocking multi-step conversation to single planning exchange + parallel generation. Writing and editing phases in PH become realistic within a single session.
 
-On a 6-module lab, `verify-content` goes from ~8 minutes to ~90 seconds. `create-lab` for a new lab goes from a blocking multi-step conversation to a single planning exchange followed by parallel generation. The editing and writing phases in PH become realistic within a single session.
+**Supersedes:** "Subagent-per-module execution" in Future Milestone Skills & Platform section.
 
-**Note:** Supersedes "Subagent-per-module execution" in the Future Milestone Skills & Platform section.
+### Showroom skills — spec-driven (headless) execution mode
 
-### [Prakhar Proposal] Showroom skills — headless mode for PH integration
+**Origin:** Prakhar Srivastava proposal (2026-05-19). Reviewed and approved 2026-06-16.
 
-**What we see.** PH writer currently "invokes" `create-lab` by answering its interactive questions from the manifest in the same conversation. This isn't an interface — it's context bleeding. It works today, but once `create-lab` becomes agent-based, the question-answer flow breaks. We need a real contract between PH and the Showroom skills.
+**Problem.** PH writer currently "invokes" `create-lab` by answering its interactive questions from manifest data in the same conversation. This is context bleeding, not an interface. The manifest already contains everything the skill asks about (audience, objectives, duration, environment) — there's no reason to re-ask. And once `create-lab` becomes agent-based (see refactor above), the question-answer puppeting breaks entirely.
 
-**The proposal.** Both skills detect their caller. If a `ph_payload` is present, they skip interactive questions and run headless. If not, they behave exactly as they do today for a human at the terminal. Same subagents run in both modes.
+**The proposal.** Skills detect their caller. If a structured `ph_payload` input is present, the skill skips all interactive questions and works directly from the provided spec. If no payload, normal interactive mode for humans at the terminal. Same subagents run in both modes.
 
-`verify-content` input (from PH editor):
-
-```yaml
-ph_payload:
-  content_path: content/modules/ROOT/pages/
-  modules: [03-module-01-pipelines.adoc]  # empty = all
-  lab_type: workshop
-  shared_context:
-    defined_attributes: [ocp_version, user, password]
-    nav_order: [index, 01-overview, 02-details, 03-module-01]
-    first_use_map: {AAP: 01-overview.adoc}
-```
-
-Returns `{findings: [{id, module, line, severity, message}]}` — ready to pass straight to `ph_store_validation_results`.
-
-`create-lab` input (from PH writer):
-
+Example `create-lab` input (from PH writer):
 ```yaml
 ph_payload:
   target_dir: content/modules/ROOT/pages/
@@ -143,73 +133,59 @@ ph_payload:
     env: {ocp_version: "4.18", attributes: {user: ..., password: ...}}
 ```
 
-Returns `{files_created: [...], nav_updated: true, warnings: []}` — PH writer reads this to update the manifest.
+Returns structured JSON (`{files_created: [...], nav_updated: true, warnings: []}`) instead of conversation output. Same pattern for `verify-content` — returns `{findings: [{id, module, line, severity, message}]}` ready for `ph_store_validation_results`.
 
-Skills become independently runnable and testable outside PH. The integration stops relying on conversation context flowing correctly and becomes something we can verify.
+**Why this matters:** Skills become independently runnable and testable outside PH. The integration becomes a contract we can verify, not conversation context we hope flows correctly. Also unblocks any future caller (CI, portal chatbot, other tools) from using these skills programmatically.
 
-**Depends on:** Showroom skills agent-based refactor above.
+**Depends on:** Showroom skills orchestrator refactor above (agent-based architecture needs to exist before adding the headless input path).
 
-### [Prakhar Proposal] PH editor — wire `ph_store_validation_results`
+### PH editor — wire `ph_store_validation_results`
 
-**What we see.** The editor skill runs `showroom:verify-content`, captures findings in conversation context, and stops there. The `ph_store_validation_results` MCP tool exists and is live — it just isn't being called.
+**Origin:** Prakhar Srivastava proposal (2026-05-19). Reviewed and approved 2026-06-16.
+
+**Problem.** The editor skill runs `showroom:verify-content`, captures findings in conversation context, and stops there. The `ph_store_validation_results` MCP tool exists and is live on the portal — it just isn't being called.
 
 **The fix.** One additional step in `skills/editor/SKILL.md`: after verify-content finishes, call `ph_store_validation_results` with the structured findings JSON. Portal kanban then shows per-module verification status without anyone having to ask what the results were.
 
-Unblocked. PH skills change only, no Showroom changes needed. Can ship before the agent refactor.
+**Status:** Unblocked. PH skills change only, no Showroom changes needed. Can ship independently before the agent refactor.
 
-### [Prakhar Proposal] Model cost reduction — right-size Claude now, OSS reasoning models in Phase 4
+### Model cost optimization — right-size models, evaluate cheaper alternatives
 
-**What we see.** PH runs entirely in Claude Code today, which calls Anthropic directly — LiteMaaS routing isn't possible in this path. The OSS model opportunity exists but only lands with the Phase 4 chatbot, where the backend is server-side. Until then, the quick win is fixing Claude model choices that are currently over-specified for what the tasks actually require.
+**Origin:** Prakhar Srivastava proposal (2026-05-19). Reviewed and approved 2026-06-16.
 
-**LiteMaaS pricing confirmed 2026-05-19 (pulled from live MCP):**
+**Guiding principle:** Reduce costs where possible, but **never at the expense of model capability**. A cheaper model that produces lower-quality content or misses review findings is not a savings — it's a regression. Every model downgrade must be validated against real output quality before shipping.
 
-| Model | Input $/1M | Output $/1M | Reasoning |
+**Step 1 — Right-size Claude models (unblocked, frontmatter-only changes)**
+
+Some skills currently default to Opus where a lighter model handles the task fine. Candidates:
+
+| Skill | Current | Candidate | Rationale |
+|---|---|---|---|
+| PH orchestrator | `claude-opus-4-6` | `claude-sonnet-4-6` | Reads YAML and routes — no frontier reasoning needed |
+| `showroom:verify-content` | `claude-opus-4-6` | `claude-3-5-haiku` | Rule classification + structured JSON output — needs validation |
+| `showroom:create-lab` | `claude-opus-4-6` | `claude-sonnet-4-6` | Content generation — needs quality comparison before committing |
+
+Each change requires running the skill against a real lab and comparing output quality before merging. Don't blindly swap model frontmatter.
+
+**Step 2 — Per-agent model routing (after agent-based refactor)**
+
+Once verify-content and create-lab use parallel subagents, each agent can declare its own model tier. Classification agents (rule-based passes) are strong candidates for Haiku. Generation agents likely need Sonnet minimum. Validate per-agent.
+
+**Step 3 — OSS reasoning models via LiteMaaS (Phase 4 chatbot only)**
+
+Phase 4 introduces a server-side chatbot backend that can call LiteMaaS directly (not Claude Code). This is where OSS models like `qwen3-235b` or `minimax-m2` could apply — but only if they match Claude quality for the specific tasks. Evaluate when Phase 4 is active.
+
+**LiteMaaS pricing snapshot (2026-05-19):**
+
+| Model | Input $/1M | Output $/1M | Notes |
 |---|---|---|---|
 | `claude-opus-4-6` | $5.00 | $25.00 | — |
 | `claude-sonnet-4-6` | $3.00 | $15.00 | — |
 | `claude-3-5-haiku` | $1.00 | $5.00 | — |
-| `qwen3-235b` | $0.22 | $0.88 | ✓ thinking mode |
-| `minimax-m2` | $0.30 | $1.20 | ✓ 1M context |
-| `gpt-oss-120b` | $0.09 | $0.36 | — |
+| `qwen3-235b` | $0.22 | $0.88 | thinking mode, 128K context |
+| `minimax-m2` | $0.30 | $1.20 | 1M context |
 
-**Step 1 — Right-size Claude models (unblocked, frontmatter-only changes)**
-
-| Skill | Current | Proposed | Saving |
-|---|---|---|---|
-| PH orchestrator | `claude-opus-4-6` | `claude-sonnet-4-6` | ~1.7x |
-| `showroom:verify-content` | `claude-opus-4-6` | `claude-3-5-haiku` | ~5x |
-| `showroom:create-lab` | `claude-opus-4-6` | `claude-sonnet-4-6` | ~1.7x |
-
-Orchestrator reads YAML and routes — no frontier reasoning needed. `verify-content` runs rule classification and returns structured JSON — Haiku handles this fine.
-
-**Step 2 — Per-agent model routing with agent-based refactor (Phase 2)**
-
-Once verify-content and create-lab use parallel subagents, each agent declares its own model. Classification agents (B/C/D/E/F passes) use `claude-3-5-haiku`. Generation agents use `claude-sonnet-4-6`. No agent needs Opus.
-
-Combined with parallel execution, a verify-content run on a 6-module lab goes from ~$0.375 (Opus, sequential) to ~$0.03 (Haiku, parallel) — roughly 12x cheaper, all within Claude.
-
-**Step 3 — OSS reasoning models via LiteMaaS for Phase 4 chatbot**
-
-Phase 4 (Dev Spaces hosted workspace) introduces a chatbot backend PH controls server-side — not Claude Code. That process calls LiteMaaS directly. This is where OSS reasoning models apply.
-
-| Model | Input $/1M | Output $/1M | Context | Why |
-|---|---|---|---|---|
-| `qwen3-235b` | $0.22 | $0.88 | 128K | Best OSS reasoning quality, thinking mode, strong at structured writing and code |
-| `minimax-m2` | $0.30 | $1.20 | 1M | 1M context — handles large multi-module labs where Qwen's 128K is tight |
-
-Phase 4 routing: `qwen3-235b` thinking for verify passes and generation, `minimax-m2` for large-context orchestration (10+ modules).
-
-**Real cost per verify-content run on 6-module lab:**
-
-| Approach | Cost | vs today |
-|---|---|---|
-| Current — Opus, sequential | $0.375 | baseline |
-| Step 1+2 — Haiku, parallel | ~$0.03 | ~12x cheaper |
-| Phase 4 — Qwen3-235B via LiteMaaS | ~$0.015 | ~25x cheaper |
-
-**Future watch item.** If Anthropic adds base URL support to Claude Code, all interactive sessions can route through LiteMaaS — full cost tracking per project, per phase, budget caps. Worth revisiting if that ships.
-
-**Depends on:** Step 1 independent. Step 2 depends on Phase 2 agent-based refactor. Step 3 depends on Phase 4 chatbot.
+**Depends on:** Step 1 independent. Step 2 depends on agent-based refactor. Step 3 depends on Phase 4 chatbot.
 
 ### Express skill (cluster customization agent)
 **UNBLOCKED** — both dependencies (RCARS integration + Express framework) are complete.
@@ -281,7 +257,7 @@ Deferred to a future milestone. Tracked but not in current roadmap.
 - PH test harness (fixture-based skill validation before releases)
 - Customizable skills (include/hook mechanism for user overrides — style, naming, review criteria)
 - AI Context Modules evaluation (skills as modules with AGENTS.md, commands/, mcp.json)
-- Subagent-per-module execution (for large 6+ module labs) — see Near-Term Prakhar Proposal above for the active version of this
+- Subagent-per-module execution (for large 6+ module labs) — **superseded** by "Showroom skills — orchestrator + parallel subagent refactor" in Near-Term section
 - Portal UI cleanup and refinement
 - End-to-end build + deploy + onboarding (full lifecycle, no manual steps)
 
