@@ -253,34 +253,75 @@ when `ph_payload` ships for agnosticv.
 
 ---
 
-### Gap 7: RCARS not used for automation discovery [MEDIUM]
+### Gap 7: Feature Request — RCARS Automation Discovery [MEDIUM]
 
-**What's missing:** RCARS is wired into PH for content vetting only (intake
-Phase 2). The automation agent (Phase 7a–7d) has no RCARS connection. Developers
-building automation cannot query what workloads already exist or what patterns
-existing labs use. Every new lab reinvents workloads that already exist in the
-catalog.
+**Origin:** Prakhar Srivastava (2026-06-17). Identified before this spec review
+began — not a net-new suggestion from this session.
+
+**Problem:** RCARS is wired into PH for content vetting only (intake Phase 2).
+The automation agent (Phase 7a–7d) has no RCARS connection. Developers building
+automation cannot query what workloads already exist or what patterns existing
+labs use. Every new lab reinvents workloads that already exist across 500+
+catalog items.
+
+**What this enables:** Before writing any automation code, the automation agent
+can ask RCARS "what already exists for DevSpaces tenant provisioning, Keycloak
+multi-user setup, or Gitea user creation?" and get back real workload names,
+source repos, and which labs use them. Developers reuse proven patterns instead
+of writing from scratch.
 
 **Proposed new MCP tool: `ph_rcars_workload_search`**
+
+Add to `app/mcp/rcars_tools.py` alongside existing RCARS tools:
 
 ```python
 async def ph_rcars_workload_search(
     query: str,
     workload_type: str = "all"   # ansible_role | agnosticv_config | all
-) -> dict: ...
+) -> dict:
+    """
+    Search for existing workloads matching a query.
+    Returns workload names, source repos, which labs use them, and AgV snippets.
+    Called by the automation agent during Phase 7a before writing any new code.
+    """
 ```
 
-Returns workload names, source repos, which labs use them, and AgV snippet.
+Returns:
+```json
+{
+  "matching_workloads": [
+    {
+      "workload_name": "ocp4_workload_tenant_devspaces",
+      "source_repo": "agnosticd/core_workloads",
+      "used_by": ["lb2010-rhads-ols-modernize"],
+      "agnosticv_snippet": "- agnosticd.core_workloads.ocp4_workload_tenant_devspaces",
+      "notes": "Provisions per-user DevSpaces workspace in a namespace"
+    }
+  ]
+}
+```
 
-**Flow:** Automation agent Phase 7a queries RCARS before writing any automation.
-Agent presents reuse plan. Developer confirms. `automation-manifest.yaml` records
-reuse decisions. Phase 7c uses RCARS hits as reference implementations.
+**Proposed flow:**
 
-**Dependency:** Requires RCARS to index workload-level data (role names, AgV
-snippets) not just catalog metadata. Coordinate with Nate (RCARS owner) before
-committing to this — the RCARS side may not be trivial.
+```
+Phase 7a: Automation Requirements
+  → Automation agent calls ph_rcars_workload_search before writing anything
+  → RCARS returns matching workloads with source repo and AgV snippet
+  → Agent presents reuse plan: "Found X — recommend reusing Y, writing Z from scratch"
+  → Developer confirms
+  → automation-manifest.yaml records reuse decisions
 
-**Action:** Add to `BACKLOG.md` Near-Term with flag: requires RCARS team input.
+Phase 7c: Automation Code
+  → Agent uses RCARS hits as reference implementations
+  → Writes only what doesn't already exist
+```
+
+**Dependency:** Requires RCARS to index workload-level data (Ansible role names,
+AgV config snippets) in addition to catalog metadata. Coordinate with Nate
+(RCARS owner) before committing — the RCARS indexing side may not be trivial.
+
+**Action:** Add to `BACKLOG.md` Near-Term. Flag as requiring RCARS team input
+before implementation begins.
 
 ---
 
@@ -294,4 +335,4 @@ committing to this — the RCARS side may not be trivial.
 | 4 | WorkspaceManager interface contract | High | Nate | backend swap |
 | 5 | Marketplace version gate | **Critical** | Prakhar | headless mode |
 | 6 | AgnosticV agent refactor + ph_payload | **Critical** | Prakhar | automation agent |
-| 7 | RCARS automation discovery | Medium | Prakhar + RCARS | nothing yet |
+| 7 | RCARS automation discovery (feature request) | Medium | Prakhar + RCARS | nothing yet |
