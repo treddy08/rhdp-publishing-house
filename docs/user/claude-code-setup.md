@@ -12,7 +12,9 @@ Publishing House exposes MCP tools that let Claude Code query the RCARS content 
 
 ## MCP Server Configuration
 
-Create an MCP config file (e.g., `~/.config/rhdp-publishing-house/mcp.json`):
+### Option 1: Global settings (recommended)
+
+Add the PH MCP server to your Claude Code global settings so it's available in every session. Open `~/.claude/settings.json` and add the `mcpServers` block:
 
 ```json
 {
@@ -32,14 +34,33 @@ Replace:
 - `<cluster-domain>` with the OpenShift cluster apps domain (ask your admin for the exact URL)
 - `<your-api-key>` with the raw API key provided by your admin
 
-Then launch Claude Code with both the MCP config and the skills plugin:
+Restart Claude Code after saving. The PH MCP tools will be available in every session automatically.
 
-```bash
-claude --mcp-config ~/.config/rhdp-publishing-house/mcp.json \
-       --plugin-dir ~/rhdp-publishing-house-skills
+### Option 2: Per-session config file
+
+If you prefer to keep the MCP config separate, create a JSON file (store it somewhere secure — it contains your API key):
+
+```json
+{
+  "mcpServers": {
+    "publishing-house": {
+      "type": "http",
+      "url": "https://ph-mcp.apps.<cluster-domain>/mcp/",
+      "headers": {
+        "Authorization": "Bearer <your-api-key>"
+      }
+    }
+  }
+}
 ```
 
-Alternatively, add the MCP server to your global config (`~/.claude/mcp.json`) or project-scoped config (`.mcp.json` in your project directory) to avoid passing `--mcp-config` every time.
+Then launch Claude Code with the config flag:
+
+```bash
+claude --mcp-config /path/to/your/ph-mcp.json
+```
+
+This approach requires passing the flag every session but keeps the API key out of your global settings.
 
 ## Verify Connection
 
