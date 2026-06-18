@@ -12,9 +12,9 @@ Publishing House exposes MCP tools that let Claude Code query the RCARS content 
 
 ## MCP Server Configuration
 
-### Option 1: Global settings (recommended)
+### Option 1: Global MCP config (recommended)
 
-Add the PH MCP server to your Claude Code global settings so it's available in every session. Open `~/.claude/settings.json` and add the `mcpServers` block:
+Add the PH MCP server to your Claude Code global MCP config so it's available in every session. Open `~/.claude/mcp.json` (create it if it doesn't exist) and add the PH server to the `mcpServers` block:
 
 ```json
 {
