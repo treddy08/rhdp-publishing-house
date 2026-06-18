@@ -14,14 +14,14 @@ Publishing House exposes MCP tools that let Claude Code query the RCARS content 
 
 ### Option 1: Global MCP config (recommended)
 
-Add the PH MCP server to your Claude Code global MCP config so it's available in every session. Open `~/.claude/mcp.json` (create it if it doesn't exist) and add the PH server to the `mcpServers` block:
+Add the PH MCP server to your Claude Code global MCP config so it's available in every session. Open `~/.claude.json` and add the PH server to the `mcpServers` block (create the block if it doesn't exist — this is the same file where other MCP servers like GitHub and context7 are configured):
 
 ```json
 {
   "mcpServers": {
     "publishing-house": {
-      "type": "streamable-http",
-      "url": "https://ph-mcp.apps.<cluster-domain>/mcp",
+      "type": "http",
+      "url": "https://ph-mcp.apps.<cluster-domain>/mcp/",
       "headers": {
         "Authorization": "Bearer <your-api-key>"
       }
@@ -44,8 +44,8 @@ If you prefer to keep the MCP config separate, create a JSON file (store it some
 {
   "mcpServers": {
     "publishing-house": {
-      "type": "streamable-http",
-      "url": "https://ph-mcp.apps.<cluster-domain>/mcp",
+      "type": "http",
+      "url": "https://ph-mcp.apps.<cluster-domain>/mcp/",
       "headers": {
         "Authorization": "Bearer <your-api-key>"
       }
