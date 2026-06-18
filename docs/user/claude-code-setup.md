@@ -20,8 +20,8 @@ Add the PH MCP server to your Claude Code global MCP config so it's available in
 {
   "mcpServers": {
     "publishing-house": {
-      "type": "http",
-      "url": "https://ph-mcp.apps.<cluster-domain>/mcp/",
+      "type": "streamable-http",
+      "url": "https://ph-mcp.apps.<cluster-domain>/mcp",
       "headers": {
         "Authorization": "Bearer <your-api-key>"
       }
@@ -44,8 +44,8 @@ If you prefer to keep the MCP config separate, create a JSON file (store it some
 {
   "mcpServers": {
     "publishing-house": {
-      "type": "http",
-      "url": "https://ph-mcp.apps.<cluster-domain>/mcp/",
+      "type": "streamable-http",
+      "url": "https://ph-mcp.apps.<cluster-domain>/mcp",
       "headers": {
         "Authorization": "Bearer <your-api-key>"
       }
