@@ -31,10 +31,9 @@ Portal as MCP gateway, express mode, Jira visibility, hosted chatbot. MCP gatewa
 - Jira Cloud, REST API v3, service account with API token
 
 **Prerequisites (blocking deployment):**
-- [ ] New Jira project created (need project admin approval)
+- [ ] RHDPCD Jira project created (JSM request submitted 2026-06-18, waiting on PME)
+- [ ] Switch to OJA-ITS-003 (Standard) issue type scheme via Delegated Project Admin (self-service, after project creation)
 - [ ] Jira service account provisioned on redhat.atlassian.net
-- [ ] Initiative issue type available in new project
-- [ ] Jira Cloud vs. Data Center auth confirmed (believed Cloud, need to verify service account process)
 
 **Requirements:** JIRA-01 through JIRA-06
 

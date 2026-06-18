@@ -31,9 +31,13 @@ Three tiers with different needs and tool preferences:
 
 ## Jira Project
 
-**Key:** RHDPPH (placeholder — final name TBD)
-**Type:** Jira Cloud, Team-managed or Company-managed (TBD based on admin access)
-**Site:** redhat.atlassian.net
+**Key:** RHDPCD (RHDP Content Development)
+**Template:** Template 2 — Basic Project (non-PGE)
+**Site:** redhat.atlassian.net (Jira Cloud)
+
+**Post-creation scheme change:** Template 2 defaults to OJA-ITS-001 (Bare Bones: Story, Sub-Task only). After project creation, use Delegated Project Admin to switch to **OJA-ITS-003 (Standard)** which provides Initiative, Epic, Task — the three-level hierarchy PH needs. This is a self-service change, no PME ticket required. See [How do Project Admins align with Red Hat Standards in Jira?](https://redhat.atlassian.net/wiki/spaces/HUB/pages/190190555) and [Adopting Approved Work Types](https://redhat.atlassian.net/wiki/spaces/HUB/pages/190190124).
+
+**Scheme reference:** [OJA: Jira Configuration Taxonomy](https://redhat.atlassian.net/wiki/spaces/HUB/pages/190189089) and [Requesting a new Jira project](https://redhat.atlassian.net/servicedesk/customer/portal/67/article/421568311).
 
 ### Why a Dedicated Project
 
@@ -42,9 +46,9 @@ GPTEINFRA (the existing RHDP Jira project) has 70+ issue types and shared scheme
 - Custom workflow matching PH lifecycle phases without affecting GPTEINFRA
 - Story points enabled on the right issue types by default
 - Automation rules scoped to content work only
-- Clean JQL: `project = RHDPPH` = all PH content work, no filtering needed
+- Clean JQL: `project = RHDPCD` = all PH content work, no filtering needed
 
-**Cross-project reporting still works.** Jira Cloud dashboards use JQL that spans projects. Issue links connect RHDPPH Epics to GPTEINFRA Initiatives. A single dashboard can show both infra and content work side by side.
+**Cross-project reporting still works.** Jira Cloud dashboards use JQL that spans projects. Issue links connect RHDPCD Epics to GPTEINFRA Initiatives. A single dashboard can show both infra and content work side by side.
 
 ### Issue Types Required
 
@@ -170,7 +174,7 @@ Examples:
 
 ### Project-to-Initiative Assignment
 
-During intake, PH queries the Portal for open Initiatives in RHDPPH. Developer selects one or "None — unassigned." The Epic is created as a child of the selected Initiative with a matching label.
+During intake, PH queries the Portal for open Initiatives in RHDPCD. Developer selects one or "None — unassigned." The Epic is created as a child of the selected Initiative with a matching label.
 
 Unassigned Epics can be moved under an Initiative later by a manager in Jira. Single parent per Epic — no multi-effort linking needed. If a project changes efforts (rare), someone drags the Epic in Jira.
 
@@ -217,7 +221,7 @@ JiraSyncService
 
 **`sync_project`:** Compares manifest phase statuses against Jira task statuses via the task mapping table. Transitions tasks that are out of sync. Adds a comment to the Epic summarizing changes. Idempotent — same manifest state produces no changes.
 
-**`get_open_initiatives`:** Queries Jira for open Initiatives in RHDPPH. Cached in Portal DB, refreshed every 15 minutes or on-demand.
+**`get_open_initiatives`:** Queries Jira for open Initiatives in RHDPCD. Cached in Portal DB, refreshed every 15 minutes or on-demand.
 
 **`_diff_state`:** Compares manifest state against Jira state, returns list of transitions needed. Uses the task mapping table to know which Jira issue corresponds to which manifest path.
 
@@ -227,12 +231,12 @@ JiraSyncService
 jira_task_mappings
   ├── id (PK)
   ├── project_id (FK → projects)
-  ├── jira_epic_key (e.g., "RHDPPH-42")
+  ├── jira_epic_key (e.g., "RHDPCD-42")
   ├── deliverable_type (enum: design_doc, module_outline, module_content,
   │                     module_automation, module_verified, code_review,
   │                     e2e_test, final_review)
   ├── module_id (nullable — null for project-level tasks)
-  ├── jira_issue_key (e.g., "RHDPPH-87")
+  ├── jira_issue_key (e.g., "RHDPCD-87")
   ├── manifest_path (e.g., "lifecycle.phases.writing.modules[id=module-03].status")
   ├── default_points (int)
   ├── created_at
@@ -299,8 +303,8 @@ The Atlassian MCP server configured in Claude Code is for interactive human use 
 ```yaml
 integrations:
   jira:
-    epic_key: "RHDPPH-42"
-    initiative_key: "RHDPPH-10"
+    epic_key: "RHDPCD-42"
+    initiative_key: "RHDPCD-10"
     effort_label: "summit-2027"
     synced_at: "2026-05-05T14:30:00Z"
 ```
@@ -392,9 +396,9 @@ The sync service handles manifests with and without the new fields:
 
 | Prerequisite | Status | Blocker? |
 |---|---|---|
-| RHDPPH Jira project created | Not started | Yes — need project admin approval |
+| RHDPCD Jira project created | JSM request submitted 2026-06-18 | Yes — waiting on PME |
+| Switch to OJA-ITS-003 (Standard) | After project creation — self-service via Delegated Project Admin | Yes — needed for Initiative/Epic/Task hierarchy |
 | Jira service account provisioned | Not started | Yes — gating dependency for deployment |
-| Initiative issue type available in RHDPPH | Not started | Yes — needed for hierarchy |
 | Phase 1 (MCP Gateway) | Complete | No |
 | Phase 2 (Express Mode Framework) | Complete | No |
 
