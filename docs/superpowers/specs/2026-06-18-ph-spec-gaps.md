@@ -317,8 +317,8 @@ Phase 7c: Automation Code
 ```
 
 **Dependency:** Requires RCARS to index workload-level data (Ansible role names,
-AgV config snippets) in addition to catalog metadata. Coordinate with Nate
-(RCARS owner) before committing — the RCARS indexing side may not be trivial.
+AgV config snippets) in addition to catalog metadata. Coordinate with the RCARS
+team before committing — the indexing side may not be trivial.
 
 **Action:** Add to `BACKLOG.md` Near-Term. Flag as requiring RCARS team input
 before implementation begins.
@@ -327,12 +327,12 @@ before implementation begins.
 
 ## Summary
 
-| # | Gap | Priority | Owner | Blocks |
+| # | Gap | Priority | Team | Blocks |
 |---|---|---|---|---|
-| 1 | Portal MCP auth in workspace pods | **Critical** | Nate | workspace_manager.py |
-| 2 | Key recovery — user-owned keys | High | Nate + UX | workspace launch |
-| 3 | Dev Spaces degradation path | Medium | Nate | nothing |
-| 4 | WorkspaceManager interface contract | High | Nate | backend swap |
-| 5 | Marketplace version gate | **Critical** | Prakhar | headless mode |
-| 6 | AgnosticV agent refactor + ph_payload | **Critical** | Prakhar | automation agent |
-| 7 | RCARS automation discovery (feature request) | Medium | Prakhar + RCARS | nothing yet |
+| 1 | Portal MCP auth in workspace pods | **Critical** | Portal | workspace_manager.py |
+| 2 | Key recovery — user-owned keys | High | Portal + UX | workspace launch |
+| 3 | Dev Spaces degradation path | Medium | Portal | nothing |
+| 4 | WorkspaceManager interface contract | High | Portal | backend swap |
+| 5 | Marketplace version gate | **Critical** | Marketplace | headless mode |
+| 6 | AgnosticV agent refactor + ph_payload | **Critical** | Marketplace | automation agent |
+| 7 | RCARS automation discovery (feature request) | Medium | Marketplace + RCARS | nothing yet |
