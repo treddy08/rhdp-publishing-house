@@ -139,16 +139,6 @@ Returns structured JSON (`{files_created: [...], nav_updated: true, warnings: []
 
 **Depends on:** Showroom skills orchestrator refactor above (agent-based architecture needs to exist before adding the headless input path).
 
-### PH editor — wire `ph_store_validation_results`
-
-**Origin:** Prakhar Srivastava proposal (2026-05-19). Reviewed and approved 2026-06-16.
-
-**Problem.** The editor skill runs `showroom:verify-content`, captures findings in conversation context, and stops there. The `ph_store_validation_results` MCP tool exists and is live on the portal — it just isn't being called.
-
-**The fix.** One additional step in `skills/editor/SKILL.md`: after verify-content finishes, call `ph_store_validation_results` with the structured findings JSON. Portal kanban then shows per-module verification status without anyone having to ask what the results were.
-
-**Status:** Unblocked. PH skills change only, no Showroom changes needed. Can ship independently before the agent refactor.
-
 ### Model cost optimization — right-size models, evaluate cheaper alternatives
 
 **Origin:** Prakhar Srivastava proposal (2026-05-19). Reviewed and approved 2026-06-16.
@@ -186,6 +176,26 @@ Phase 4 introduces a server-side chatbot backend that can call LiteMaaS directly
 | `minimax-m2` | $0.30 | $1.20 | 1M context |
 
 **Depends on:** Step 1 independent. Step 2 depends on agent-based refactor. Step 3 depends on Phase 4 chatbot.
+
+### Template: Zero-Touch Showroom support — COMPLETED
+
+**Origin:** Publishing House & RCARS review (2026-06-17). **Completed 2026-06-18.**
+
+Template now ships with both `runtime/` and `setup/` directories. Manifest includes `project.showroom_type` field (classic | zero_touch). Intake skill captures the value. Orchestrator removes the ZT directories for classic projects after intake completes.
+
+### Approval gates with threshold-based scoring
+
+**Origin:** Publishing House & RCARS review (2026-06-17).
+
+Formalize the vetting phase with a scoring system. RCARS similarity scores determine the review path:
+
+- **High similarity (≥ 98%):** Auto-block — flag as potential duplicate, require human override to proceed.
+- **Medium similarity (threshold TBD):** Human reviewer required before advancing past vetting.
+- **Low similarity:** Author can self-approve and proceed.
+
+This builds on the existing RCARS vetting in the intake skill but adds structured approval logic. The threshold values need calibration against real RCARS results. The blocking behavior is optional per-project to avoid unnecessarily stalling progress.
+
+**Depends on:** RCARS catalog search returning usable similarity scores (verify current output format).
 
 ### Express skill (cluster customization agent)
 **UNBLOCKED** — both dependencies (RCARS integration + Express framework) are complete.
@@ -274,6 +284,8 @@ Split into `field_content_cluster` + `field_content_tenant` roles. Both deploy A
 
 | Date | What |
 |---|---|
+| 2026-06-18 | ZT Showroom template support (template, manifest, intake, orchestrator) |
+| 2026-06-18 | Dropped `ph_store_validation_results` wiring — review files in git are the source of truth; portal UI for this adds complexity without current value |
 | 2026-05-05 | Jira integration brainstorm and design spec |
 | 2026-05-05 | Backlog reorganization, doc cleanup, branch consolidation (gsd-project → main) |
 | 2026-05-04 | Express mode framework (Phase 2) |
