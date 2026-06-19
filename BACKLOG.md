@@ -81,6 +81,33 @@ Portal as MCP gateway, express mode, Jira visibility, hosted chatbot. MCP gatewa
 
 Items that are unblocked or nearly unblocked. Not on the current roadmap but high value.
 
+### Deterministic client layer — PRIORITY (BLOCKING)
+
+**Origin:** PH Central testing (2026-06-19). Multiple rounds of testing showed that LLM-driven skill instructions cannot reliably control presentation or enforce workflow discipline, regardless of how explicit the instructions are.
+
+**Problem.** The PH Central backend works — gates enforce correctly, RCARS vetting runs, custody chain records decisions, self-approval is rejected. But the client layer (Claude Code orchestrator skill) rewrites server output, uses the word "approved" when Central said "completed", ignores `vetting_assessment` fields, auto-advances through multiple gates on a single "proceed," and searches wherever it feels like despite explicit instructions. Stronger instructions haven't fixed this — it's a fundamental limitation of LLM-driven interfaces for workflow enforcement.
+
+**The pattern:** Every time we fix the LLM behavior with instructions, it works for one test and breaks the next. The server-side move solved the logic problem but not the presentation problem. The LLM owns the output and reinterprets everything.
+
+**Proposed approach:** A lightweight TypeScript (or Python) CLI application that sits between the user and Central. The user still has a conversational experience, but the application controls:
+- What Central tools are called and in what order (deterministic, not LLM-decided)
+- How gate results are presented (formatted from Central's response, not reinterpreted)
+- When to stop and wait for user input (code-enforced checkpoints, not LLM instructions)
+- Which phases allow LLM involvement (creative work like spec writing, content generation) vs which are app-controlled (gates, vetting presentation, phase transitions)
+
+The LLM is still used for creative work — intake conversation, spec generation, content writing. But the workflow orchestration, gate presentation, and phase management are handled by the application, not the LLM.
+
+**Architecture options to evaluate:**
+1. **CLI app that shells out to Claude/LLM for creative phases** — the app drives the workflow, calls Central's MCP tools directly, formats output, and only invokes an LLM when creative input is needed (intake conversation, spec refinement suggestions, content writing)
+2. **Claude Code extension/hook that intercepts tool calls** — use Claude Code hooks to enforce which tools can be called and format responses before the LLM sees them
+3. **Web-based workflow UI in Central dashboard** — forms-driven workflow with embedded LLM chat for creative phases, no free-form LLM orchestration
+
+**What this replaces:** The `rhdp-publishing-house` orchestrator and intake SKILL.md files become secondary — available for power users who want the raw Claude Code experience, but not the primary interface for most users.
+
+**Depends on:** PH Central backend (deployed and tested). The backend is ready — this is about what sits in front of it.
+
+**Why blocking:** Every other backlog item (dashboard redesign, Jira integration, Showroom skill updates) builds on the assumption that the client layer works reliably. If the client can't be trusted to present results faithfully or follow workflow rules, the features built on top of it inherit that unreliability.
+
 ### Dashboard redesign for PH Central — PRIORITY
 
 **Origin:** PH Central architecture evolution (2026-06-19). Feature branch deployed and running.
