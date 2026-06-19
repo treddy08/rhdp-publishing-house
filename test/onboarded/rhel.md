@@ -12,4 +12,4 @@ Every organization has its own standard operating environment — hardened, comp
 - Cover both the cockpit/web UI and CLI (composer-cli) workflows
 - Output formats: qcow2 for local KVM, AMI for AWS
 - Automated provisioning: kickstart + Ansible post-config
-- RHEL 9.4 target
+- RHEL 10 target

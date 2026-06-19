@@ -9,7 +9,7 @@ Can you build this as an RHDP Published lab?
 
 ## Follow-up Details (feed in when asked)
 
-- AAP 2.5 with EDA controller
+- AAP 2.6 with EDA controller
 - Alertmanager as the event source (already firing test alerts)
 - Scenarios: disk full remediation, service restart, scaling
 - Should cover rulebook writing from scratch, not just using pre-built ones

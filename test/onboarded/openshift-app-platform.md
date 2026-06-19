@@ -12,4 +12,4 @@ I want to create a developer-focused workshop showing how to build and deploy a 
 - Service Mesh for observability between services, not just networking
 - Sample app: 3-4 microservices, nothing too complex — a storefront or order system
 - Would like a module on debugging with distributed tracing (Jaeger/Tempo)
-- OCP 4.16+, Dev Spaces operator, OpenShift GitOps, OpenShift Pipelines, Service Mesh pre-installed
+- OCP 4.21+, Dev Spaces operator, OpenShift GitOps, OpenShift Pipelines, Service Mesh pre-installed

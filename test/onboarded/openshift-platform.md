@@ -11,5 +11,5 @@ I want to build a workshop on OpenShift Virtualization for VM admins who are new
 - Need a pre-staged Windows VM in vSphere to import — that's the "aha" moment
 - Day 2 ops are important: backup, maintenance mode, live migration
 - Multi-user lab, each learner gets their own namespace
-- OCP 4.17+ with OCP Virt and MTV operators pre-installed
+- OCP 4.21+ with OCP Virt and MTV operators pre-installed
 - Want the full pipeline: AgnosticV catalog, Ansible automation
