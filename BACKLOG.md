@@ -111,6 +111,23 @@ Items that are unblocked or nearly unblocked. Not on the current roadmap but hig
 
 **Scope:** Frontend redesign + 2-3 new REST endpoints. No backend service changes — PhaseEngine, GateService, and GitRepoReader are already built.
 
+### SpecValidator LLM quality checks — PRIORITY
+
+**Origin:** PH Central testing (2026-06-19). SpecValidator structural checks are deployed but quality assessment requires a backend LLM call.
+
+**Problem.** The structural validator checks that required sections exist (learning objectives, products, audience, duration, modules) but cannot assess quality. During testing, the intake skill generated vague learning objectives like "Interact with a foundation model..." that passed structural validation but were refined to better versions during spec refinement. A quality validator would catch these before the spec leaves intake.
+
+**What's needed:**
+- Backend LLM call via LiteLLM/MaaS with a fixed, challenging prompt
+- Checks: Are objectives specific and testable? Are module descriptions detailed enough for a writer agent? Does the scope match the stated duration? Are products named correctly per Red Hat standards?
+- The prompt must be pessimistic — it's a quality gate, not encouragement
+- Results are advisory during spec refinement, blocking at the approval gate
+- Same LiteLLM/MaaS integration pattern already used in RCARS
+
+**Depends on:** LiteLLM/MaaS endpoint accessible from the `publishing-house-central-dev` namespace. Same configuration as RCARS uses.
+
+**Scope:** One new method in `SpecValidator`, LiteLLM client setup, wire into `ph_request_gate` for approval phase.
+
 ### Showroom skills — orchestrator + parallel subagent refactor
 
 **Origin:** Prakhar Srivastava proposal (2026-05-19). Reviewed and approved 2026-06-16.
