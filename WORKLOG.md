@@ -6,6 +6,46 @@ Clear periodically — the backlog ([BACKLOG.md](BACKLOG.md)) is the persistent 
 
 ---
 
+## 2026-06-19 — Dashboard redesign for PH Central (Nate)
+
+### Design
+- Brainstormed and designed the dashboard redesign for PH Central
+- Design spec: [2026-06-19-dashboard-redesign-for-central.md](docs/superpowers/specs/2026-06-19-dashboard-redesign-for-central.md)
+- Implementation plan: [2026-06-19-dashboard-redesign-for-central.md](docs/superpowers/plans/2026-06-19-dashboard-redesign-for-central.md)
+- Key decisions: keep PatternFly 6 (Red Hat standard), 6-column kanban with merged iterative/parallel columns, cache phase statuses in DB for instant board load, gate history inline per phase (not a separate tab)
+
+### Backend (4 commits + 2 fixes)
+- Added 5 cached status fields to Project model (`cached_phase_statuses`, `cached_current_phase`, `cached_next_action`, `cached_manifest_data`, `cached_at`) + Alembic migration
+- Rewrote `app/api/projects.py`: 9 REST endpoints using GitRepoReader + PhaseEngine + GateService instead of old Manifest/Phase models
+- Rewrote `app/services/refresh.py`: periodic sync now caches phase statuses via PhaseEngine
+- New Pydantic schemas: `CentralProjectCreate`, `CentralProjectResponse`, `GateRecordResponse`, `ProjectStatusResponse`
+- Fixed MCP `ph_register` to populate cached status on registration (was returning empty overview)
+- Added `app/core/logging.py`: consistent timestamped JSON logging across all MCP tools, REST endpoints, gate decisions, and refresh cycles
+- Deleted superseded test files (`test_api_projects.py`, `test_refresh.py`), 123 tests passing
+
+### Frontend (rewrite in place)
+- New TypeScript types: `CentralProject`, `GateRecord`, `ProjectStatus` with data-driven `PIPELINE_COLUMNS` config
+- Pipeline board: 6-column kanban — Intake, Vetting/Spec (ITERATIVE), Approval, Writing+Automation (PARALLEL), Review, Ready
+- Project detail: phase progress bar, phase accordions with gate history drill-down, artifacts per phase, Next Action card, branch shown in header
+- Projects list: branch column, deployment mode, current phase, progress bar from cached statuses
+- Register page: added branch field (defaults to `main`)
+- Masthead: "Publishing House Central", subtitle removed
+- Timestamps include time, not just date
+- Deleted `RefreshButton.tsx` (inlined), Next.js build passes clean
+
+### Deployment
+- All on `feature/ph-central-registration` branch in `rhdp-publishing-house-central`
+- Deployed to `publishing-house-central-dev` namespace: migration + backend + frontend builds
+- Env is `central-dev` (not `dev`), kubeconfig at `~/devel/secrets/ph-central-mgmt-central-dev.kubeconfig`
+
+### What's next
+1. **Test the full flow** — register via orchestrator, verify dashboard shows correct data, test refresh
+2. **SpecValidator LLM quality checks** — backend LLM via LiteLLM/MaaS
+3. **Deterministic client layer** — still the blocking item for reliable orchestrator behavior
+4. **Merge feature branches** — after validation
+
+---
+
 ## 2026-06-18/19 — Publishing House Central architecture + implementation (Nate)
 
 ### Backlog triage and quick wins
@@ -64,7 +104,7 @@ Clear periodically — the backlog ([BACKLOG.md](BACKLOG.md)) is the persistent 
 
 ### What's next
 1. **Deterministic client layer** (BLOCKING) — design the application that sits between user and Central, controls workflow deterministically, uses LLM only for creative work
-2. **Dashboard redesign** — show Central data (custody chain, gate history, project status from git)
+2. ~~**Dashboard redesign**~~ — DONE (see 2026-06-19 session above)
 3. **SpecValidator LLM quality checks** — backend LLM via LiteLLM/MaaS for spec quality assessment
 4. **Merge feature branches** — after the client layer approach is decided and validated
 
