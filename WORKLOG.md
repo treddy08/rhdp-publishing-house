@@ -6,6 +6,70 @@ Clear periodically — the backlog ([BACKLOG.md](BACKLOG.md)) is the persistent 
 
 ---
 
+## 2026-06-18/19 — Publishing House Central architecture + implementation (Nate)
+
+### Backlog triage and quick wins
+- Triaged the full PH backlog, prioritized near-term items
+- Added Zero-Touch Showroom support to the project template (`runtime/`, `setup/` dirs), manifest (`showroom_type` field), intake skill, and orchestrator (cleanup for classic projects)
+- Dropped `ph_store_validation_results` wiring — git review files are the source of truth, portal UI adds complexity without current value
+- Updated Jira integration spec: project key RHDPCD, Template 2 (Basic Project) with self-service switch to OJA-ITS-003 (Standard) via Delegated Project Admin. JSM request submitted.
+
+### PH Central architecture evolution (major)
+- Brainstormed and designed the architecture evolution from portal to "Publishing House Central"
+- Design spec: [2026-06-19-publishing-house-central-design.md](docs/superpowers/specs/2026-06-19-publishing-house-central-design.md)
+- Core principle: **trust but verify** — local LLM and skills have full creative freedom, Central owns validation, gate enforcement, and custody chain
+- All phases are required (no optional phases), three deployment mode profiles with different gate hardness
+- Central reads from git (not MCP payloads), project identity = repo URL + branch
+- Custody chain: independent record of gate decisions that the manifest can't override
+
+### PH Central backend implementation (63 tests)
+- Renamed repo from `rhdp-publishing-house-portal` to `rhdp-publishing-house-central`
+- All work on `feature/ph-central-registration` branch (not merged to main)
+- **New services:** GitRepoReader, PhaseEngine, GateService, SpecValidator
+- **New models:** GateRecord (custody chain), SubmittedResult, Project.branch column
+- **7 MCP tools:** `ph_register`, `ph_list_projects`, `ph_get_status`, `ph_request_gate`, `ph_submit_results`, `ph_get_history`, `ph_approve` (noted, deferred)
+- **Gate enforcement:** Central verifies its own gate records (doesn't trust manifest), RCARS unavailable = hard reject, self-approval rejected for onboarded projects, spec commit tracking for vetting loop
+- **Vetting posture:** Server-side challenging assessment with fixed tone, "completed" not "approved" for non-approval phases
+- Deployed to `publishing-house-central-dev` namespace on ocpv-infra01, parallel to existing dev deployment
+- RCARS SA allowlist updated for new namespace
+- Fixed Ansible build tasks (replaced `kubernetes.core.k8s_info` with `oc` commands for Build resources)
+
+### Skill updates
+- All work on `feature/ph-central-skills` branch (not merged to main)
+- Orchestrator: uses Central tools, tool boundary enforcement, one-gate-per-request rule, all phases required
+- Intake: removed direct RCARS calls, vetting handled by Central via orchestrator, spec refinement reads vetting findings for recommendations
+
+### MCP server configuration
+- Found and fixed MCP config location: `~/.claude.json` (not `~/.claude/mcp.json` or `~/.claude/settings.json`)
+- Transport type `http` with trailing slash matches existing working servers
+- Moved MCP config to `~/devel/secrets/ph-mcp-dev.json`, removed old `~/.config/rhdp-publishing-house/` directory
+- Updated user docs three times as we found the correct configuration
+
+### Key discovery: LLM presentation problem
+- Despite server-side gate enforcement working correctly, the LLM orchestrator consistently reinterprets Central's output — says "approved" when Central said "completed", ignores `vetting_assessment` fields, auto-advances through multiple gates
+- Multiple rounds of instruction strengthening (one-gate-per-request, STOP/WAIT, verbatim presentation) did not reliably fix the behavior
+- This is a fundamental limitation of LLM-driven interfaces for workflow enforcement, not fixable with better instructions
+- Added **deterministic client layer** as BLOCKING priority backlog item
+
+### Other fixes
+- Removed stale `rhdp-skills-marketplace` local dev clone (was causing confusion with outdated v2.4.8 vs installed v2.14.0)
+- Saved memory: always check installed plugin paths (`~/.claude/plugins/marketplaces/`) not dev clones
+
+### Feature branches (NOT merged to main)
+| Repo | Branch | Content |
+|---|---|---|
+| `rhdp-publishing-house-central` | `feature/ph-central-registration` | Backend: 7 MCP tools, 5 services, 3 models, 63 tests, Ansible fixes |
+| `rhdp-publishing-house-skills` | `feature/ph-central-skills` | Orchestrator + intake rewritten for Central |
+| `rhdp-publishing-house` | `feature/ph-central` | Spec, plans, backlog, submodule pointer |
+
+### What's next
+1. **Deterministic client layer** (BLOCKING) — design the application that sits between user and Central, controls workflow deterministically, uses LLM only for creative work
+2. **Dashboard redesign** — show Central data (custody chain, gate history, project status from git)
+3. **SpecValidator LLM quality checks** — backend LLM via LiteLLM/MaaS for spec quality assessment
+4. **Merge feature branches** — after the client layer approach is decided and validated
+
+---
+
 ## 2026-05-15 — Phase 4 brainstorm + design spec (Nate)
 
 ### Hosted Workspace design (formerly "Portal Chatbot")
