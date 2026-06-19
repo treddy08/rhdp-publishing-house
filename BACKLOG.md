@@ -81,6 +81,36 @@ Portal as MCP gateway, express mode, Jira visibility, hosted chatbot. MCP gatewa
 
 Items that are unblocked or nearly unblocked. Not on the current roadmap but high value.
 
+### Dashboard redesign for PH Central — PRIORITY
+
+**Origin:** PH Central architecture evolution (2026-06-19). Feature branch deployed and running.
+
+**Problem.** The dashboard was built for the portal model — it reads from the `Manifest` model which was populated by `ph_sync_manifest` pushes from the client. With PH Central, manifests are read from git by the backend, not pushed via MCP. The dashboard shows empty project cards because nothing populates the old model.
+
+**What needs to change:**
+
+1. **Data source** — The dashboard should read project status from the `ProjectRegistration` model (new) and compute phase status via `PhaseEngine` or a REST endpoint that wraps `ph_get_status`. It should NOT depend on `Manifest.parsed_data` being populated by MCP sync.
+
+2. **Pipeline view** — The kanban columns should match the Central phase profiles. All phases are required (no optional phases). The vetting ⇄ spec refinement loop and writing ↔ automation concurrency should be visually represented.
+
+3. **Custody chain visibility** — Each project card should show gate history from `GateRecord`. Managers need to see: which gates passed, who approved, whether any gates were overridden, and RCARS vetting findings.
+
+4. **Registration view** — The "Register" nav item should show the manual registration form (repo URL + branch) and list all registered projects with their sync status.
+
+5. **Project detail** — Clicking a project should show: manifest metadata (read from git via backend), phase status with gate history, submitted results from local skills, and links to the repo.
+
+6. **Naming** — Update "RHDP Publishing House" / "Content Lifecycle Portal" to "Publishing House Central" throughout the frontend.
+
+**Technical notes:**
+- Frontend: Next.js 15 + PatternFly 6 (existing stack)
+- New REST endpoints needed: `GET /api/v1/central/projects` (wraps ProjectRegistration), `GET /api/v1/central/projects/{id}/gates` (wraps GateRecord), `GET /api/v1/central/projects/{id}/status` (calls PhaseEngine against git manifest)
+- The old REST endpoints (`/api/v1/projects`) can remain for backward compatibility during transition
+- The frontend lives in `rhdp-publishing-house-central/src/frontend/`
+
+**Depends on:** PH Central backend (deployed on `feature/ph-central-registration` branch). Feature branch must be merged or the dashboard work done on the same branch.
+
+**Scope:** Frontend redesign + 2-3 new REST endpoints. No backend service changes — PhaseEngine, GateService, and GitRepoReader are already built.
+
 ### Showroom skills — orchestrator + parallel subagent refactor
 
 **Origin:** Prakhar Srivastava proposal (2026-05-19). Reviewed and approved 2026-06-16.
