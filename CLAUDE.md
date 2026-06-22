@@ -17,7 +17,7 @@ rhdp-publishing-house/              ← YOU ARE HERE (dev + planning + docs)
 ├── WORKLOG.md                      ← session handoff notes between developers
 └── CLAUDE.md                       ← this file
 
-rhdp-publishing-house-portal/       ← separate repo (portal + MCP server + API)
+rhdp-publishing-house-central/      ← separate repo (Central backend + MCP server + API + dashboard)
 rhdp-publishing-house-skills/       ← published skills (users clone this)
 rhdp-publishing-house-template/     ← project template (users clone to start a project)
 ```
@@ -28,7 +28,7 @@ All repos live under `github.com/rhpds/`. Clone with SSH.
 
 **rhdp-publishing-house** (this repo): Development hub. Skills are developed here via the `skills-plugin` submodule, then pushed to the skills repo. Documentation, specs, plans, and the backlog all live here. A developer working on PH features works here. Regular PH users never need this repo.
 
-**rhdp-publishing-house-portal**: FastAPI backend + Next.js frontend deployed on OpenShift. Houses the MCP server (mounted at `/mcp`), REST API, database models, RCARS client, and all backend services. The portal is also the single gateway for Jira sync (planned). Code repo only — regular users never interact with it directly.
+**rhdp-publishing-house-central** (formerly portal): FastAPI backend + Next.js dashboard deployed on OpenShift. Houses the MCP server (mounted at `/mcp`), REST API, database models, phase engine, gate service, RCARS client, Jira sync service, and all backend services. Central is the validation engine, gate authority, and single gateway for Jira sync. Code repo only — regular users never interact with it directly.
 
 **rhdp-publishing-house-skills**: Published skills for Claude Code / Cursor. Users install PH by cloning this repo and pointing their AI tool at it. Contains the orchestrator, intake, writer, editor, automation, and worklog skills. During development, changes flow through the submodule in this repo.
 
@@ -46,14 +46,14 @@ When developing skills or template changes:
 
 ### Source of Truth
 
-The git manifest (`publishing-house/manifest.yaml`) is the source of truth for project state in onboarded and self-published modes. Express mode projects (transient, no git repo) use the portal database. Jira is a one-directional sync target — PH pushes to Jira, Jira never drives PH state.
+The git manifest (`publishing-house/manifest.yaml`) is the source of truth for project state in onboarded and self-published modes. Express mode projects (transient, no git repo) use the Central database. Jira is a one-directional sync target — PH pushes to Jira, Jira never drives PH state.
 
-### Portal Backend (Single Gateway)
+### Central Backend (Single Gateway)
 
-The portal backend IS the MCP gateway. FastMCP 3.2+ server mounted at `/mcp` on the FastAPI app. One codebase, one deployment, one database. Every external service gets a client class in `app/services/` with retry logic and structured errors. MCP tools delegate to these clients — they never make HTTP calls directly.
+The Central backend IS the MCP gateway. FastMCP 3.2+ server mounted at `/mcp` on the FastAPI app. One codebase, one deployment, one database. Central is the validation engine, gate authority, and tracking service. Every external service gets a client class in `app/services/` with retry logic and structured errors. MCP tools delegate to these clients — they never make HTTP calls directly.
 
 ```
-rhdp-publishing-house-portal/src/backend/
+rhdp-publishing-house-central/src/backend/
 ├── app/
 │   ├── main.py              # FastAPI app + FastMCP mount
 │   ├── core/
@@ -80,19 +80,37 @@ rhdp-publishing-house-portal/src/backend/
 
 ### MCP Tools Available
 
+**Gate Service (Central core — used by orchestrator skill):**
+
 | Tool | Purpose |
 |------|---------|
-| `ph_list_projects` | List projects (with optional owner_email filter) |
-| `ph_get_launch_instructions` | Get step-by-step ordering instructions for a project |
-| `ph_store_validation_results` | Store validation results from agnosticv:validator or showroom:verify-content |
-| `ph_get_validation_results` | Retrieve stored validation results (optional phase filter) |
+| `ph_register` | Register a project from its repo URL + branch |
+| `ph_get_status` | Get project phase status, next action, and Jira summary |
+| `ph_request_gate` | Request phase advancement (validates, records custody chain, syncs Jira) |
+| `ph_submit_results` | Submit structured results from local skills (verify-content, automation) |
+| `ph_get_history` | Get full custody chain (all gate decisions, validations, approvals) |
+| `ph_get_open_initiatives` | Get open Jira Initiatives for intake Initiative selection |
+| `ph_list_projects` | List registered projects by owner email |
+
+**RCARS Content Advisory:**
+
+| Tool | Purpose |
+|------|---------|
 | `ph_rcars_query` | Submit RCARS advisor query, poll until complete |
 | `ph_rcars_catalog_search` | Search RCARS catalog items |
 | `ph_rcars_catalog_item` | Get full metadata for a specific catalog item |
-| `ph_store_intake_results` | Store intake data in portal DB |
+
+**Session & Legacy:**
+
+| Tool | Purpose |
+|------|---------|
+| `ph_get_launch_instructions` | Get step-by-step ordering instructions for a project |
+| `ph_store_validation_results` | Store validation results from agnosticv:validator or showroom:verify-content |
+| `ph_get_validation_results` | Retrieve stored validation results (optional phase filter) |
+| `ph_store_intake_results` | Store intake data in Central DB |
 | `ph_get_intake_results` | Retrieve stored intake data |
 | `ph_list_intake_sessions` | List intake sessions by owner |
-| `ph_sync_manifest` | Sync manifest content to portal DB |
+| `ph_sync_manifest` | Sync manifest content to Central DB |
 | `ph_record_express_run` | Record express mode run metrics |
 
 ### Auth Model
@@ -108,7 +126,7 @@ Six skills in `skills-plugin/skills/`:
 
 | Skill | Purpose |
 |-------|---------|
-| `orchestrator` | Entry point. Discovers projects, reads manifest, dispatches to other skills, manages phase transitions. MCP-aware: checks local manifest → portal fallback → new intake. |
+| `orchestrator` | Entry point. Discovers projects, reads manifest, dispatches to other skills. Calls Central for project registration, status, and gate requests. |
 | `intake` | Conversational project intake. Two entry paths ("I have a spec" / "I have an idea"). Deployment mode selection (onboarded, self-published, express). RCARS vetting. Session continuity via MCP. |
 | `writer` | Content writing agent. Wraps `showroom:create-lab` and `showroom:create-demo`. Works per-module from spec outlines. |
 | `editor` | Content review agent. Wraps `showroom:verify-content`. |
@@ -121,7 +139,7 @@ Six skills in `skills-plugin/skills/`:
 |------|-----------|----------------|---------------|
 | `rhdp_published` (onboarded) | Yes | Git manifest | Yes |
 | `self_published` | Yes | Git manifest | No |
-| `express` | No | Portal DB only | No (transient) |
+| `express` | No | Central DB only | No (transient) |
 
 ### Manifest Lifecycle Phases
 
@@ -135,7 +153,7 @@ Required phases: intake, writing, code_security_review, final_review. Optional p
 ### Infrastructure
 
 - **Cluster**: OpenShift (`ocpv-infra01.dal12.infra.demo.redhat.com`)
-- **Namespaces**: `publishing-house-dev` (portal), `rcars-dev` (RCARS)
+- **Namespaces**: `publishing-house-central-dev` (Central), `rcars-dev` (RCARS)
 - **Database**: PostgreSQL 16 (deployed as StatefulSet)
 - **Deployments**: Ansible manages everything — `ansible-playbook ansible/deploy.yml -e env=dev --tags deploy`
 - **Build tags**: `build-backend`, `build-frontend`, `builds` (both), `deploy` (full), `apply` (manifests only), `migrate` (Alembic only)
@@ -146,8 +164,8 @@ Required phases: intake, writing, code_security_review, final_review. Optional p
 - Orchestrator with MCP-aware project discovery and phase dispatch
 - Intake with 3-mode routing (onboarded, self-published, express)
 - Writer, editor, automation agents (functional, improving)
-- Portal backend: FastAPI + MCP server + RCARS client + session tools
-- Portal frontend: Next.js + PatternFly 6 (kanban, project table, phase detail)
+- Central backend: FastAPI + MCP server + gate service + RCARS client + Jira sync + session tools
+- Central dashboard: Next.js + PatternFly 6 (pipeline board, project detail, custody chain)
 - RCARS integration: 3 MCP tools, SA token auth, cross-namespace connectivity
 - Express mode framework: DB models, session tools, intake routing (express skill itself is backlogged)
 - API key auth for MCP endpoint
@@ -155,7 +173,7 @@ Required phases: intake, writing, code_security_review, final_review. Optional p
 
 ### What's Next (see BACKLOG.md)
 - **Phase 3: Jira Integration** — spec complete, ready for implementation planning
-- **Phase 4: Portal Chatbot** — needs brainstorm
+- **Phase 4: Central Chatbot** — needs brainstorm
 - **Express skill** — unblocked, needs own brainstorm+spec
 
 ### Known Blockers
@@ -165,11 +183,11 @@ Required phases: intake, writing, code_security_review, final_review. Optional p
 ## Development Guidelines
 
 ### Key Rules
-- **Manifest is truth.** All project state flows from `publishing-house/manifest.yaml`. Portal and Jira are downstream consumers.
+- **Manifest is truth.** All project state flows from `publishing-house/manifest.yaml`. Central and Jira are downstream consumers.
 - **Ansible deploys everything.** No manual `oc edit`. Secrets, routes, config — all through Ansible.
-- **One gateway.** Portal backend is the single MCP gateway. Chatbot, Jira sync, and CC users all flow through the same tool functions.
-- **Skills don't own phase transitions.** The orchestrator manages `current_phase` and phase statuses. Skills read their inputs from the manifest and update their own artifacts.
-- **Every push triggers a build.** Commits pushed to the portal repo trigger OpenShift builds. Batch commits and push at meaningful milestones.
+- **One gateway.** Central backend is the single MCP gateway. Chatbot, Jira sync, and CC users all flow through the same tool functions.
+- **Skills don't own phase transitions.** The orchestrator calls Central's gate tools at phase boundaries. Skills read their inputs from the manifest and update their own artifacts.
+- **Every push triggers a build.** Commits pushed to the Central repo trigger OpenShift builds. Batch commits and push at meaningful milestones.
 - **SA token re-read per request.** Never cache the K8s SA token — it rotates after 1 hour on OCP 4.11+.
 - **`yaml.safe_load` always.** Never use `yaml.load` for manifest parsing.
 
@@ -192,7 +210,7 @@ Required phases: intake, writing, code_security_review, final_review. Optional p
 
 **Deploying changes:**
 ```bash
-cd rhdp-publishing-house-portal
+cd rhdp-publishing-house-central
 
 # Config/secret changes only (API keys, env vars, route config)
 ansible-playbook ansible/deploy.yml -e env=dev --tags apply
@@ -212,7 +230,7 @@ ansible-playbook ansible/deploy.yml -e env=dev --tags migrate
 
 ### Testing
 ```bash
-cd rhdp-publishing-house-portal/src/backend
+cd rhdp-publishing-house-central/src/backend
 python -m pytest tests/ -x -q --timeout=30    # quick run
 python -m pytest tests/ -v --timeout=60       # full suite
 ```
@@ -224,8 +242,8 @@ Docs live in `docs/` with this structure:
 | Directory | Content |
 |-----------|---------|
 | `docs/` (root) | Overview docs: index, executive-summary, how-it-works, getting-started |
-| `docs/architecture/` | System design: portal, RCARS integration, express mode, Jira integration |
-| `docs/admin/` | Operational: portal deployment, MCP auth, RCARS service auth, common rules |
+| `docs/architecture/` | System design: Central, RCARS integration, express mode, Jira integration |
+| `docs/admin/` | Operational: Central deployment, MCP auth, RCARS service auth, common rules |
 | `docs/user/` | End-user guides: Claude Code setup |
 | `docs/api/` | API reference: MCP tools |
 | `docs/superpowers/specs/` | Historical design specs from brainstorming sessions |
@@ -240,5 +258,5 @@ Design decisions are documented in `docs/superpowers/specs/`. Read the relevant 
 | `2026-04-09-rhdp-publishing-house-design.md` | Original PH design (orchestrator, agents, manifest) |
 | `2026-04-20-skills-redesign.md` | Deployment modes, worklog, smart intake, phase ordering |
 | `2026-04-27-rcars-integration-design.md` | RCARS MCP gateway, API key auth, SA token auth |
-| `2026-04-28-express-mode-design.md` | Express mode lifecycle, RCARS base-finding, portal DB state |
+| `2026-04-28-express-mode-design.md` | Express mode lifecycle, RCARS base-finding, Central DB state |
 | `2026-05-05-jira-integration-design.md` | Jira sync, points model, ticket hierarchy, sync triggers |

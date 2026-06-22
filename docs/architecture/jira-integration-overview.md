@@ -1,7 +1,7 @@
 # Jira Integration
 
-!!! info "Proposed"
-    This feature is designed but not yet implemented. The design spec is complete and awaiting team review. Prerequisites (Jira project creation, service account provisioning) are blocking deployment.
+!!! success "Implemented"
+    Designed 2026-05-05, implemented 2026-06-22. Deployed to central-dev. RHDPCD Jira project active with OJA-ITS-003 scheme. Using personal API token for dev; service account provisioning pending for production.
 
 ## The Problem
 
@@ -17,7 +17,7 @@ Everything maps to standard Jira concepts:
 
 **Initiatives** are efforts — Summit 2027, RH1, BAU Content Dev, Arcade Development, Blog Series, etc. Created by managers to represent what the team is working toward. Each Initiative can have a due date for event-driven work (content freeze deadlines) or remain open-ended for ongoing work.
 
-**Epics** are projects — each content project (lab, workshop, demo) gets one Epic. Created automatically by PH when a new project starts. Lives under its parent Initiative.
+**Epics** are projects — each content project (lab, workshop, demo) gets one Epic. Created automatically by Central when the approval gate passes (spec is frozen at that point). Lives under its parent Initiative.
 
 **Tasks** are deliverables — each piece of work within a project gets a Task with story points. Created automatically by PH alongside the Epic.
 
