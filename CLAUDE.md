@@ -120,7 +120,7 @@ Six skills in `skills-plugin/skills/`:
 | Mode | Git Repo? | State Location | Jira Tracked? |
 |------|-----------|----------------|---------------|
 | `rhdp_published` (onboarded) | Yes | Git manifest | Yes |
-| `self_published` | Yes | Git manifest | Yes |
+| `self_published` | Yes | Git manifest | No |
 | `express` | No | Portal DB only | No (transient) |
 
 ### Manifest Lifecycle Phases
