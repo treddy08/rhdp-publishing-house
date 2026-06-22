@@ -90,19 +90,19 @@ graph TD
 
 ### Cross-Project Visibility
 
-The [Publishing House Portal](https://github.com/rhpds/rhdp-publishing-house-portal) gives managers and PMs a single view across all active projects — a kanban pipeline, a searchable project table, and detailed phase-level status with completion dates, assignees, and artifact links. No CLI required. See [Portal Architecture](architecture/portal.md).
+The [Publishing House Central](https://github.com/rhpds/rhdp-publishing-house-central) gives managers and PMs a single view across all active projects — a kanban pipeline, a searchable project table, and detailed phase-level status with completion dates, assignees, and artifact links. No CLI required. See [Central Architecture](architecture/central.md).
 
 ### Implementation Status
 
-- **Orchestrator + Intake agent** — complete, MCP-aware with portal fallback
+- **Orchestrator + Intake agent** — complete, MCP-aware with Central fallback
 - **Writer + Editor agents** (wrapping showroom skills) — complete
 - **Automation agent** (AgnosticV catalog + Ansible/GitOps code generation + testing gate) — complete
-- **Portal** (FastAPI backend + Next.js frontend, cross-project visibility) — deployed on OpenShift
+- **Central** (FastAPI backend + Next.js frontend, cross-project visibility) — deployed on OpenShift
 - **RCARS MCP gateway** (3 tools: query, catalog search, catalog item) — complete
 - **API key auth** for MCP endpoint (SHA-256 hashed keys, K8s Secret) — complete
 - **Express mode framework** (DB models, session tools, intake routing, manifest sync) — complete
 - **Session continuity** (5 MCP tools for intake persistence + manifest sync) — complete
 - **Code & Security Review + Final Review agents** — not yet implemented
 - **Jira integration** — spec complete, implementation next
-- **Portal chatbot** — needs design
+- **Central chatbot** — needs design
 - **Express skill** (cluster customization agent) — unblocked, needs design

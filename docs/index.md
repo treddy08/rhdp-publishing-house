@@ -12,7 +12,7 @@ One command. One manifest. Pick up where you left off, any day, any session.
 - [Getting Started](getting-started.md)
 
 ### Architecture
-- [Portal Architecture](architecture/portal.md)
+- [Central Architecture](architecture/central.md)
 - [RCARS Integration](architecture/rcars-integration.md)
 - [Express Mode](architecture/express-mode-overview.md)
 - [Jira Integration](architecture/jira-integration-overview.md)
@@ -21,7 +21,7 @@ One command. One manifest. Pick up where you left off, any day, any session.
 - [Claude Code Setup](user/claude-code-setup.md)
 
 ### Admin Guides
-- [Portal Deployment](admin/portal-deployment.md)
+- [Central Deployment](admin/central-deployment.md)
 - [MCP Auth](admin/mcp-auth.md)
 - [RCARS Service Auth](admin/rcars-service-auth.md)
 - [Common Rules](admin/PH-COMMON-RULES.md)

@@ -1,6 +1,6 @@
-# Portal Deployment
+# Central Deployment
 
-The Publishing House Portal is deployed to OpenShift using Ansible with Jinja2-templated manifests, following the same pattern as RCARS.
+The Publishing House Central is deployed to OpenShift using Ansible with Jinja2-templated manifests, following the same pattern as RCARS.
 
 ## Architecture
 
@@ -49,7 +49,7 @@ Fill in all `CHANGEME` values:
 | `pg_password` | PostgreSQL password — generate with `openssl rand -hex 16` |
 | `oauth_client_secret` | OAuth client secret — generate with `openssl rand -hex 16` |
 | `oauth_cookie_secret` | OAuth cookie secret — generate with `openssl rand -hex 16` |
-| `github_repo` | Repo in `owner/name` format (e.g., `rhpds/rhdp-publishing-house-portal`) |
+| `github_repo` | Repo in `owner/name` format (e.g., `rhpds/rhdp-publishing-house-central`) |
 | `github_token` | GitHub PAT for fetching manifests from private repos |
 | `rcars_url` | RCARS external URL for frontend links (e.g., `https://rcars-dev.apps.<cluster-domain>/`) |
 | `rcars_internal_url` | RCARS cluster-internal URL (e.g., `http://rcars-api.rcars-dev.svc.cluster.local:8080`) |
@@ -114,5 +114,5 @@ Two Containerfiles at the repo root:
 
 ## Repos
 
-- [rhdp-publishing-house-portal](https://github.com/rhpds/rhdp-publishing-house-portal) — the portal app and deployment manifests
+- [rhdp-publishing-house-central](https://github.com/rhpds/rhdp-publishing-house-central) — Central app and deployment manifests
 - [rhdp-publishing-house](https://github.com/rhpds/rhdp-publishing-house) — the CLI skills and plugin

@@ -144,9 +144,9 @@ Set during intake. Determines the automation approach, publishing target, and st
 |------|------------|-------------------|-------------|-------|------------|
 | `rhdp_published` | Ansible, GitOps, or both | Required at 7b | Required | Git manifest | Standalone RHDP catalog item |
 | `self_published` | GitOps only | Skipped | Recommended | Git manifest | Order Field Source CI with your repo URL |
-| `express` | Live agent (`oc` commands) | N/A | N/A | Portal DB | Disposable one-off demo environment |
+| `express` | Live agent (`oc` commands) | N/A | N/A | Central DB | Disposable one-off demo environment |
 
-**Express mode** is for transient demo environments — no git repo, no content pipeline. A user describes what they need, the system finds the closest existing base environment via RCARS, provisions it, and customizes it live. No Showroom content, no review gates, no Jira tracking. Express sessions are stored in the portal database and are disposable.
+**Express mode** is for transient demo environments — no git repo, no content pipeline. A user describes what they need, the system finds the closest existing base environment via RCARS, provisions it, and customizes it live. No Showroom content, no review gates, no Jira tracking. Express sessions are stored in the Central database and are disposable.
 
 ## State Management
 
@@ -163,7 +163,7 @@ For git-based modes (`rhdp_published`, `self_published`), all project state live
 
 Both files are committed and pushed at session end. The orchestrator pulls at session start. This makes collaboration seamless — push your repo, a colleague picks up exactly where you left off without any external coordination tool.
 
-For **express mode**, state lives in the portal database (intake sessions, express metrics). No git repo, no manifest file.
+For **express mode**, state lives in the Central database (intake sessions, express metrics). No git repo, no manifest file.
 
 ## Autonomy Levels
 
@@ -218,9 +218,9 @@ my-new-lab/
 
 Everything lives in one repo. The Showroom scaffold (`site.yml`, `ui-config.yml`, `content/antora.yml`) is included from the start so content agents can write AsciiDoc immediately. The writer agent places modules in `content/modules/ROOT/pages/` and the automation agent writes code to `automation/`.
 
-## Portal
+## Central Dashboard
 
-The [RHDP Publishing House Portal](https://github.com/rhpds/rhdp-publishing-house-portal) serves two roles: cross-project visibility for managers and PMs, and MCP gateway for Claude Code users and backend integrations.
+The [RHDP Publishing House Central](https://github.com/rhpds/rhdp-publishing-house-central) serves two roles: cross-project visibility for managers and PMs, and MCP gateway for Claude Code users and backend integrations.
 
 **Visibility features:**
 
@@ -230,8 +230,8 @@ The [RHDP Publishing House Portal](https://github.com/rhpds/rhdp-publishing-hous
 - **Worklog timeline** — human-context entries from `worklog.yaml`
 - **Launch instructions** — how to order and use the deployed environment
 
-**MCP gateway:** The portal backend hosts a FastMCP server (mounted at `/mcp`) that provides tools for project queries, RCARS integration, validation storage, manifest sync, and session management. Claude Code skills call these tools — they never make raw HTTP calls to external services. The portal is the single gateway for all backend integrations.
+**MCP gateway:** The Central backend hosts a FastMCP server (mounted at `/mcp`) that provides tools for project queries, RCARS integration, validation storage, manifest sync, and session management. Claude Code skills call these tools — they never make raw HTTP calls to external services. The Central is the single gateway for all backend integrations.
 
-**Express mode state:** For express projects (no git repo), the portal database stores intake sessions and metrics directly.
+**Express mode state:** For express projects (no git repo), the Central database stores intake sessions and metrics directly.
 
-See [Portal Architecture](architecture/portal.md) for full details.
+See [Central Architecture](architecture/central.md) for full details.

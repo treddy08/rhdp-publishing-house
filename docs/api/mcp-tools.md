@@ -267,7 +267,7 @@ These tools manage Publishing House projects. They were available before the RCA
 
 ### ph_list_projects
 
-List all Publishing House projects with their current phase and status. Supports filtering by owner email for portal project discovery.
+List all Publishing House projects with their current phase and status. Supports filtering by owner email for Central project discovery.
 
 #### Parameters
 
@@ -382,13 +382,13 @@ Get validation results for a project, optionally filtered by phase. Returns resu
 
 ## Session Continuity Tools
 
-These tools persist intake data and manifest state in the portal DB, enabling session continuity across Claude Code restarts. Added in Phase 2.
+These tools persist intake data and manifest state in Central DB, enabling session continuity across Claude Code restarts. Added in Phase 2.
 
 ---
 
 ### ph_store_intake_results
 
-Store intake interview results in the portal DB for session continuity. Creates an IntakeSession record. Used by all three deployment modes (onboarded, self_published, express).
+Store intake interview results in Central DB for session continuity. Creates an IntakeSession record. Used by all three deployment modes (onboarded, self_published, express).
 
 #### Parameters
 
@@ -479,7 +479,7 @@ List intake sessions for a user, optionally filtered by status. Returns sessions
 
 ### ph_sync_manifest
 
-Sync manifest YAML content from a skill to the portal DB. Called by skills after every manifest write to keep the portal in real-time sync. Sets `sync_source='mcp'` to prevent the refresh engine from overwriting MCP-pushed data.
+Sync manifest YAML content from a skill to Central DB. Called by skills after every manifest write to keep Central in real-time sync. Sets `sync_source='mcp'` to prevent the refresh engine from overwriting MCP-pushed data.
 
 #### Parameters
 

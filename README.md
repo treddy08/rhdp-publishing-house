@@ -78,14 +78,14 @@ Set during intake. Determines the automation path and publishing target.
 | `rhdp_published` | Ansible, GitOps, or both | Required | Yes |
 | `self_published` | GitOps only | Skipped | No — uses Field Source CI |
 
-## Portal
+## Central Dashboard
 
-The [RHDP Publishing House Portal](https://github.com/rhpds/rhdp-publishing-house-portal)
+The [RHDP Publishing House Central](https://github.com/rhpds/rhdp-publishing-house-central)
 provides cross-project visibility for managers and PMs. Register projects by repo URL and see
 all content flowing through the pipeline — kanban board, project table, phase detail, worklog
 timeline, and launch instructions.
 
-See [docs/portal.md](docs/portal.md).
+See [docs/central.md](docs/central.md).
 
 ## Getting Started
 

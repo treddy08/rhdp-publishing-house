@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Publishing House portal backend serves as a single MCP gateway to the RCARS v2 content advisory system. Claude Code users and the future portal chatbot access RCARS through authenticated MCP tools (`ph_rcars_query`, `ph_rcars_catalog_search`, `ph_rcars_catalog_item`) exposed at the `/mcp` endpoint. Skills never call RCARS directly -- the MCP server handles routing, authentication, and network access. If RCARS changes its API, skills remain unchanged.
+The Publishing House Central backend serves as a single MCP gateway to the RCARS v2 content advisory system. Claude Code users and the future Central chatbot access RCARS through authenticated MCP tools (`ph_rcars_query`, `ph_rcars_catalog_search`, `ph_rcars_catalog_item`) exposed at the `/mcp` endpoint. Skills never call RCARS directly -- the MCP server handles routing, authentication, and network access. If RCARS changes its API, skills remain unchanged.
 
 ## System Diagram
 
@@ -15,7 +15,7 @@ graph TD
         Route["OpenShift Route (ph-mcp)<br/>host: ph-mcp.apps.domain<br/>path: /mcp"]
         Route -->|"HTTP (cluster-internal)"| BE
 
-        subgraph BE["PH Portal Backend (FastAPI)"]
+        subgraph BE["PH Central Backend (FastAPI)"]
             MCP["FastMCP 3.2+ Server<br/>mounted at /mcp"]
             Auth["ApiKeyAuth Middleware<br/>on_call_tool hook<br/>SHA-256 hash + hmac.compare_digest<br/>Keys from volume-mount"]
             Tools["MCP Tools<br/>• ph_rcars_query<br/>• ph_rcars_catalog_search<br/>• ph_rcars_catalog_item<br/>• ph_list_projects<br/>• ph_get_launch_instructions<br/>• + 7 more"]
@@ -55,7 +55,7 @@ The PH backend authenticates to RCARS using its Kubernetes ServiceAccount token.
 
 - **Token source:** Auto-mounted by Kubernetes at `/var/run/secrets/kubernetes.io/serviceaccount/token`. Re-read from the filesystem on every RCARS request (never cached) because K8s rotates tokens automatically
 - **Validation:** RCARS middleware validates the token via the Kubernetes TokenReview API, then checks the authenticated identity against the `RCARS_SA_ALLOWLIST_STR` environment variable
-- **Allowlist entry:** `system:serviceaccount:publishing-house-dev:default`
+- **Allowlist entry:** `system:serviceaccount:publishing-house-central-dev:default`
 - **No secrets to manage:** K8s handles token lifecycle -- no creation, rotation, or revocation required
 - **Configuration:** See [RCARS Service Auth Admin Guide](../admin/rcars-service-auth.md)
 
@@ -67,8 +67,8 @@ The PH backend and RCARS API are deployed in separate OpenShift namespaces on th
 graph LR
     ExtRoute["OpenShift Route<br/>ph-mcp.apps.cluster-domain<br/>path: /mcp (TLS edge)"] --> BE
 
-    subgraph NS1["publishing-house-dev namespace"]
-        BE["ph-portal-backend<br/>(FastAPI + MCP)<br/>Service: ClusterIP :8080"]
+    subgraph NS1["publishing-house-central-dev namespace"]
+        BE["ph-central-backend<br/>(FastAPI + MCP)<br/>Service: ClusterIP :8080"]
     end
 
     BE -->|"HTTP<br/>cross-namespace"| RCARS
@@ -86,12 +86,12 @@ graph LR
 | Component | Repo | Changes | Managed By |
 |-----------|------|---------|------------|
 | RCARS SA token auth middleware | `rcars-advisory` | New TokenReview + allowlist auth dependency | RCARS Ansible deployer |
-| RCARS HTTP client (`rcars_client.py`) | `rhdp-publishing-house-portal` | New httpx async client with retry and SA token | PH Ansible deployer |
-| ApiKeyAuth middleware (`auth.py`) | `rhdp-publishing-house-portal` | FastMCP 3.2+ Middleware subclass, replaces Keycloak scaffolding | PH Ansible deployer |
-| RCARS MCP tools (`rcars_tools.py`) | `rhdp-publishing-house-portal` | Three new tools: query, catalog search, catalog item | PH Ansible deployer |
-| MCP Route | `rhdp-publishing-house-portal` | OpenShift Route for `/mcp` path with TLS edge | PH Ansible deployer |
-| API key Secret | `rhdp-publishing-house-portal` | K8s Secret volume-mounted into backend pod | PH Ansible deployer |
-| Health endpoint update | `rhdp-publishing-house-portal` | RCARS connectivity sub-check in `/health` response | PH Ansible deployer |
+| RCARS HTTP client (`rcars_client.py`) | `rhdp-publishing-house-central` | New httpx async client with retry and SA token | PH Ansible deployer |
+| ApiKeyAuth middleware (`auth.py`) | `rhdp-publishing-house-central` | FastMCP 3.2+ Middleware subclass, replaces Keycloak scaffolding | PH Ansible deployer |
+| RCARS MCP tools (`rcars_tools.py`) | `rhdp-publishing-house-central` | Three new tools: query, catalog search, catalog item | PH Ansible deployer |
+| MCP Route | `rhdp-publishing-house-central` | OpenShift Route for `/mcp` path with TLS edge | PH Ansible deployer |
+| API key Secret | `rhdp-publishing-house-central` | K8s Secret volume-mounted into backend pod | PH Ansible deployer |
+| Health endpoint update | `rhdp-publishing-house-central` | RCARS connectivity sub-check in `/health` response | PH Ansible deployer |
 | Intake skill vetting update | `rhdp-publishing-house` (skills-plugin) | Replace broken `curl` with `ph_rcars_query` MCP tool reference | Committed to dev repo |
 | Documentation (5 files) | `rhdp-publishing-house` | Architecture, admin guides, user guide, API reference | Committed to dev repo |
 

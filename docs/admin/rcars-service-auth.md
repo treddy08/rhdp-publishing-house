@@ -2,7 +2,7 @@
 
 ## Overview
 
-The PH portal backend authenticates to the RCARS API using its Kubernetes ServiceAccount (SA) token. This is a cluster-internal, zero-configuration authentication mechanism -- Kubernetes manages token creation, rotation, and injection automatically.
+The PH Central backend authenticates to the RCARS API using its Kubernetes ServiceAccount (SA) token. This is a cluster-internal, zero-configuration authentication mechanism -- Kubernetes manages token creation, rotation, and injection automatically.
 
 RCARS validates incoming SA tokens via the Kubernetes TokenReview API and checks the authenticated identity against a configured allowlist. No secrets need to be created or rotated manually.
 
@@ -22,10 +22,10 @@ The SA allowlist controls which service accounts are permitted to call the RCARS
 ### Current PH entry
 
 ```
-system:serviceaccount:publishing-house-dev:default
+system:serviceaccount:publishing-house-central-dev:default
 ```
 
-This is the `default` ServiceAccount in the `publishing-house-dev` namespace, which the PH backend pod runs under.
+This is the `default` ServiceAccount in the `publishing-house-central-dev` namespace, which the PH backend pod runs under.
 
 ### Adding or removing entries
 
@@ -33,7 +33,7 @@ Edit `ansible/vars/dev.yml` in the `rcars-advisory` repo:
 
 ```yaml
 rcars_sa_allowlist:
-  - "system:serviceaccount:publishing-house-dev:default"
+  - "system:serviceaccount:publishing-house-central-dev:default"
   # Add additional SAs as needed:
   # - "system:serviceaccount:other-namespace:service-name"
 ```
@@ -77,7 +77,7 @@ This is the RCARS API ClusterIP Service in the `rcars-dev` namespace. No externa
 From the PH backend pod, test that RCARS is reachable:
 
 ```bash
-oc exec deployment/ph-portal-backend -n publishing-house-dev -- \
+oc exec deployment/ph-central-backend -n publishing-house-central-dev -- \
   curl -s http://rcars-api.rcars-dev.svc.cluster.local:8080/api/v1/health
 ```
 
@@ -90,7 +90,7 @@ Expected response:
 ### Verify SA token is being mounted
 
 ```bash
-oc exec deployment/ph-portal-backend -n publishing-house-dev -- \
+oc exec deployment/ph-central-backend -n publishing-house-central-dev -- \
   cat /var/run/secrets/kubernetes.io/serviceaccount/token | head -c 50
 ```
 
@@ -101,7 +101,7 @@ This should print the first 50 characters of a JWT-formatted token.
 Check what SA the backend pod is running as:
 
 ```bash
-oc get deployment ph-portal-backend -n publishing-house-dev \
+oc get deployment ph-central-backend -n publishing-house-central-dev \
   -o jsonpath='{.spec.template.spec.serviceAccountName}'
 ```
 
@@ -113,14 +113,14 @@ If empty, the pod uses the `default` SA.
 oc exec deployment/rcars-api -n rcars-dev -- env | grep SA_ALLOWLIST
 ```
 
-The output should include `system:serviceaccount:publishing-house-dev:default`.
+The output should include `system:serviceaccount:publishing-house-central-dev:default`.
 
 ### Verify authenticated RCARS call
 
 From the PH backend pod, test authentication end-to-end:
 
 ```bash
-oc exec deployment/ph-portal-backend -n publishing-house-dev -- \
+oc exec deployment/ph-central-backend -n publishing-house-central-dev -- \
   bash -c 'TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token) && \
   curl -s -H "Authorization: Bearer $TOKEN" \
   http://rcars-api.rcars-dev.svc.cluster.local:8080/api/v1/health'
@@ -135,10 +135,10 @@ Verify no NetworkPolicies are blocking cross-namespace traffic:
 oc get networkpolicy -n rcars-dev
 
 # Check for NetworkPolicies in the PH namespace
-oc get networkpolicy -n publishing-house-dev
+oc get networkpolicy -n publishing-house-central-dev
 ```
 
-If restrictive policies exist, ensure they allow ingress from the `publishing-house-dev` namespace to the `rcars-api` service on port 8080.
+If restrictive policies exist, ensure they allow ingress from the `publishing-house-central-dev` namespace to the `rcars-api` service on port 8080.
 
 ## Troubleshooting
 
@@ -160,7 +160,7 @@ If restrictive policies exist, ensure they allow ingress from the `publishing-ho
 
 **Fix:**
 1. Verify the allowlist value (see verification commands above)
-2. Ensure the entry matches exactly: `system:serviceaccount:publishing-house-dev:default`
+2. Ensure the entry matches exactly: `system:serviceaccount:publishing-house-central-dev:default`
 3. If missing, add it to `rcars_sa_allowlist` in `ansible/vars/dev.yml` and redeploy RCARS
 
 ### DNS resolution failure
@@ -173,7 +173,7 @@ If restrictive policies exist, ensure they allow ingress from the `publishing-ho
 oc get svc rcars-api -n rcars-dev
 
 # Test DNS resolution from PH pod
-oc exec deployment/ph-portal-backend -n publishing-house-dev -- \
+oc exec deployment/ph-central-backend -n publishing-house-central-dev -- \
   nslookup rcars-api.rcars-dev.svc.cluster.local
 ```
 
@@ -202,4 +202,4 @@ The PH `RCARSClient` retries transient failures 3 times with exponential backoff
 
 - [RCARS Integration Architecture](../architecture/rcars-integration.md)
 - [MCP Auth Admin Guide](mcp-auth.md)
-- [Portal Deployment](portal-deployment.md)
+- [Central Deployment](central-deployment.md)

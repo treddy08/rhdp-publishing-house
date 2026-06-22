@@ -63,9 +63,9 @@ PH updates Jira as work progresses — no one has to remember to do it. When a d
 
 Three sync paths ensure Jira stays current:
 
-1. **Real-time during active development.** When a developer works in PH, every manifest update syncs to the Portal backend, which immediately updates Jira.
+1. **Real-time during active development.** When a developer works in PH, every manifest update syncs to the Central backend, which immediately updates Jira.
 2. **Periodic polling.** A background job checks project repos every 15-30 minutes for manifest changes made outside PH (manual edits, CI pipelines). Catches anything the real-time path missed.
-3. **Manual refresh.** A "Sync now" button in the Portal UI for on-demand sync.
+3. **Manual refresh.** A "Sync now" button in the Central dashboard for on-demand sync.
 
 ### What You Can See
 
@@ -100,4 +100,4 @@ Two things need to happen before this can go live:
 
 1. **New Jira project.** We need a dedicated Jira project (working name: RHDPPH) so we can configure workflows, story points, and automation rules without affecting GPTEINFRA. Cross-project dashboards and issue links keep everything visible alongside existing RHDP work.
 
-2. **Jira service account.** The Portal backend needs a service account with API access to create and update tickets programmatically. This is the integration identity — not tied to any individual's account.
+2. **Jira service account.** The Central backend needs a service account with API access to create and update tickets programmatically. This is the integration identity — not tied to any individual's account.

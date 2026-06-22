@@ -51,7 +51,7 @@ There are no Helm charts or GitOps repos involved. The agent works directly on t
 
 ### 4. Handoff
 
-The agent produces a **recap document**: what was installed, what was configured, what's working, and what's left for the user to finish manually. The recap is stored in the PH portal and, for local users, saved to their working directory.
+The agent produces a **recap document**: what was installed, what was configured, what's working, and what's left for the user to finish manually. The recap is stored in the PH Central and, for local users, saved to their working directory.
 
 Optionally, PH generates a **lightweight Showroom guide** — a simple walkthrough of the finished environment. This is created after the work is done. It describes the result; it doesn't drive the work.
 
@@ -70,25 +70,25 @@ There is a dependency here: RCARS currently indexes Showroom content (what a lab
 
 ## State and Visibility
 
-Express projects have no git repository. State lives in the PH portal database — intake data is stored via `ph_store_intake_results` and express run metrics via `ph_record_express_run`. Express projects are transient: they do not appear on the portal kanban or have detail views. Aggregate metrics (how many express runs, which base CIs are popular) provide visibility into express usage patterns without per-project tracking overhead.
+Express projects have no git repository. State lives in the PH Central database — intake data is stored via `ph_store_intake_results` and express run metrics via `ph_record_express_run`. Express projects are transient: they do not appear on Central kanban or have detail views. Aggregate metrics (how many express runs, which base CIs are popular) provide visibility into express usage patterns without per-project tracking overhead.
 
-This is a meaningful shift from the other PH modes, where a git manifest is the source of truth. For express, the portal stores intake data for session continuity, but the work itself is ephemeral.
+This is a meaningful shift from the other PH modes, where a git manifest is the source of truth. For express, Central stores intake data for session continuity, but the work itself is ephemeral.
 
 ## Who Uses It
 
 Express mode is designed for field associates, SAs, and anyone who needs a tailored demo environment quickly and doesn't have the time or need to produce a permanent catalog item. Two access paths:
 
 - **Claude Code users** run express through the PH skills plugin and authenticate to the cluster locally with `oc login`
-- **Portal users** (no Claude Code or Anthropic access required) interact through the hosted chatbot, providing cluster credentials through the browser
+- **Central users** (no Claude Code or Anthropic access required) interact through the hosted chatbot, providing cluster credentials through the browser
 
 ## What's Required to Build It
 
 | Dependency | Status |
 |------------|--------|
 | PH MCP server with RCARS integration | Complete (Phase 1) |
-| Portal DB model for express (IntakeSession, ExpressMetric) | Complete (Phase 2) |
-| Portal MCP tools for session continuity | Complete (Phase 2) |
-| Orchestrator awareness of portal-based projects | Complete (Phase 2) |
+| Central DB model for express (IntakeSession, ExpressMetric) | Complete (Phase 2) |
+| Central MCP tools for session continuity | Complete (Phase 2) |
+| Orchestrator awareness of Central-registered projects | Complete (Phase 2) |
 | Intake three-mode routing with express flow | Complete (Phase 2) |
 | Express skill (the cluster customization agent) | Needs its own design |
 | RCARS infrastructure-aware metadata (for base-finding accuracy) | Backlogged in RCARS |

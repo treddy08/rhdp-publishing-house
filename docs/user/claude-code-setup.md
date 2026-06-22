@@ -2,7 +2,7 @@
 
 ## Overview
 
-Publishing House exposes MCP tools that let Claude Code query the RCARS content advisory system, persist intake data across sessions, sync manifest state to the portal, and track express mode usage. This guide explains how to connect Claude Code to the Publishing House MCP server.
+Publishing House exposes MCP tools that let Claude Code query the RCARS content advisory system, persist intake data across sessions, sync manifest state to Central, and track express mode usage. This guide explains how to connect Claude Code to the Publishing House MCP server.
 
 ## Prerequisites
 
@@ -96,10 +96,10 @@ Once connected, Claude Code can use the following MCP tools:
 
 | Tool | Description |
 |------|-------------|
-| `ph_store_intake_results` | Persist intake interview data in the portal DB. Used by all three modes (onboarded, self-published, express). |
+| `ph_store_intake_results` | Persist intake interview data in Central DB. Used by all three modes (onboarded, self-published, express). |
 | `ph_get_intake_results` | Retrieve previously stored intake data by session ID. Enables resuming intake across Claude Code restarts. |
 | `ph_list_intake_sessions` | List intake sessions for a user, optionally filtered by status. |
-| `ph_sync_manifest` | Sync manifest YAML to the portal DB after every manifest write. Keeps the portal in real-time sync. |
+| `ph_sync_manifest` | Sync manifest YAML to Central DB after every manifest write. Keeps Central in real-time sync. |
 | `ph_record_express_run` | Record a completed express mode run for aggregate metrics tracking. |
 
 For detailed parameter and return shape documentation, see the [MCP Tools Reference](../api/mcp-tools.md).

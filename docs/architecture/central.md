@@ -1,8 +1,8 @@
-# Portal
+# Central
 
-The RHDP Publishing House Portal provides cross-project visibility into the content lifecycle. While individual authors interact with the CLI skills, the portal gives managers, PMs, and stakeholders a single view across all active projects — without needing Claude Code.
+The RHDP Publishing House Central provides cross-project visibility into the content lifecycle. While individual authors interact with the CLI skills, Central gives managers, PMs, and stakeholders a single view across all active projects — without needing Claude Code.
 
-The portal has two data paths: the **refresh engine** pulls project state from GitHub repos on a schedule, and **MCP tools** accept writes from Claude Code skills in real time. The manifest in git remains the source of truth for onboarded and self-published projects; the portal database also stores intake session data and express metrics that have no git representation.
+The Central has two data paths: the **refresh engine** pulls project state from GitHub repos on a schedule, and **MCP tools** accept writes from Claude Code skills in real time. The manifest in git remains the source of truth for onboarded and self-published projects; the Central database also stores intake session data and express metrics that have no git representation.
 
 ## Architecture
 
@@ -17,11 +17,11 @@ graph TD
 
 The refresh engine checks each registered project's GitHub repo and syncs manifest and worklog data to the database. It runs on a schedule and on-demand when you trigger a manual refresh.
 
-MCP tools provide a second write path: Claude Code skills call `ph_sync_manifest` after every manifest write (keeping the portal in sync without waiting for the next refresh cycle), `ph_store_intake_results` to persist intake session data across Claude Code restarts, and `ph_record_express_run` for lightweight express usage metrics.
+MCP tools provide a second write path: Claude Code skills call `ph_sync_manifest` after every manifest write (keeping Central in sync without waiting for the next refresh cycle), `ph_store_intake_results` to persist intake session data across Claude Code restarts, and `ph_record_express_run` for lightweight express usage metrics.
 
 ## Registering a Project
 
-Navigate to the **Register** page and provide the GitHub repository URL. The portal fetches the manifest, reads project metadata (name, owner, type, deployment mode), parses lifecycle phases, and adds the project. You'll be redirected to the project detail page.
+Navigate to the **Register** page and provide the GitHub repository URL. The Central fetches the manifest, reads project metadata (name, owner, type, deployment mode), parses lifecycle phases, and adds the project. You'll be redirected to the project detail page.
 
 Registration requires only a repo URL — all other metadata comes from the manifest.
 
@@ -129,11 +129,11 @@ lifecycle:
       status: "pending"         # pending | in_progress | completed | skipped
       completed_at: null        # ISO datetime when completed (YYYY-MM-DD HH:mm)
       assignees: []             # GitHub usernames working on this phase
-      artifacts: []             # File paths (linked to GitHub in the portal)
+      artifacts: []             # File paths (linked to GitHub in Central)
 ```
 
 The `completed_at`, `assignees`, and `artifacts` fields drive what appears in the phase accordions.
 
 ## Deployment
 
-The portal runs on OpenShift. See [Portal Deployment](portal-deployment.md) for deployment instructions.
+The Central runs on OpenShift. See [Central Deployment](central-deployment.md) for deployment instructions.

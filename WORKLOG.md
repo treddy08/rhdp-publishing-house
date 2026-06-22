@@ -6,6 +6,44 @@ Clear periodically — the backlog ([BACKLOG.md](BACKLOG.md)) is the persistent 
 
 ---
 
+## 2026-06-22 — Gating overhaul, spec review, JIRA verification, infra requirements (Nate)
+
+### JIRA Project (RHDPCD)
+- Verified OJA-ITS-003 scheme switch is live — Initiative, Epic, Task all available
+- Created RHDPCD-1 test ticket, walked through all 4 workflow states (New → Refinement → In Progress → Closed), confirmed global transitions
+- Updated Jira integration spec with actual transition IDs, custom field IDs, Outcome type (level 3) for event grouping
+- Updated prerequisites table — scheme switch and project creation marked complete, service account still pending
+
+### Gating Overhaul (Central backend — 8 files)
+- **Phase engine**: Self-published and express now have only `intake` as hard gate; everything else is soft
+- **Gate service**: Soft gates auto-approve once prerequisites met — skip custody chain verification, self-approval checks, spec-change checks. Gate records still written for audit trail.
+- **Vetting**: RCARS still runs for soft gates. If RCARS unavailable, soft gates complete anyway (informational). Hard gates still block.
+- 7 new soft gate tests, all 56 related tests passing
+
+### Spec Review (2 new services)
+- **`llm.py`**: LLM provider routing following RCARS pattern — LiteMaaS preferred → Vertex AI fallback → Anthropic API fallback
+- **`spec_reviewer.py`**: LLM-powered spec review — summarizes project, assesses quality/infrastructure/actionability, recommends approve/needs_work/reject
+- Integrated at approval gate: hard gates can reject on "reject" recommendation; soft gates record findings only
+- Graceful degradation if no LLM provider configured
+
+### Infrastructure Requirements (intake + validation)
+- Added `## Infrastructure Requirements` to spec validator required sections
+- Updated intake skill with infrastructure fields aligned to existing catalog intake form (base CI, sizing, cloud provider, automation approach, workloads)
+- Updated spec guidelines reference with detailed infrastructure section
+
+### Ansible / Deployment
+- Added LiteMaaS + Vertex AI credentials to `central-dev.yml`
+- Created K8s secrets for LiteMaaS API key and Vertex credentials in infra template
+- Wired LLM env vars into backend deployment with Vertex volume mount
+- Deployed PH Central dev with full `--tags deploy`
+
+### What's next
+1. **Push PH Central code changes** — commit and push to feature branch, rebuild
+2. **Test spec reviewer end-to-end** — run approval gate with LLM credentials live
+3. **Jira sync implementation** — service account is the remaining blocker
+
+---
+
 ## 2026-06-19 — Dashboard redesign for PH Central (Nate)
 
 ### Design

@@ -28,7 +28,7 @@ Replace `<raw-key>` with the actual key from Step 1. This produces the SHA-256 h
 
 ### Step 3: Add the hash to Ansible vars
 
-Edit `ansible/vars/dev.yml` (or `ansible/vars/prod.yml` for production) in the `rhdp-publishing-house-portal` repo. Add the hashed value to the `mcp_api_keys` dictionary:
+Edit `ansible/vars/dev.yml` (or `ansible/vars/prod.yml` for production) in the `rhdp-publishing-house-central` repo. Add the hashed value to the `mcp_api_keys` dictionary:
 
 ```yaml
 mcp_api_keys:
@@ -45,7 +45,7 @@ The key name (e.g., `nate`) is an admin identifier for bookkeeping -- it tells y
 Run the Ansible deployer to update the Secret and restart the backend pod:
 
 ```bash
-cd rhdp-publishing-house-portal && ansible-playbook ansible/deploy.yml -e env=dev --tags apply
+cd rhdp-publishing-house-central && ansible-playbook ansible/deploy.yml -e env=dev --tags apply
 ```
 
 The `apply` tag updates manifests (Secrets, ConfigMaps, Deployments) without triggering a rebuild. The backend pod restarts to pick up the new key file (D-01: no hot-reload in Phase 1). Only use `--tags deploy` if you also need to rebuild code and run migrations.
@@ -63,7 +63,7 @@ To revoke a user's API key:
 1. Remove the user's entry from `mcp_api_keys` in `ansible/vars/dev.yml`
 2. Apply the change:
    ```bash
-   cd rhdp-publishing-house-portal && ansible-playbook ansible/deploy.yml -e env=dev --tags apply
+   cd rhdp-publishing-house-central && ansible-playbook ansible/deploy.yml -e env=dev --tags apply
    ```
 3. The backend pod restarts and loads the updated key file. The revoked key is immediately invalid.
 
@@ -80,7 +80,7 @@ The old key becomes invalid as soon as the pod restarts with the updated Secret.
 
 ## Key Storage
 
-API keys are stored in a Kubernetes Secret named `ph-mcp-api-keys` in the `publishing-house-dev` namespace. The Secret is volume-mounted into the backend pod at `/etc/ph/mcp-api-keys/keys.yaml`.
+API keys are stored in a Kubernetes Secret named `ph-mcp-api-keys` in the `publishing-house-central-dev` namespace. The Secret is volume-mounted into the backend pod at `/etc/ph/mcp-api-keys/keys.yaml`.
 
 ### File format
 
@@ -101,7 +101,7 @@ Each entry maps an admin-chosen key name to a `sha256:`-prefixed hex digest. The
 
 ## Ansible Integration
 
-The API key Secret is defined in the portal's Ansible infrastructure template (`ansible/templates/manifests-infra.yaml.j2`). The template iterates over the `mcp_api_keys` dictionary from vars and generates the Secret content using `dict2items`:
+The API key Secret is defined in Central's Ansible infrastructure template (`ansible/templates/manifests-infra.yaml.j2`). The template iterates over the `mcp_api_keys` dictionary from vars and generates the Secret content using `dict2items`:
 
 ```yaml
 stringData:
@@ -149,11 +149,11 @@ Compare the output with the value stored in `ansible/vars/dev.yml`.
 **Fix:**
 1. Verify the Secret exists:
    ```bash
-   oc get secret ph-mcp-api-keys -n publishing-house-dev
+   oc get secret ph-mcp-api-keys -n publishing-house-central-dev
    ```
 2. Verify the file exists inside the pod:
    ```bash
-   oc exec deployment/ph-portal-backend -n publishing-house-dev -- cat /etc/ph/mcp-api-keys/keys.yaml
+   oc exec deployment/ph-central-backend -n publishing-house-central-dev -- cat /etc/ph/mcp-api-keys/keys.yaml
    ```
 3. Verify `mcp_api_keys` is not empty in `ansible/vars/dev.yml`
 
@@ -163,7 +163,7 @@ Compare the output with the value stored in `ansible/vars/dev.yml`.
 
 **Fix:** The backend reads the key file at startup only (D-01). After updating keys and redeploying, verify the pod restarted:
 ```bash
-oc get pods -l app=ph-portal,component=backend -n publishing-house-dev
+oc get pods -l app=ph-central,component=backend -n publishing-house-central-dev
 ```
 The pod age should be recent (seconds/minutes, not hours/days).
 
@@ -171,4 +171,4 @@ The pod age should be recent (seconds/minutes, not hours/days).
 
 - [RCARS Integration Architecture](../architecture/rcars-integration.md)
 - [Claude Code Setup Guide](../user/claude-code-setup.md)
-- [Portal Deployment](portal-deployment.md)
+- [Central Deployment](central-deployment.md)
