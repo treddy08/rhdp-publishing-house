@@ -3,7 +3,7 @@
 **Date:** 2026-05-05
 **Status:** Draft
 **Phase:** 3 (Milestone 2 Roadmap)
-**Depends on:** Phase 1 (RCARS MCP Gateway) — complete
+**Depends on:** Phase 1 (RCARS MCP Gateway) — complete, Publishing House Central architecture — complete (2026-06-19 spec)
 
 ## Problem
 
@@ -16,16 +16,17 @@ Three tiers with different needs and tool preferences:
 | Tier | Primary Tool | What They Need |
 |------|-------------|----------------|
 | Content developers | PH (80%) / Jira (20%) | Don't want to think about Jira. It should just work. |
-| Direct managers | Jira (50%) / Portal (50%) | Area-level status, verify Jira is current, generate reports |
-| Senior director + PM | Jira (80%) / Portal (20%) | Portfolio view, effort-level rollups, points, checkpoints, cut decisions |
+| Direct managers | Jira (50%) / Central (50%) | Area-level status, verify Jira is current, generate reports |
+| Senior director + PM | Jira (80%) / Central (20%) | Portfolio view, effort-level rollups, points, checkpoints, cut decisions |
 
 ## Design Principles
 
 1. **Manifest is the source of truth.** Jira is a one-directional sync target. PH → Jira always. Jira → PH never (v1).
-2. **Only the Portal backend talks to Jira.** No LLM creates or modifies Jira tickets. No Jira credentials leave the Portal.
-3. **Developers never need to touch Jira.** PH automates all Jira ticket creation and status updates.
-4. **Managers own the strategic layer.** Initiatives (efforts) are created manually by managers. PH owns everything below that.
-5. **Points are defaults, not mandates.** PH sets fixed point values at creation. Humans adjust in Jira. PH never overwrites point values.
+2. **Onboarded projects only.** Jira integration applies to `rhdp_published` (onboarded) projects. Self-published and express projects are not tracked in Jira — self-published work is done by others on their own schedule, and express is transient.
+3. **Only the Central backend talks to Jira.** No LLM creates or modifies Jira tickets. No Jira credentials leave Central.
+4. **Developers never need to touch Jira.** PH automates all Jira ticket creation and status updates.
+5. **Managers own the strategic layer.** Initiatives (efforts) are created manually by managers. PH owns everything below that.
+6. **Points are defaults, not mandates.** PH sets fixed point values at creation. Humans adjust in Jira. PH never overwrites point values.
 
 ---
 
@@ -52,33 +53,45 @@ GPTEINFRA (the existing RHDP Jira project) has 70+ issue types and shared scheme
 
 ### Issue Types Required
 
-| Type | Hierarchy Level | Purpose |
-|------|----------------|---------|
-| Initiative | 2 | Effort grouping (Summit 2027, RH1, BAU) |
-| Epic | 1 | One per PH project |
-| Task | 0 | One per deliverable (with story points) |
+| Type | Hierarchy Level | ID | Purpose |
+|------|----------------|-----|---------|
+| Outcome | 3 | 10130 | Organizational grouping ("All Events", "Non-Event Content") |
+| Initiative | 2 | 10103 | Effort grouping (Summit 2027, RH1, BAU) |
+| Epic | 1 | 10000 | One per PH project |
+| Task | 0 | 10014 | One per deliverable (with story points) |
+
+OJA-ITS-003 also includes Story, Bug, Vulnerability, Weakness, and Sub-task. PH uses only the four types above.
 
 ### Workflow
 
-Simple three-state workflow on Tasks:
+OJA-ITS-003 provides a four-state workflow. All transitions are global (any state can reach any other state).
 
-```
-To Do → In Progress → Done
-```
+| Status | ID | Transition ID | Category | PH Maps To |
+|--------|----|---------------|----------|------------|
+| New | 10142 | 51 | To Do | `pending` |
+| Refinement | 10143 | 61 | To Do | *(not used by PH)* |
+| In Progress | 3 | 31 | In Progress | `in_progress` |
+| Closed | 6 | 41 | Done | `completed` / `skipped` |
 
-No additional states. PH phases map to these three states:
-- `pending` → To Do
-- `in_progress` → In Progress
-- `completed` / `skipped` → Done
+PH uses 3 of 4 states (skips Refinement). The Closed transition requires a resolution field (e.g., "Done").
+
+### Key Custom Fields
+
+| Field | ID | Available On | Purpose |
+|-------|-----|-------------|---------|
+| Story Points | customfield_10028 | Task, Story, Initiative | Effort estimation (float) |
+| Epic Link | customfield_10014 | Task, Story | Parent Epic linking |
+| Epic Name | customfield_10011 | Epic | Display name |
 
 ---
 
 ## Ticket Hierarchy
 
 ```
-Initiative (effort)            → "Summit 2027 Labs"           [manual, manager-created]
-  └── Epic (project)           → "OCP Getting Started"        [auto, PH-created]
-        ├── Design Doc          → 3 pts                       [auto]
+Outcome (organizational)       → "All Events", "Non-Event Content"  [manual, director-created]
+  └── Initiative (effort)      → "Summit 2027 Labs"                 [manual, manager-created]
+        └── Epic (project)     → "OCP Getting Started"              [auto, PH-created]
+              ├── Design Doc          → 3 pts                       [auto]
         ├── Module 1: Outline   → 5 pts                       [auto]
         ├── Module 1: Content   → 5 pts                       [auto]
         ├── Module 1: Automation → 8 pts                      [auto]
@@ -94,6 +107,12 @@ Initiative (effort)            → "Summit 2027 Labs"           [manual, manager
 ```
 
 Each PH project = one Epic. One parent Initiative. One effort label.
+
+**Project identity = repo URL + branch** (per Central architecture). A feature branch of the same repo gets its own Epic and independent phase progression. The Jira task mapping table uses `project_id` (which encodes repo URL + branch) as the foreign key, not repo URL alone.
+
+Outcomes group Initiatives by broad organizational category. Directors create these;
+managers place their Initiatives under the appropriate Outcome. PH does not create or
+sync Outcomes — they're a portfolio-level construct managed by leadership.
 
 ---
 
@@ -128,9 +147,13 @@ Points represent relative effort. Fixed defaults set by PH at task creation. Man
 | 3-module workshop | 3 + 3×(5+5+8+5) + 3 + 8 + 1 | 84 |
 | 2-module quick lab | 3 + 2×(5+5+8+5) + 3 + 8 + 1 | 61 |
 
-### Skipped Phases
+### Phase Profiles and Task Creation
 
-When a developer skips a phase, PH transitions the corresponding Task to Done with 0 points. The project total shrinks accordingly, and percentage calculations stay accurate.
+Central's `PhaseEngine` defines which phases exist per deployment mode (onboarded, self-published, express). Tasks are created based on the project's phase profile, not a universal hardcoded list. Different deployment modes may produce different task sets.
+
+If a phase profile is extended later (e.g., E2E test added as a separate phase), new tasks are created for existing projects on next sync.
+
+In rare cases where a manager decides to bypass a task in Jira (e.g., marking a task Done without the work being completed), the task transitions to Done with 0 points. The project total shrinks accordingly, and percentage calculations stay accurate. This is an exception path managed in Jira, not a PH workflow.
 
 ### Module Content + Automation Relationship
 
@@ -174,7 +197,7 @@ Examples:
 
 ### Project-to-Initiative Assignment
 
-During intake, PH queries the Portal for open Initiatives in RHDPCD. Developer selects one or "None — unassigned." The Epic is created as a child of the selected Initiative with a matching label.
+During intake, PH queries Central for open Initiatives in RHDPCD. Developer selects one or "None — unassigned." The Epic is created as a child of the selected Initiative with a matching label.
 
 Unassigned Epics can be moved under an Initiative later by a manager in Jira. Single parent per Epic — no multi-effort linking needed. If a project changes efforts (rare), someone drags the Epic in Jira.
 
@@ -201,31 +224,33 @@ Unassigned Epics can be moved under an Initiative later by a manager in Jira. Si
 | Secret management | Ansible deployer |
 | API version | Jira Cloud REST API v3 |
 
-**MAJOR TODO:** Determine if Red Hat can provision a Jira Cloud service account on redhat.atlassian.net. If not, evaluate alternatives (shared team token, OAuth 2.0 app). This is a gating dependency for deployment — must be resolved before implementation begins.
+**Initial development uses a personal Jira account** (nstephan@redhat.com) with an API token stored in the Ansible vars (gitignored). This unblocks implementation while the service account is provisioned. The token and email are swappable — replace `jira_email` and `jira_api_token` in the env-specific vars file when the service account is ready.
 
-### Portal Backend: JiraSyncService
+**TODO for production:** Provision a dedicated Jira Cloud service account on redhat.atlassian.net. If not possible, evaluate alternatives (shared team token, OAuth 2.0 app). This remains a dependency for production deployment.
 
-Single integration class. Pure Python, deterministic, no LLM in the loop.
+### Central Backend: JiraSyncService
+
+Single integration class in `rhdp-publishing-house-central`. Pure Python, deterministic, no LLM in the loop.
 
 ```
 app/services/jira_sync.py
 
 JiraSyncService
-  ├── create_project(manifest, initiative_key) → epic_key + task_keys
+  ├── create_project(manifest, initiative_key, phase_profile) → epic_key + task_keys
   ├── sync_project(manifest, task_mapping) → list of changes made
   ├── get_open_initiatives() → list of initiatives (cached, 15min TTL)
   └── _diff_state(manifest, jira_state) → list of transitions needed
 ```
 
-**`create_project`:** Reads manifest, counts modules, creates Epic + all Tasks in one Jira API batch. Returns Jira keys stored in Portal DB.
+**`create_project`:** Uses `PhaseEngine.get_profile(deployment_mode)` to determine which deliverable tasks to create for this project's deployment mode. Reads manifest, counts modules, creates Epic + all Tasks in one Jira API batch. Returns Jira keys stored in Central DB. Different deployment modes may produce different task sets.
 
-**`sync_project`:** Compares manifest phase statuses against Jira task statuses via the task mapping table. Transitions tasks that are out of sync. Adds a comment to the Epic summarizing changes. Idempotent — same manifest state produces no changes.
+**`sync_project`:** Compares manifest phase statuses against Jira task statuses via the task mapping table. Transitions tasks that are out of sync. Adds a comment to the Epic summarizing changes and linking to the custody chain gate decision that triggered the sync. Idempotent — same manifest state produces no changes.
 
-**`get_open_initiatives`:** Queries Jira for open Initiatives in RHDPCD. Cached in Portal DB, refreshed every 15 minutes or on-demand.
+**`get_open_initiatives`:** Queries Jira for open Initiatives in RHDPCD. Cached in Central DB, refreshed every 15 minutes or on-demand.
 
 **`_diff_state`:** Compares manifest state against Jira state, returns list of transitions needed. Uses the task mapping table to know which Jira issue corresponds to which manifest path.
 
-### Task Mapping Table (Portal DB)
+### Task Mapping Table (Central DB)
 
 ```
 jira_task_mappings
@@ -245,30 +270,35 @@ jira_task_mappings
 
 Every row maps one manifest path to one Jira issue. The sync service reads this table to know what to diff and what to transition.
 
+This table lives alongside Central's existing models: `Project` (with cached JSONB phase statuses), `GateRecord` (custody chain), and `SubmittedResult` (local skill outputs). The `project_id` FK references the `Project` model, which identifies projects by `repo_url + branch`.
+
 ### Sync Triggers
 
-Three paths, all converging on the Portal backend:
+Three paths, all converging on the Central backend. Central reads project state from git via `GitRepoReader` (GitHub API, no full clone) — there is no `ph_sync_manifest` push model.
 
-**1. MCP-triggered (real-time, during active CC work)**
+**1. Gate-driven (real-time, during active CC work)**
 
 ```
-CC session → manifest update → ph_sync_manifest MCP tool → Portal receives manifest
-  → Portal detects state change → JiraSyncService.sync_project() → Jira updated
+Skill completes phase work → pushes to git
+  → calls ph_request_gate(repo_url, branch, target_phase)
+    → Central reads manifest from git via GitRepoReader
+      → Gate evaluates, records decision in custody chain
+        → If state changed, JiraSyncService.sync_project() → Jira updated
 ```
 
-For new projects (no Jira mapping exists), the Portal calls `create_project()` instead.
+For new projects (no Jira mapping exists), Central calls `create_project()` when the **approval gate** passes — the point where the spec is frozen and the module list is stable. Earlier gates (vetting, spec refinement) don't trigger Jira creation because modules may still change during the vetting ⇄ spec refinement loop.
 
-**2. Polling (near-real-time, catches manual edits)**
+Subsequent gate passes sync task statuses to Jira. This ensures Jira reflects validated progress, not work-in-progress.
 
-Portal background job (APScheduler) runs every 15-30 minutes:
-- Scans known project repos for manifest changes (compare hash against last-known)
-- If changed, pulls updated manifest, runs `sync_project()`
-- Catches changes made outside CC (manual git edits, CI pipelines, other tools)
+**2. Periodic sync (near-real-time, catches drift)**
 
-**3. Manual refresh (on-demand)**
+Central's existing APScheduler periodic sync already reads manifests from git via `GitRepoReader` to update cached phase statuses. The Jira sync hooks into this: after updating cached statuses, compare against Jira state via the task mapping table. If out of sync, run `JiraSyncService.sync_project()`.
 
-- Portal UI: "Sync now" button on project detail page
-- MCP tool: `ph_jira_sync` (read-only trigger — tells Portal to sync, doesn't call Jira directly)
+This catches changes made outside gate calls: manual git edits, CI pipeline updates, and any state drift between Central and Jira.
+
+**3. Dashboard-triggered (on-demand)**
+
+Central dashboard: "Sync to Jira" button on project detail page. Calls `JiraSyncService.sync_project()` directly. No separate MCP tool needed — this is a dashboard-only action, consistent with Central's minimal MCP tool surface.
 
 ### Error Handling
 
@@ -281,18 +311,40 @@ Portal background job (APScheduler) runs every 15-30 minutes:
 | API rate limit | Exponential backoff, reconciliation catches remainder |
 | Service account token expired | Health endpoint reports Jira unhealthy, alert via monitoring |
 
-### What the Portal Exposes via MCP (Read-Only)
+### Jira Data in MCP Responses
 
-| Tool | Purpose | Data Source |
-|---|---|---|
-| `ph_jira_status` | Show Jira status of current project | Portal DB (no Jira API call) |
-| `ph_jira_link` | Return Jira Epic URL | Portal DB |
+No separate Jira MCP tools. Jira metadata is folded into the existing `ph_get_status` response, consistent with Central's minimal MCP tool surface (7 high-level tools):
 
-These are convenience tools for CC users. No write operations. No Jira credentials exposed.
+```json
+{
+  "...existing ph_get_status fields...",
+  "jira": {
+    "epic_key": "RHDPCD-42",
+    "epic_url": "https://redhat.atlassian.net/browse/RHDPCD-42",
+    "initiative_key": "RHDPCD-10",
+    "points_completed": 45,
+    "points_total": 130,
+    "synced_at": "2026-07-15T14:30:00Z"
+  }
+}
+```
+
+The `jira` block is `null` for projects not yet linked to Jira (e.g., express mode projects). Skills present this data conversationally — one fewer MCP tool call per status check.
+
+### Custody Chain Integration
+
+When a gate passes and triggers a Jira sync, `JiraSyncService` adds a comment to the Jira Epic summarizing the gate decision:
+
+- Phase name, result (approved/rejected/overridden), who requested, who approved
+- Override decisions are flagged: "Proceeded despite high overlap — override recorded in custody chain"
+- Comments are human-readable, not machine-cross-references — managers get a partial audit trail in Jira without needing to check the Central dashboard for every decision
+- Gate IDs from the custody chain are not exposed in Jira
+
+This ensures that the Jira Epic comment history tells the story of how the project progressed, including any exceptions.
 
 ### Atlassian MCP Server Relationship
 
-The Atlassian MCP server configured in Claude Code is for interactive human use (querying Jira, browsing issues). The Portal backend does NOT use it — it calls the Jira REST API directly via `httpx`. These are independent integration paths that coexist without conflict.
+The Atlassian MCP server configured in Claude Code is for interactive human use (querying Jira, browsing issues). Central's `JiraSyncService` calls the Jira REST API directly via `httpx`. These are independent integration paths that coexist without conflict.
 
 ---
 
@@ -308,6 +360,18 @@ integrations:
     effort_label: "summit-2027"
     synced_at: "2026-05-05T14:30:00Z"
 ```
+
+### Developer option: disabling Jira sync
+
+Not included in the manifest template. Developers who need to test the PH pipeline repeatedly without creating Jira issues can add this to their project manifest:
+
+```yaml
+integrations:
+  jira:
+    enabled: false
+```
+
+When `enabled` is `false`, Central skips all Jira operations (creation, sync, comments) for that project. Defaults to `true` when omitted. This is a per-project setting — it doesn't affect other projects or the Central configuration.
 
 ### Per-module outline tracking (new structure under spec_refinement):
 
@@ -386,8 +450,9 @@ The sync service handles manifests with and without the new fields:
 | Jira → PH write-back | Conflict resolution is complex. One-directional sync first. v2 feature. |
 | Manager reopens task in Jira → PH respects it | Requires bidirectional awareness. v2. |
 | Automated regression detection (reopen Verified tasks) | PH feature, not Jira feature. Backlogged. |
-| Jira webhooks to Portal | Per-repo webhook setup doesn't scale. Polling + MCP trigger sufficient. |
+| Jira webhooks to Central | Per-repo webhook setup doesn't scale. Gate-driven sync + periodic reconciliation sufficient. |
 | Express project tracking in Jira | Express is transient — no Jira presence by design. |
+| Self-published project tracking in Jira | Self-published work is done by others on their own schedule. Not useful for portfolio tracking in v1. Can add later if needed. |
 | Self-service API key onboarding for CC users | Important but separate from Jira integration. Backlogged. |
 
 ---
@@ -396,11 +461,11 @@ The sync service handles manifests with and without the new fields:
 
 | Prerequisite | Status | Blocker? |
 |---|---|---|
-| RHDPCD Jira project created | JSM request submitted 2026-06-18 | Yes — waiting on PME |
-| Switch to OJA-ITS-003 (Standard) | After project creation — self-service via Delegated Project Admin | Yes — needed for Initiative/Epic/Task hierarchy |
-| Jira service account provisioned | Not started | Yes — gating dependency for deployment |
+| RHDPCD Jira project created | **Complete** (2026-06-18) | No |
+| Switch to OJA-ITS-003 (Standard) | **Complete** (2026-06-22, verified via API) | No |
+| Jira service account provisioned | Not started (personal account used for dev) | Yes — gating dependency for **production** deployment |
 | Phase 1 (MCP Gateway) | Complete | No |
-| Phase 2 (Express Mode Framework) | Complete | No |
+| Publishing House Central architecture | **Complete** (2026-06-19 spec, implemented) | No |
 
 ---
 
