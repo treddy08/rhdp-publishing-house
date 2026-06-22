@@ -6,6 +6,54 @@ Clear periodically — the backlog ([BACKLOG.md](BACKLOG.md)) is the persistent 
 
 ---
 
+## 2026-06-22 — Jira integration implementation, spec template, doc overhaul (Nate)
+
+### Jira Integration (Central backend — fully implemented)
+- **JiraClient** (`jira_client.py`): Sync HTTP client for Jira Cloud REST API v3, Basic auth, project key guardrail (`allowed_project_key` enforced on all write ops)
+- **JiraTaskMapping** model + Alembic migration: maps manifest deliverables to Jira issues
+- **JiraSyncService** (`jira_sync.py`): create_project (Epic + per-module Tasks with story points), sync_project (diff manifest vs Jira, transition tasks), get_open_initiatives, custody chain comments on Jira Epics
+- **Gate integration**: Jira Epic+Tasks created at **approval gate** (not vetting — spec isn't stable until approved). Subsequent gates sync status. Non-blocking — Jira failures never block gate passes.
+- **ph_get_open_initiatives** MCP tool: exposed for intake Initiative selection
+- **ph_get_status** response now includes `jira` block with Epic URL, points completed/total
+- **Periodic reconciliation**: hooks into APScheduler refresh to catch drift
+- **Ansible deployment**: K8s Secret for Jira credentials, env vars conditional on `jira_url`
+- Deployed to central-dev, tested end-to-end — 20 issues created in RHDPCD under Test Initiative (RHDPCD-2)
+- Fixed Jira API URL: must use `api.atlassian.com/ex/jira/{cloudId}` not `redhat.atlassian.net` (site URL returns 404 for API tokens)
+- Fixed RCARS SA allowlist: added `publishing-house-central-dev:default` to RCARS dev vars
+- Fixed missing `spec_reviewer.py` and `llm.py` (uncommitted files broke MCP import chain)
+
+### Design Decisions
+- **Onboarded only**: Jira sync scoped to `rhdp_published` projects. Self-published and express excluded.
+- **Approval gate creation**: Epic+Tasks created when spec is frozen, not at vetting (avoids churn during vetting ⇄ spec refinement loop)
+- **Manifest opt-out**: `integrations.jira.enabled: false` disables Jira for testing. Not in template — undocumented developer option.
+- **Initiative selection**: During intake, skill calls `ph_get_open_initiatives`, presents pick list. Source stored in `manifest.integrations.jira.initiative_key`.
+
+### Intake Skill Updates
+- **Design spec template** (`design-template.md`): Fixed section headings, bracketed placeholders. Intake fills in the template instead of generating freeform. Template also pushed to `rhdp-publishing-house-template`.
+- **Jira issue as intake path** (Path C): New third entry — point at any Jira issue (any project) as requirements source. Uses Atlassian MCP tools. Source key stored in `project.source_issue`.
+- **Spec validator rewritten**: Checks for exact template headings + unfilled placeholders instead of regex heading matching.
+
+### Ansible Fixes
+- **Build wait fix**: `oc wait` now targets the specific build name (from `oc start-build` output) instead of label selector. Fixes false negatives from pruned old builds.
+- Added Tony, Sha, Prakhar API keys to central-dev MCP config
+
+### Documentation Overhaul
+- Renamed `portal.md` → `central.md`, `portal-deployment.md` → `central-deployment.md`
+- Complete Portal → Central rename across all 15 active doc files
+- Updated namespaces (`publishing-house-dev` → `publishing-house-central-dev`), repo names, deployment names
+- Updated MCP tools table with Gate Service category (7 tools)
+- Rewrote Central CLAUDE.md with current services, models, and tools
+- Updated Jira integration overview status from "Proposed" to "Implemented"
+- Jira spec updated: approval gate creation, enabled flag, Initiative selection, project key guardrail
+
+### What's next
+1. **Test full PH workflow end-to-end** with `ph-onboarded-ai` (reset to blank template with `jira.enabled: false`)
+2. **Test Jira flow** with a fresh project that goes through approval gate — verify Epic+Tasks created correctly
+3. **Service account provisioning** — still the production blocker for Jira
+4. **Spec template conformance** — existing projects need their design.md aligned to the template
+
+---
+
 ## 2026-06-22 — Gating overhaul, spec review, JIRA verification, infra requirements (Nate)
 
 ### JIRA Project (RHDPCD)
