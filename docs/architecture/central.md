@@ -115,8 +115,8 @@ For a project to display correctly, its `publishing-house/manifest.yaml` must in
 ```yaml
 project:
   name: "Project Title"
-  owner_name: "Jane Smith"
   owner_github: "jsmith"
+  owner_email: "jsmith@redhat.com"
   type: "workshop"              # workshop | demo
   deployment_mode: "rhdp_published"  # rhdp_published | self_published
   autonomy: "guided"

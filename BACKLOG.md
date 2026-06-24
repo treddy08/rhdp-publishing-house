@@ -81,6 +81,16 @@ Portal as MCP gateway, express mode, Jira visibility, hosted chatbot. MCP gatewa
 
 Items that are unblocked or nearly unblocked. Not on the current roadmap but high value.
 
+### Documentation overhaul — PRIORITY
+
+**Origin:** PH Central testing and manifest review (2026-06-24).
+
+Docs were written at different stages of the project and need a consistency pass now that Central, Jira integration, phase restructuring (split code/security review, e2e_testing), and manifest schema changes (owner_email, autonomy rename) are all in place. Many docs reference deprecated fields, old phase names, or describe features at a point-in-time that no longer matches current behavior.
+
+**Scope:** All files in `docs/` (excluding `superpowers/plans/` and `superpowers/specs/` which are historical). Review for accuracy against current codebase, remove outdated content, ensure consistent terminology.
+
+**Depends on:** Nothing — unblocked, can be done anytime.
+
 ### Deterministic client layer — PRIORITY (BLOCKING)
 
 **Origin:** PH Central testing (2026-06-19). Multiple rounds of testing showed that LLM-driven skill instructions cannot reliably control presentation or enforce workflow discipline, regardless of how explicit the instructions are.
