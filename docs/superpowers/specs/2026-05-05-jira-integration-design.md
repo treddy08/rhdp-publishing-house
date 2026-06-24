@@ -25,7 +25,7 @@ Three tiers with different needs and tool preferences:
 2. **Onboarded projects only.** Jira integration applies to `rhdp_published` (onboarded) projects. Self-published and express projects are not tracked in Jira — self-published work is done by others on their own schedule, and express is transient.
 3. **Only the Central backend talks to Jira.** No LLM creates or modifies Jira tickets. No Jira credentials leave Central.
 4. **Developers never need to touch Jira.** PH automates all Jira ticket creation and status updates.
-5. **Managers own the strategic layer.** Initiatives (efforts) are created manually by managers. PH owns everything below that.
+5. **Humans own the strategic layer.** Outcomes and Initiatives are created manually in Jira. PH owns everything below that (Epics and Tasks).
 6. **Points are defaults, not mandates.** PH sets fixed point values at creation. Humans adjust in Jira. PH never overwrites point values.
 
 ---
@@ -56,8 +56,8 @@ GPTEINFRA (the existing RHDP Jira project) has 70+ issue types and shared scheme
 | Type | Hierarchy Level | ID | Purpose |
 |------|----------------|-----|---------|
 | Outcome | 3 | 10130 | Organizational grouping ("All Events", "Non-Event Content") |
-| Initiative | 2 | 10103 | Effort grouping (Summit 2027, RH1, BAU) |
-| Epic | 1 | 10000 | One per PH project |
+| Initiative | 2 | 10103 | One per event or program (Summit 2027, RH1, BAU) |
+| Epic | 1 | 10000 | One per PH project (lab, demo, workshop) |
 | Task | 0 | 10014 | One per deliverable (with story points) |
 
 OJA-ITS-003 also includes Story, Bug, Vulnerability, Weakness, and Sub-task. PH uses only the four types above.
@@ -75,44 +75,120 @@ OJA-ITS-003 provides a four-state workflow. All transitions are global (any stat
 
 PH uses 3 of 4 states (skips Refinement). The Closed transition requires a resolution field (e.g., "Done").
 
-### Key Custom Fields
+### Key Fields
 
-| Field | ID | Available On | Purpose |
-|-------|-----|-------------|---------|
-| Story Points | customfield_10028 | Task, Story, Initiative | Effort estimation (float) |
-| Epic Link | customfield_10014 | Task, Story | Parent Epic linking |
-| Epic Name | customfield_10011 | Epic | Display name |
+#### Standard and Custom Fields Used by PH
+
+| Field | Type | ID | Available On | Purpose |
+|-------|------|----|-------------|---------|
+| Story Points | Custom (float) | customfield_10028 | Task, Epic, Initiative | Effort estimation |
+| Epic Link | Custom | customfield_10014 | Task | Parent Epic linking |
+| Epic Name | Custom | customfield_10011 | Epic | Display name |
+| Assignee | Standard (user picker) | — | All | The person who owns this issue |
+| Flagged | Standard (flag) | — | All | Impediment flag for escalation |
+
+**Assignee = owner.** The person assigned to an issue in Jira is the owner of that deliverable. At the Epic level, this is the RHDP team member accountable for the project. At the Task level, it's whoever is doing the work — which may be the same person or someone else. PH sets the Assignee on Epics and Tasks at creation time from `manifest.project.owner_email`. Managers reassign in Jira as needed; PH never overwrites Assignee on existing issues.
+
+#### Dependency and Blocker Tracking
+
+Content projects frequently depend on people outside the RHDP team — product engineers building automation, partners providing content, or other teams delivering prerequisites. When those dependencies stall, the project is blocked, and leadership needs to see it.
+
+**The problem:** today, a blocked Epic just shows "In Progress" with no indication of why or who is holding it up. A senior director sees the project is behind but can't tell if it's a staffing issue, a technical blocker, or an external dependency waiting on someone outside the team.
+
+**Assumption:** All contributors (internal and external) have Jira accounts on redhat.atlassian.net. This is a prerequisite for proper tracking.
+
+**Proposed custom fields:**
+
+| Field | Jira Field Type | Available On | Purpose |
+|-------|----------------|-------------|---------|
+| Waiting On | User picker (multi) | Task, Epic | People this issue is waiting on. Structured, queryable, supports multiple users. |
+| Dependency Note | Text (multi-line) | Task, Epic | Context about the dependency — what they're doing, expected timeline. Visible on the issue for humans reading it. |
+
+**Why these types:**
+
+- **User picker (multi) for "Waiting On"** gives structured, JQL-queryable data: `"Waiting On" in (Bob)` finds all issues waiting on Bob across the entire project. Multi-user supports the common case where a Task is waiting on more than one person. Since all contributors have Jira accounts, there's no reason to fall back to free text.
+- **Text (multi-line) for "Dependency Note"** provides context that a user picker can't: what the people are doing, what the expected timeline is, and any relevant details. "Bob is building the operator controller. Alice is handling CRDs. Expected completion: July 15."
+- **Flagged (standard)** is the escalation signal. When a dependency stalls, the manager flags the issue as an impediment. Built-in Jira field — no custom field creation needed.
+
+**How it looks in practice:**
+
+```
+Epic: "OCP Getting Started"
+  Assignee: Tyrell (RHDP — owns the project)
+
+  Task: "Module 3: Automation"
+    Assignee: Tyrell (he's accountable)
+    Waiting On: [Bob, Alice]
+    Dependency Note: "Bob is building the operator controller. Alice is handling
+                      CRDs. Expected mid-July."
+    Status: In Progress
+    Flagged: Yes (impediment — Bob missed two check-ins)
+
+  Task: "Module 3: Verified"
+    Assignee: Tyrell
+    Waiting On: [Bob]   ← same dependency, different task
+    Status: In Progress
+```
+
+Key point: Tyrell stays the **Assignee** because he owns and is accountable for the deliverable. "Waiting On" shows who is actually doing the work or blocking progress. When a manager looks at this, the picture is clear: Tyrell owns it, Bob and Alice are the dependency, and it's flagged because Bob is late.
+
+**Dashboard queries this enables:**
+
+| Query | JQL | Who Uses It |
+|-------|-----|-------------|
+| My projects | `issuetype = Epic AND assignee = currentUser()` | Developer |
+| Everything waiting on someone | `"Waiting On" is not EMPTY AND status != Closed` | Manager |
+| What is Bob holding up? | `"Waiting On" in (Bob) AND status != Closed` | Manager |
+| Flagged/blocked items | `flagged = impediment AND project = RHDPCD` | Manager, PM |
+| At-risk projects | `issuetype = Epic AND flagged = impediment` | Senior director |
+| All of Tyrell's work | `assignee = Tyrell AND project = RHDPCD` | Manager |
+
+**Who sets these fields — PH or Jira direct?**
+
+| Field | Set By | Why |
+|-------|--------|-----|
+| Assignee | **PH** at creation, then Jira direct | PH sets from `manifest.project.owner_email` when creating Epics and Tasks. Managers reassign in Jira as needed. PH never overwrites existing Assignee values. |
+| Waiting On | **Jira direct** only | This is a management judgment call — "we're waiting on Bob." The information lives in the manager's head (conversations, check-ins, team knowledge), not in the manifest or git. PH has no way to know who Bob is or that he's late. |
+| Dependency Note | **Jira direct** only | Same reasoning — context about what external people are doing and when they're expected to deliver is human knowledge, not derivable from code. |
+| Flagged | **Jira direct** only | Flagging an impediment is a human decision based on missed deadlines, unanswered messages, or gut feel. Not something PH can determine from manifest state. |
+
+PH's role is limited to what it can derive from the manifest: issue creation and status transitions. Everything related to dependencies, blockers, and escalation is managed by humans directly in Jira because the underlying information doesn't exist in PH's world.
+
+**Future consideration — stale detection (v2):** The one scenario where PH *could* assist is detecting stalled work: if a Task has been "In Progress" for N days with no corresponding manifest change, PH could auto-flag it and notify the manager to investigate. This would be an automated nudge, not a field-setting mechanism — the manager still decides what to do about it. Not v1, but worth designing the fields to support it.
+
+**Open questions for discussion:**
+
+1. **Custom field creation:** Can project admins create "Waiting On" (multi-user picker) and "Dependency Note" (multi-line text) in RHDPCD via Delegated Project Admin, or does this require a PME request? If custom fields must be org-wide, we may need to check whether equivalent fields already exist.
+2. **Stale detection threshold:** What's the right N for "Task in progress with no manifest change"? 7 days? 14? Should it vary by deliverable type (automation tasks legitimately take longer)?
 
 ---
 
 ## Ticket Hierarchy
 
 ```
-Outcome (organizational)       → "All Events", "Non-Event Content"  [manual, director-created]
-  └── Initiative (effort)      → "Summit 2027 Labs"                 [manual, manager-created]
-        └── Epic (project)     → "OCP Getting Started"              [auto, PH-created]
-              ├── Design Doc          → 3 pts                       [auto]
-        ├── Module 1: Outline   → 5 pts                       [auto]
-        ├── Module 1: Content   → 5 pts                       [auto]
-        ├── Module 1: Automation → 8 pts                      [auto]
-        ├── Module 1: Verified  → 5 pts                       [auto]
-        ├── Module 2: Outline   → 5 pts                       [auto]
-        ├── Module 2: Content   → 5 pts                       [auto]
-        ├── Module 2: Automation → 8 pts                      [auto]
-        ├── Module 2: Verified  → 5 pts                       [auto]
-        ├── ...
-        ├── Code & Security Review → 3 pts                    [auto]
-        ├── E2E Test            → 8 pts                       [auto]
-        └── Final Review        → 1 pt                        [auto]
+Outcome (grouping)             → "All Events", "Non-Event Content"  [manually created]
+  └── Initiative (event)       → "Summit 2027 Labs"                 [manually created]
+        └── Epic (project)     → "OCP Getting Started"              [PH auto-created]
+              ├── Design Doc          → 3 pts                       [PH auto-created]
+              ├── Module 1: Outline   → 5 pts                       [PH auto-created]
+              ├── Module 1: Content   → 5 pts                       [PH auto-created]
+              ├── Module 1: Automation → 8 pts                      [PH auto-created]
+              ├── Module 1: Verified  → 5 pts                       [PH auto-created]
+              ├── Module 2: Outline   → 5 pts                       [PH auto-created]
+              ├── Module 2: Content   → 5 pts                       [PH auto-created]
+              ├── Module 2: Automation → 8 pts                      [PH auto-created]
+              ├── Module 2: Verified  → 5 pts                       [PH auto-created]
+              ├── ...
+              ├── Code & Security Review → 3 pts                    [PH auto-created]
+              ├── E2E Test            → 8 pts                       [PH auto-created]
+              └── Final Review        → 1 pt                        [PH auto-created]
 ```
 
-Each PH project = one Epic. One parent Initiative. One effort label.
+Each PH project = one Epic. One parent Initiative (the event or effort). One effort label.
 
 **Project identity = repo URL + branch** (per Central architecture). A feature branch of the same repo gets its own Epic and independent phase progression. The Jira task mapping table uses `project_id` (which encodes repo URL + branch) as the foreign key, not repo URL alone.
 
-Outcomes group Initiatives by broad organizational category. Directors create these;
-managers place their Initiatives under the appropriate Outcome. PH does not create or
-sync Outcomes — they're a portfolio-level construct managed by leadership.
+Outcomes and Initiatives are created manually in Jira. PH does not create or sync them — they're organizational constructs managed by the team.
 
 ---
 
@@ -169,9 +245,21 @@ If a change to automation or content affects a previously verified module, the V
 
 ## Effort Categories & Initiative Management
 
+### Four-Level Hierarchy
+
+The hierarchy maps to standard Jira issue types and their built-in hierarchy levels:
+
+**Outcomes** (level 3) are organizational groupings — broad categories that organize the team's work. Examples: "All Events", "Non-Event Content", "Architecture & Infrastructure". Manually created in Jira. PH does not create or sync Outcomes.
+
+**Initiatives** (level 2) are events or efforts — each event, program, or work stream gets one Initiative under its parent Outcome. Examples: "Summit 2027 Labs", "RH1 FY27 Content", "BAU Content Development", "Arcade Development". Manually created in Jira. PH does not create Initiatives.
+
+**Epics** (level 1) are projects — each content project (lab, workshop, demo) gets one Epic under its parent Initiative. PH auto-created when the approval gate passes.
+
+**Tasks** (level 0) are deliverables — each piece of work within a project gets a Task with story points under its parent Epic. PH auto-created alongside the Epic.
+
 ### What an Initiative Represents
 
-A business-level grouping of content work. Answers: "What are we working toward and by when?"
+A business-level grouping of content work under one event or effort. Answers: "What are we working toward and by when?"
 
 Examples:
 - "Summit 2027 Labs"
@@ -184,7 +272,7 @@ Examples:
 
 ### Initiative Lifecycle
 
-**Created by:** Managers or PM, manually in Jira. PH never creates Initiatives.
+**Created by:** Manually in Jira. PH never creates Initiatives.
 
 **Key fields:**
 
@@ -194,6 +282,7 @@ Examples:
 | Description | Scope, goals, deadline context | "All labs for Summit 2027. Content freeze: 2027-04-15." |
 | Due date | Hard deadline (event-driven) or empty (BAU) | 2027-04-15 |
 | Labels | Broad effort type for cross-cutting queries | `event`, `bau`, `blog`, `architecture`, `arcade` |
+| Parent | Outcome this Initiative belongs to | "All Events" |
 
 ### Project-to-Initiative Assignment
 
@@ -205,9 +294,10 @@ Unassigned Epics can be moved under an Initiative later by a manager in Jira. Si
 
 | Level | What They See | Jira Action |
 |---|---|---|
-| Portfolio | All Initiatives with total/completed points, % done, due dates | Dashboard |
-| Effort | All Epics under one Initiative with per-project points | Click Initiative |
-| Project | All Tasks under one Epic with per-deliverable status | Click Epic |
+| Organization | All Outcomes with total/completed points, % done | Dashboard |
+| Effort | All Initiatives under one Outcome with per-effort points | Click Outcome |
+| Project | All Epics under one Initiative with per-project status | Click Initiative |
+| Deliverables | All Tasks under one Epic with per-deliverable status | Click Epic |
 | Cross-cutting | All work by effort type (all events, all BAU) | Label-based JQL filter |
 
 ---
@@ -286,7 +376,7 @@ Skill completes phase work → pushes to git
         → If state changed, JiraSyncService.sync_project() → Jira updated
 ```
 
-For new projects (no Jira mapping exists), Central calls `create_project()` when the **approval gate** passes — the point where the spec is frozen and the module list is stable. Earlier gates (vetting, spec refinement) don't trigger Jira creation because modules may still change during the vetting ⇄ spec refinement loop.
+For new projects (no Jira mapping exists), Central calls `create_project()` when the **approval gate** passes — the point where the spec is frozen and the module list is stable. Earlier gates (vetting, spec refinement) don't trigger Jira creation because modules may still change during the vetting ⇄ spec refinement loop. The Epic is created under the selected Initiative (event/effort), with Tasks as children of the Epic.
 
 Subsequent gate passes sync task statuses to Jira. This ensures Jira reflects validated progress, not work-in-progress.
 
@@ -333,14 +423,14 @@ The `jira` block is `null` for projects not yet linked to Jira (e.g., express mo
 
 ### Custody Chain Integration
 
-When a gate passes and triggers a Jira sync, `JiraSyncService` adds a comment to the Jira Epic summarizing the gate decision:
+When a gate passes and triggers a Jira sync, `JiraSyncService` adds a comment to the project's Jira Epic summarizing the gate decision:
 
 - Phase name, result (approved/rejected/overridden), who requested, who approved
 - Override decisions are flagged: "Proceeded despite high overlap — override recorded in custody chain"
 - Comments are human-readable, not machine-cross-references — managers get a partial audit trail in Jira without needing to check the Central dashboard for every decision
 - Gate IDs from the custody chain are not exposed in Jira
 
-This ensures that the Jira Epic comment history tells the story of how the project progressed, including any exceptions.
+This ensures that the Epic comment history tells the story of how the project progressed, including any exceptions.
 
 ### Atlassian MCP Server Relationship
 

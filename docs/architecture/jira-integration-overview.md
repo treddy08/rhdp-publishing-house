@@ -11,31 +11,34 @@ Jira integration bridges this gap. The Publishing House (PH) system that manages
 
 ## How It Works
 
-### Three-Level Hierarchy
+### Four-Level Hierarchy
 
-Everything maps to standard Jira concepts:
+Everything maps to standard Jira issue types and their built-in hierarchy levels:
 
-**Initiatives** are efforts — Summit 2027, RH1, BAU Content Dev, Arcade Development, Blog Series, etc. Created by managers to represent what the team is working toward. Each Initiative can have a due date for event-driven work (content freeze deadlines) or remain open-ended for ongoing work.
+**Outcomes** are organizational groupings — broad categories that organize the team's work. Examples: "All Events", "Non-Event Content", "Architecture & Infrastructure". Manually created in Jira.
 
-**Epics** are projects — each content project (lab, workshop, demo) gets one Epic. Created automatically by Central when the approval gate passes (spec is frozen at that point). Lives under its parent Initiative.
+**Initiatives** are events or efforts — each event, program, or work stream gets one Initiative. Examples: Summit 2027, RH1, BAU Content Dev, Arcade Development. Each Initiative can have a due date for event-driven work (content freeze deadlines) or remain open-ended for ongoing work. Manually created in Jira.
 
-**Tasks** are deliverables — each piece of work within a project gets a Task with story points. Created automatically by PH alongside the Epic.
+**Epics** are projects — each content project (lab, workshop, demo) gets one Epic. PH auto-created when the approval gate passes (spec is frozen at that point). Lives under its parent Initiative.
+
+**Tasks** are deliverables — each piece of work within a project gets a Task with story points. PH auto-created alongside the Epic.
 
 ```
-Initiative: "Summit 2027 Labs"
-  └── Epic: "OCP Getting Started Workshop"
-        ├── Design Doc                    [3 pts]  ✓ Done
-        ├── Module 1: Outline             [5 pts]  ✓ Done
-        ├── Module 1: Content             [5 pts]  ✓ Done
-        ├── Module 1: Automation          [8 pts]  ● In Progress
-        ├── Module 1: Verified            [5 pts]  ○ To Do
-        ├── Module 2: Outline             [5 pts]  ✓ Done
-        ├── Module 2: Content             [5 pts]  ● In Progress
-        ├── Module 2: Automation          [8 pts]  ○ To Do
-        ├── Module 2: Verified            [5 pts]  ○ To Do
-        ├── Code & Security Review        [3 pts]  ○ To Do
-        ├── E2E Test                      [8 pts]  ○ To Do
-        └── Final Review                  [1 pt]   ○ To Do
+Outcome: "All Events"
+  └── Initiative: "Summit 2027 Labs"
+        └── Epic: "OCP Getting Started Workshop"
+              ├── Design Doc                    [3 pts]  ✓ Done
+              ├── Module 1: Outline             [5 pts]  ✓ Done
+              ├── Module 1: Content             [5 pts]  ✓ Done
+              ├── Module 1: Automation          [8 pts]  ● In Progress
+              ├── Module 1: Verified            [5 pts]  ○ To Do
+              ├── Module 2: Outline             [5 pts]  ✓ Done
+              ├── Module 2: Content             [5 pts]  ● In Progress
+              ├── Module 2: Automation          [8 pts]  ○ To Do
+              ├── Module 2: Verified            [5 pts]  ○ To Do
+              ├── Code & Security Review        [3 pts]  ○ To Do
+              ├── E2E Test                      [8 pts]  ○ To Do
+              └── Final Review                  [1 pt]   ○ To Do
 ```
 
 ### Points = Estimated Effort
@@ -69,9 +72,11 @@ Three sync paths ensure Jira stays current:
 
 ### What You Can See
 
-**Portfolio view:** Open the Jira dashboard. See all Initiatives with total points, completed points, and percentage done. "Summit 2027 is at 62% with 3 weeks to go. RH1 is at 28%."
+**Organization view:** Open the Jira dashboard. See all Outcomes with total points, completed points, and percentage done across all events and programs.
 
-**Effort view:** Click an Initiative. See all projects under it with per-project progress. "OCP Getting Started is 85%. AI Observability is 40%."
+**Effort view:** Click an Outcome. See all Initiatives under it — each event or program — with per-effort progress. "Summit 2027 is at 62% with 3 weeks to go. RH1 is at 28%."
+
+**Event view:** Click an Initiative. See all Epics under it with per-project progress. "OCP Getting Started is 85%. AI Observability is 40%."
 
 **Project view:** Click an Epic. See every deliverable — which are done, which are in progress, which haven't started. Instantly see where a project is stuck. "Content is done on all modules but automation is behind on modules 3-5."
 
@@ -84,9 +89,9 @@ Three sync paths ensure Jira stays current:
 | Role | Jira Responsibility |
 |------|---------------------|
 | **Developers** | Nothing. PH handles Jira automatically. Developers can glance at their Epic if curious. |
-| **Direct managers** | Create Initiatives for their areas. Verify Jira reflects reality. Adjust points if defaults are wrong. Pull reports for their teams. |
-| **PM** | Use Initiatives for portfolio tracking. Set due dates. Build dashboards for cross-effort views. |
-| **Senior director** | Consume dashboards. Drill into Initiatives and Epics. Make checkpoint/cut decisions based on point data. |
+| **Direct managers** | Create Initiatives for their events/efforts. Verify Jira reflects reality. Adjust points if defaults are wrong. Pull reports for their teams. |
+| **PM** | Use Initiatives and Outcomes for portfolio tracking. Set due dates on Initiatives. Build dashboards for cross-effort views. |
+| **Senior director** | Create Outcomes for organizational groupings. Consume dashboards. Drill into Initiatives and Epics. Make checkpoint/cut decisions based on point data. |
 
 ## What Jira Does NOT Track
 
@@ -98,6 +103,6 @@ Three sync paths ensure Jira stays current:
 
 Two things need to happen before this can go live:
 
-1. **New Jira project.** We need a dedicated Jira project (working name: RHDPPH) so we can configure workflows, story points, and automation rules without affecting GPTEINFRA. Cross-project dashboards and issue links keep everything visible alongside existing RHDP work.
+1. **New Jira project.** We need a dedicated Jira project (RHDPCD) so we can configure workflows, story points, and automation rules without affecting GPTEINFRA. Cross-project dashboards and issue links keep everything visible alongside existing RHDP work.
 
 2. **Jira service account.** The Central backend needs a service account with API access to create and update tickets programmatically. This is the integration identity — not tied to any individual's account.
