@@ -14,9 +14,9 @@ Rules that apply to ALL Publishing House skills. Read this before working on any
 
 The manifest's `project.autonomy` field controls agent behavior:
 
-- **supervised**: Present every artifact to user for approval before writing to disk or committing. Ask "Does this look right?" after each output. Do not commit without explicit approval.
-- **semi**: Write artifacts to disk and commit to a WIP branch. Run validation skills automatically. Only pause for user input at phase gates (transitions between lifecycle phases) and decision points (e.g., RCARS vetting results).
-- **full**: Work through the entire current phase end-to-end. Present completed output at the phase gate for review before transitioning to the next phase.
+- **guided** (default): Present every artifact for approval before writing to disk or committing. "Does this look right?" after each output. Nothing hits disk without explicit approval.
+- **assisted**: Write artifacts to disk and commit to a WIP branch. Run validation skills automatically. Only pause at phase gates (transitions between lifecycle phases) and decision points (e.g., RCARS vetting results).
+- **autonomous**: Work through the entire current phase end-to-end. Present completed output at the phase gate for review before transitioning to the next phase.
 
 ## Phase Transitions
 
@@ -57,7 +57,7 @@ version from disk. If a file has changed since the last agent run:
 - Respect the human's changes as intentional
 - Build on top of what exists rather than overwriting it
 - Flag divergence from the spec as informational (the human may have had good reasons)
-- Ask before reverting or overwriting human work, even in `full` autonomy mode
+- Ask before reverting or overwriting human work, even in `autonomous` mode
 
 The manifest tracks module status, but it cannot track every human edit. A module marked
 `drafted` may have been substantially revised by a human since the writer agent produced it.

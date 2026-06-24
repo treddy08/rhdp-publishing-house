@@ -17,7 +17,7 @@ Entry point. Checks the current directory for a project manifest, syncs the repo
 state, presents current status, and dispatches agent skills. If no project is found, offers
 three paths: point to a local clone, provide a remote URL, or create a new one from the
 template. Handles Showroom and automation repo setup at phase gates. Supports three
-autonomy levels: supervised (default), semi, full.
+autonomy levels: guided (default), assisted, autonomous.
 
 ### /rhdp-publishing-house:intake
 
@@ -95,9 +95,9 @@ See [docs/getting-started.md](docs/getting-started.md).
 
 | Level | Behavior |
 |-------|----------|
-| **supervised** (default) | Review every artifact before commit |
-| **semi** | Review at phase gates only |
-| **full** | Review at phase completion |
+| **guided** (default) | Review every artifact before commit |
+| **assisted** | Review at phase gates only |
+| **autonomous** | Review at phase completion |
 
 ## Content Lifecycle
 

@@ -6,7 +6,7 @@ RHDP Publishing House uses a Hub + Spoke plugin architecture. A thin orchestrato
 
 ```mermaid
 graph TD
-    CMD["/rhdp-publishing-house [supervised|semi|full]"] --> O["Orchestrator<br/>(discovers project, syncs repo, reads manifest, dispatches)"]
+    CMD["/rhdp-publishing-house [guided|assisted|autonomous]"] --> O["Orchestrator<br/>(discovers project, syncs repo, reads manifest, dispatches)"]
     O --> I[Intake]
     O --> W[Writer]
     O --> Ed[Editor]
@@ -72,7 +72,7 @@ graph LR
 The entry point. Checks the current directory for a project manifest, syncs the repo, reads state, presents current status, and dispatches agent skills. If no project is found, offers three paths: point to a local clone, provide a remote URL to clone, or create a new project from the template. Does not perform content work itself — purely state management and routing.
 
 - **Model:** Opus 4.6
-- **Invoked by:** `/rhdp-publishing-house [supervised|semi|full]`
+- **Invoked by:** `/rhdp-publishing-house [guided|assisted|autonomous]`
 - **Session start:** `git pull --rebase --autostash`
 - **Session end:** commits manifest + worklog, pushes
 
@@ -186,11 +186,11 @@ Control how much review you want at each step:
 
 | Level | Behavior |
 |-------|----------|
-| **supervised** (default) | Agent presents every artifact for approval before committing |
-| **semi** | Agent works ahead, pauses at phase gates and decision points |
-| **full** | Agent works through entire phase, presents output at phase completion |
+| **guided** (default) | Agent presents every artifact for approval before committing |
+| **assisted** | Agent works ahead, pauses at phase gates and decision points |
+| **autonomous** | Agent works through entire phase, presents output at phase completion |
 
-Switch mid-session: `"switch to semi"` or re-invoke with a different level.
+Switch mid-session: `"switch to assisted"` or re-invoke with a different level.
 
 ## Existing Skills Reused
 

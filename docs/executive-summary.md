@@ -33,7 +33,7 @@ graph LR
 
 **Specialized Agents** — Six focused AI agents — Intake, Writer, Editor, Automation, Security, Review — each backed by existing RHDP skills where possible (showroom, agnosticv, code-review). No reinventing the wheel.
 
-**Configurable Autonomy** — Three modes: **supervised** (review every artifact), **semi** (review at gates), **full** (review at phase completion). Start supervised, build trust, scale up.
+**Configurable Autonomy** — Three modes: **guided** (review every artifact), **assisted** (review at gates), **autonomous** (review at phase completion). Start guided, build trust, scale up.
 
 **RCARS Integration** — Automatically vets new content against the existing RHDP catalog via the RCARS API. Identifies gaps, prevents duplication, and can feed gap analysis directly into new project creation.
 
@@ -78,7 +78,7 @@ A thin orchestrator manages state and dispatches to specialized agent skills. Ea
 
 ```mermaid
 graph TD
-    CMD["/rhdp-publishing-house [supervised|semi|full]"] --> O[Orchestrator]
+    CMD["/rhdp-publishing-house [guided|assisted|autonomous]"] --> O[Orchestrator]
     O --> |"reads manifest, determines phase, dispatches"| I[Intake]
     O --> W[Writer]
     O --> Ed[Editor]

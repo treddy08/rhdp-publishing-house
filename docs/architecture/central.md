@@ -119,7 +119,7 @@ project:
   owner_github: "jsmith"
   type: "workshop"              # workshop | demo
   deployment_mode: "rhdp_published"  # rhdp_published | self_published
-  autonomy: "supervised"
+  autonomy: "guided"
   created: "2026-04-01"
 
 lifecycle:

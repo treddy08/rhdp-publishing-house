@@ -101,9 +101,9 @@ The content pipeline (intake, writing, editing) is the same for onboarded and se
 Control how much review you want at each step:
 
 ```
-/rhdp-publishing-house              # supervised (default) — review everything
-/rhdp-publishing-house semi         # review at phase gates only
-/rhdp-publishing-house full         # review at phase completion
+/rhdp-publishing-house              # guided (default) — review everything
+/rhdp-publishing-house assisted     # review at phase gates only
+/rhdp-publishing-house autonomous   # review at phase completion
 ```
 
 Switch any time mid-session: `"switch to semi"`
