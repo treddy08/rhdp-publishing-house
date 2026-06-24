@@ -145,10 +145,10 @@ Six skills in `skills-plugin/skills/`:
 
 ```
 intake → vetting → spec_refinement → approval → writing → editing →
-automation → code_security_review → final_review → ready_for_publishing
+automation → code_review ↔ security_review → e2e_testing → final_review → ready_for_publishing
 ```
 
-Required phases: intake, writing, code_security_review, final_review. Optional phases can be skipped. The orchestrator manages transitions; individual skills must not touch phase-level state.
+Required phases: intake, writing, code_review, security_review, final_review. Optional phases can be skipped. Code review and security review run in parallel (like writing/automation). E2E testing follows both reviews. The orchestrator manages transitions; individual skills must not touch phase-level state.
 
 ### Infrastructure
 

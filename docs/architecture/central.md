@@ -36,9 +36,8 @@ The **Pipeline** page shows a kanban board with columns mapping to lifecycle pha
 | Writing | writing |
 | Automation | automation |
 | Editing | editing |
-| Code & Security | code_security_review |
-| Final Review | final_review |
-| Ready | ready_for_publishing |
+| Review | editing, code_review, security_review |
+| Ready | e2e_testing, final_review, ready_for_publishing |
 
 Each project appears as a card in its current active phase column. Cards show the project name, module count, and assignees.
 

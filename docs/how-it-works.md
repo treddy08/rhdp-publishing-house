@@ -27,13 +27,18 @@ Each agent is a separate skill file — focused, testable, independently iterabl
 ```mermaid
 graph LR
     A["Intake*"] --> B[Vetting] --> C[Spec Refinement] --> D["Approval*"]
-    D --> E[Writing] --> F[Automation] --> G["Editing*"]
-    G --> H["Code & Security Review*"] --> I["Final Review*"] --> J[Ready for Publishing]
+    D --> E[Writing] --> G["Editing*"]
+    D --> F[Automation] --> G
+    G --> H["Code Review*"] --> J["E2E Testing*"]
+    G --> K["Security Review*"] --> J
+    J --> I["Final Review*"] --> L[Ready for Publishing]
 
     style A fill:#1a73e8,color:#fff
     style D fill:#1a73e8,color:#fff
     style G fill:#1a73e8,color:#fff
     style H fill:#1a73e8,color:#fff
+    style K fill:#1a73e8,color:#fff
+    style J fill:#1a73e8,color:#fff
     style I fill:#1a73e8,color:#fff
 ```
 
@@ -46,7 +51,9 @@ graph LR
 | **Intake** | Intake Agent (Opus) | Generates or ingests the project spec and module outlines. Shortcuttable with a pre-existing design doc. |
 | **Approval** | Human | Owner reviews and approves the spec. Hard gate — never auto-advanced. |
 | **Technical Editing** | Editor Agent (Sonnet) | Wraps `showroom:verify-content` + spec alignment checks. Quality gate regardless of how content was produced. |
-| **Code & Security Review** | Security Agent (Sonnet) | Content-level security audit and automation code review. *(Not yet implemented.)* |
+| **Code Review** | Reviewer (Sonnet) | Automation code review — correctness, patterns, maintainability. *(Not yet implemented.)* |
+| **Security Review** | Security Agent (Sonnet) | Content-level security audit and automation security review. *(Not yet implemented.)* |
+| **E2E Testing** | Human + Agent | Deploy environment, walk the lab as a student, verify it works end-to-end. *(Not yet implemented.)* |
 | **Final Review** | Review Agent (Sonnet) | Holistic check: spec alignment, completeness, cross-module consistency. *(Not yet implemented.)* |
 
 ### Optional Phases
@@ -111,7 +118,7 @@ Creates automation requirements, AgnosticV catalog configuration, and environmen
 - **Sub-phases:**
   - **7a: Automation Requirements** — analyzes content (outlines, AsciiDoc, design spec) to produce a reviewable `automation-manifest.yaml` describing what needs to be pre-configured. Always a human-approval gate.
   - **7b: Catalog Item** — wraps `agnosticv:catalog-builder` + `agnosticv:validator`. `rhdp_published` only; automatically skipped for `self_published`. Handles the case where the user doesn't have AgnosticV access (sets `pending_handoff` and records a worklog entry).
-  - **7c: Automation Code** — writes Ansible collections or GitOps repos from the approved requirements manifest. Runs a safety checklist after writing (no hardcoded creds, pinned image tags, variable naming). The formal code review happens in Code & Security Review.
+  - **7c: Automation Code** — writes Ansible collections or GitOps repos from the approved requirements manifest. Runs a safety checklist after writing (no hardcoded creds, pinned image tags, variable naming). The formal code review happens in the Code Review phase.
   - **7d: Testing** — human gate: deploy to a dev environment and verify automation works
 - **Deployment mode behavior:**
   - `self_published` → GitOps only (Helm + ArgoCD, using `field-sourced-content-template`)
@@ -128,9 +135,17 @@ Manages the human-context layer between sessions.
 - **Commits and pushes** after every read/write operation
 - **Auto-squashes** old resolved entries when the file grows large
 
-### Code & Security Review Agent *(not yet implemented)*
+### Code Review Agent *(not yet implemented)*
 
-Code review of automation artifacts and security audit of both content and automation.
+Code review of automation artifacts — correctness, patterns, maintainability.
+
+### Security Review Agent *(not yet implemented)*
+
+Security audit of both content and automation — credentials, hardcoded values, RBAC scope.
+
+### E2E Testing *(not yet implemented)*
+
+Deploy the environment, walk the lab as a student, verify all steps work end-to-end. Runs after both code review and security review pass.
 
 ### Final Review Agent *(not yet implemented)*
 
