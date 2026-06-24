@@ -81,6 +81,23 @@ Portal as MCP gateway, express mode, Jira visibility, hosted chatbot. MCP gatewa
 
 Items that are unblocked or nearly unblocked. Not on the current roadmap but high value.
 
+### Setup skill (`/rhdp-publishing-house:setup`) — PRIORITY
+
+**Origin:** PH intake testing (2026-06-24). Users have no guided way to configure PH for first use. The orchestrator silently infers the wrong email from git config, and MCP server setup is entirely manual.
+
+**Problem.** `PH_USER_EMAIL` exists in the orchestrator instructions but there's no mechanism to set it. Users whose git email differs from their Red Hat SSO email (common — e.g., `nate@redhat.com` vs `nstephan@redhat.com`) get silently matched to the wrong identity in Central. MCP server connection to Central is also manual (copy API key, add to settings).
+
+**What the skill does:**
+1. Ask for Red Hat SSO email and GitHub username
+2. Write `PH_USER_EMAIL` and `PH_OWNER_GITHUB` to `.claude/settings.local.json` under the `env` block (pattern established by rhdp-rca-plugin's `settings.example.json`)
+3. Configure MCP server connection to PH Central (API key, endpoint URL)
+4. Verify Central connectivity with a test call
+5. Any future first-run configuration items go here
+
+**Ship with:** A `settings.example.json` in the plugin showing all configurable env vars. The setup skill is the guided path; manual editing of settings is the power-user path.
+
+**Depends on:** Nothing — unblocked. Uses existing Claude Code `env` block in settings and the `CLAUDE_ENV_FILE` mechanism.
+
 ### Documentation overhaul — PRIORITY
 
 **Origin:** PH Central testing and manifest review (2026-06-24).
