@@ -6,6 +6,40 @@ Clear periodically — the backlog ([BACKLOG.md](BACKLOG.md)) is the persistent 
 
 ---
 
+## 2026-06-23/24 — Test infrastructure, manifest schema, intake refactor (Nate)
+
+### Test Infrastructure
+- Created 4 example repos (`publishing-house-example-{ai,ansible,appdev,rhel}`) with fresh templates for repeatable E2E testing
+- Created test prompt files in `test/onboarded/` for each — AI Observability (3 modules), AppDev Postcard Generator (5 modules, bring-your-own automation), RHEL Container Hardening (Hummingbird), Ansible Edge Automation
+- All repos have `jira.enabled: false` to avoid creating Jira issues during test runs
+
+### Manifest Schema Changes
+- Added `owner_email` field (Red Hat SSO email, separate from GitHub email)
+- Removed `owner_name` (unnecessary)
+- Split `code_security_review` into parallel `code_review` + `security_review` phases
+- Added `e2e_testing` phase after reviews, before final_review
+- Renamed autonomy modes: `supervised` → `guided`, `semi` → `assisted`, `full` → `autonomous`
+- Removed deprecated `rcars_api`, `field_source_ci` from integrations, `e2e_checks` from automation substeps
+- Updated phase_engine, manifest_parser, jira_sync, frontend, all test fixtures, all skills, all docs
+
+### Intake Skill Fixes
+- Deferred Central registration for blank templates (don't register until manifest is populated)
+- Fixed post-intake handoff message (was contradictory — now asks "Ready to advance?")
+- Added instruction to use user-provided module descriptions as-is, not substitute LLM's ideas
+- **Subagent-based module outline generation** — design.md is written first from the conversation, then a fresh subagent generates module outlines from the written spec only (no conversation context bleed)
+- SSO email: orchestrator now asks explicitly instead of inferring from git config
+
+### Backlog Updates
+- Added setup skill (`/rhdp-publishing-house:setup`) as high priority — first-run config for SSO email, GitHub username, MCP server connection
+- Added documentation overhaul as high priority — docs are stale after all the schema and phase changes
+
+### What's Next
+1. **Test the intake with subagent dispatch** — reset example-ai, run the AI Observability test prompt, verify module outlines match the design spec
+2. **Build the setup skill** — guided first-run config, writes to `.claude/settings.local.json`
+3. **Documentation overhaul** — consistency pass across all docs
+
+---
+
 ## 2026-06-22 — Jira integration implementation, spec template, doc overhaul (Nate)
 
 ### Jira Integration (Central backend — fully implemented)
