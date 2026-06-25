@@ -1,9 +1,10 @@
 # Jira Integration Design Spec
 
-**Date:** 2026-05-05
-**Status:** Draft
+**Date:** 2026-05-05 (updated 2026-06-25)
+**Status:** Active — core implemented, polish items in RHDPCD-77
 **Phase:** 3 (Milestone 2 Roadmap)
 **Depends on:** Phase 1 (RCARS MCP Gateway) — complete, Publishing House Central architecture — complete (2026-06-19 spec)
+**Tracking:** [RHDPCD-77](https://redhat.atlassian.net/browse/RHDPCD-77) — remaining polish items
 
 ## Problem
 
@@ -179,7 +180,8 @@ Outcome (grouping)             → "All Events", "Non-Event Content"  [manually 
               ├── Module 2: Automation → 8 pts                      [PH auto-created]
               ├── Module 2: Verified  → 5 pts                       [PH auto-created]
               ├── ...
-              ├── Code & Security Review → 3 pts                    [PH auto-created]
+              ├── Code Review         → 3 pts                       [PH auto-created]
+              ├── Security Review     → 3 pts                       [PH auto-created]
               ├── E2E Test            → 8 pts                       [PH auto-created]
               └── Final Review        → 1 pt                        [PH auto-created]
 ```
@@ -201,27 +203,28 @@ Points represent relative effort. Fixed defaults set by PH at task creation. Man
 | Deliverable | Points | Manifest Source | Count |
 |---|---|---|---|
 | Design Doc | 3 | `lifecycle.phases.intake.status` + `lifecycle.phases.vetting.status` | 1 per project |
-| Module X: Outline | 5 | `lifecycle.phases.spec_refinement.modules[id=X].status` (NEW) | per module |
+| Module X: Outline | 5 | `lifecycle.phases.spec_refinement.modules[id=X].status` | per module |
 | Module X: Content | 5 | `lifecycle.phases.writing.modules[id=X].status` | per module |
-| Module X: Automation | 8 | `lifecycle.phases.automation.modules[id=X].status` (NEW) | per module |
-| Module X: Verified | 5 | `lifecycle.phases.writing.modules[id=X].verified` (NEW) | per module |
-| Code & Security Review | 3 | `lifecycle.phases.code_security_review.status` | 1 per project |
-| E2E Test | 8 | `lifecycle.phases.e2e_test.status` (NEW) | 1 per project |
+| Module X: Automation | 8 | `lifecycle.phases.automation.modules[id=X].status` | per module |
+| Module X: Verified | 5 | `lifecycle.phases.writing.modules[id=X].verified` | per module |
+| Code Review | 3 | `lifecycle.phases.code_review.status` | 1 per project |
+| Security Review | 3 | `lifecycle.phases.security_review.status` | 1 per project |
+| E2E Test | 8 | `lifecycle.phases.e2e_testing.status` | 1 per project |
 | Final Review | 1 | `lifecycle.phases.final_review.status` | 1 per project |
 
 **Manifest evolution notes:**
 - **Design Doc** combines intake + vetting. Vetting is not its own Jira task — it's part of getting the spec right. Design Doc task moves to Done when intake is complete and vetting is either complete or skipped.
-- **Module Outline** requires per-module status tracking under `spec_refinement`. Today `spec_refinement` is a single phase status. Manifest needs a `modules` array mirroring the writing phase structure.
-- **Module Automation** requires per-module status tracking under `automation`. Today automation has `substeps` (requirements, catalog_item, automation_code, testing) but not per-module status. Manifest needs a `modules` array here too. This is a significant manifest evolution that aligns with the direction of per-module self-contained automation.
-- Fields marked (NEW) require manifest additions — see Manifest Changes section.
+- **Module Outline** requires per-module status tracking under `spec_refinement`. Manifest needs a `modules` array mirroring the writing phase structure.
+- **Module Automation** requires per-module status tracking under `automation`. Manifest needs a `modules` array here too. This aligns with the direction of per-module self-contained automation.
+- **Code Review and Security Review** are separate deliverables and separate manifest phases (`code_review` and `security_review`). They run in parallel — either can complete first. Both use the same point value (3 pts each).
 
 ### Example Project Sizes
 
 | Project Type | Calculation | Total Points |
 |---|---|---|
-| 5-module workshop | 3 + 5×(5+5+8+5) + 3 + 8 + 1 | 130 |
-| 3-module workshop | 3 + 3×(5+5+8+5) + 3 + 8 + 1 | 84 |
-| 2-module quick lab | 3 + 2×(5+5+8+5) + 3 + 8 + 1 | 61 |
+| 5-module workshop | 3 + 5×(5+5+8+5) + 3 + 3 + 8 + 1 | 133 |
+| 3-module workshop | 3 + 3×(5+5+8+5) + 3 + 3 + 8 + 1 | 87 |
+| 2-module quick lab | 3 + 2×(5+5+8+5) + 3 + 3 + 8 + 1 | 64 |
 
 ### Phase Profiles and Task Creation
 
@@ -349,7 +352,7 @@ jira_task_mappings
   ├── jira_epic_key (e.g., "RHDPCD-42")
   ├── deliverable_type (enum: design_doc, module_outline, module_content,
   │                     module_automation, module_verified, code_review,
-  │                     e2e_test, final_review)
+  │                     security_review, e2e_test, final_review)
   ├── module_id (nullable — null for project-level tasks)
   ├── jira_issue_key (e.g., "RHDPCD-87")
   ├── manifest_path (e.g., "lifecycle.phases.writing.modules[id=module-03].status")
@@ -400,6 +403,271 @@ Central dashboard: "Sync to Jira" button on project detail page. Calls `JiraSync
 | Module removed from manifest | Transition task to Done with 0 points, comment "Module removed" |
 | API rate limit | Exponential backoff, reconciliation catches remainder |
 | Service account token expired | Health endpoint reports Jira unhealthy, alert via monitoring |
+
+### Assignee from owner_email
+
+When PH creates Epics and Tasks at the approval gate, it sets the Assignee field from `manifest.project.owner_email`. This gives instant visibility into who owns what — managers don't need to manually assign every task.
+
+**User lookup flow:**
+
+```
+manifest.project.owner_email = "tyrell@redhat.com"
+  → JiraClient.search_users("tyrell@redhat.com")
+    → Jira REST API GET /rest/api/3/user/search?query=tyrell@redhat.com
+      → Returns [{accountId: "70121:abc123", displayName: "Tyrell Dev", ...}]
+  → Use accountId in assignee field when creating Epic and Tasks
+```
+
+**JiraClient.search_users method:**
+
+```python
+def search_users(self, query: str, max_results: int = 10) -> list[dict]:
+    """Search for Jira users by email or display name."""
+    params = {"query": query, "maxResults": max_results}
+    resp = self._client.get(
+        self._url("/user/search"),
+        headers=self._headers,
+        params=params,
+    )
+    resp.raise_for_status()
+    return resp.json()
+```
+
+**Rules:**
+- PH sets Assignee **at creation time only** — never overwrites existing Assignee values on subsequent syncs.
+- If the email lookup fails (user not found, API error), the Epic/Task is created without an Assignee. Log a warning, don't fail.
+- The Assignee is set on both the Epic and all Tasks from the same `owner_email`. A manager can reassign individual Tasks in Jira later.
+- Cache the account ID lookup per sync call — no need to look up the same email multiple times within one `create_project` call.
+
+**Implementation in JiraSyncService.create_project:**
+
+```python
+# Look up Jira account ID from owner email
+owner_email = manifest.get("project", {}).get("owner_email")
+assignee_account_id = None
+if owner_email:
+    try:
+        users = self._jira.search_users(owner_email)
+        if users:
+            assignee_account_id = users[0].get("accountId")
+            logger.info("Resolved %s to Jira accountId %s", owner_email, assignee_account_id)
+        else:
+            logger.warning("No Jira user found for email %s", owner_email)
+    except JiraError as e:
+        logger.warning("Jira user lookup failed for %s: %s", owner_email, e.message)
+
+# Set on Epic and Task creation:
+if assignee_account_id:
+    epic_fields["assignee"] = {"accountId": assignee_account_id}
+    task_fields["assignee"] = {"accountId": assignee_account_id}
+```
+
+### Dashboard Sync Button
+
+The Central dashboard project detail page needs a "Sync to Jira" button that forces Central to reconcile a project's Jira state on demand. Currently the only sync triggers are gate-driven (during active CC work) and periodic (APScheduler). There's no way for a manager or developer to force a sync without either.
+
+**REST API endpoint:**
+
+```
+POST /api/v1/projects/{project_id}/sync-jira
+
+Response 200:
+{
+  "synced": true,
+  "changes": [
+    {"issue_key": "RHDPCD-101", "deliverable": "module_content", "from": "pending", "to": "in_progress"}
+  ],
+  "epic_key": "RHDPCD-100"
+}
+
+Response 200 (Jira not configured):
+{"synced": false, "reason": "jira_not_configured"}
+
+Response 200 (no mappings):
+{"synced": false, "reason": "no_mappings"}
+
+Response 404: Project not found
+```
+
+**Backend implementation** (in `app/api/projects.py`):
+
+```python
+@router.post("/{project_id}/sync-jira")
+def sync_project_jira(project_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Manually trigger Jira sync for a project."""
+    project = db.query(Project).filter_by(id=project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
+
+    jira_svc = create_jira_sync_service()
+    if not jira_svc:
+        return {"synced": False, "reason": "jira_not_configured"}
+
+    if not project.cached_manifest_data:
+        return {"synced": False, "reason": "no_manifest_data"}
+
+    result = jira_svc.sync_project(db, project.id, project.cached_manifest_data)
+    return result
+```
+
+**Frontend** (in project detail page, kebab dropdown):
+
+Add "Sync to Jira" as a dropdown item after "Refresh from GitHub." Only shown for `rhdp_published` projects. Calls `api.syncProjectJira(projectId)`, shows a brief toast with the number of changes made.
+
+```typescript
+// api.ts
+syncProjectJira: (id: string) =>
+  request<{synced: boolean; changes?: unknown[]; reason?: string}>(`/projects/${id}/sync-jira`, { method: "POST" }),
+```
+
+The button re-reads the manifest from the cached data (not a fresh GitHub fetch) and reconciles against Jira. If the user wants a fresh manifest first, they should "Refresh from GitHub" then "Sync to Jira."
+
+### Error Edge Cases — Manifest as Truth
+
+The sync service must handle three divergence scenarios where Jira state has drifted from the manifest. These ensure the git manifest remains the source of truth. The reconciliation runs during `sync_project` (all three sync paths: gate-driven, periodic, dashboard button).
+
+**Scenario 1: Jira task deleted manually**
+
+Someone deletes a Jira task (or it gets cleaned up by automation). The mapping table still has a row for it, but the issue no longer exists in Jira.
+
+Detection: During `_diff_and_transition`, after querying Jira for child issues of the Epic, check whether any mapped issue keys are missing from the Jira response.
+
+Behavior:
+1. Log warning: "Jira task {key} not found — recreating"
+2. Create a new Jira Task with the same summary, points, and parent Epic
+3. Update the mapping table row with the new Jira issue key
+4. Transition the new task to match the current manifest status
+
+```python
+# In _diff_and_transition, after building jira_status_map:
+for mapping in mappings:
+    if mapping.jira_issue_key not in jira_status_map:
+        logger.warning("Jira task %s deleted externally — recreating", mapping.jira_issue_key)
+        d = DELIVERABLE_DEFAULTS.get(DeliverableType(mapping.deliverable_type))
+        if not d:
+            continue
+        task_fields = {
+            "project": {"key": self._project_key},
+            "issuetype": {"id": ISSUE_TYPE_TASK},
+            "summary": d["summary"],  # rebuild from deliverable type + module
+            "parent": {"key": epic_key},
+            FIELD_STORY_POINTS: float(mapping.default_points),
+        }
+        try:
+            new_task = self._jira.create_issue(task_fields)
+            old_key = mapping.jira_issue_key
+            mapping.jira_issue_key = new_task["key"]
+            db.commit()
+            jira_status_map[new_task["key"]] = "pending"
+            changes.append({"issue_key": new_task["key"], "action": "recreated", "old_key": old_key})
+        except JiraError as e:
+            logger.warning("Failed to recreate task: %s", e.message)
+```
+
+**Scenario 2: Manifest has module with no Jira task**
+
+A module was added to the manifest after the initial Epic creation (e.g., the developer added Module 6 to a 5-module workshop). The mapping table has no rows for this module's deliverables.
+
+Detection: During `sync_project`, compare `build_deliverable_list(manifest)` against existing mappings. Any deliverable in the manifest list that has no corresponding mapping is a new task to create.
+
+Behavior:
+1. Log info: "New module {id} found in manifest — creating Jira tasks"
+2. Create Tasks for all missing deliverables under the existing Epic
+3. Add new rows to the mapping table
+4. Transition new tasks to match current manifest status
+
+```python
+# In sync_project, after fetching mappings:
+manifest_deliverables = build_deliverable_list(manifest, "rhdp_published")
+existing_keys = {(m.deliverable_type, m.module_id) for m in mappings}
+missing = [d for d in manifest_deliverables
+           if (d["deliverable_type"], d["module_id"]) not in existing_keys]
+
+if missing:
+    for d in missing:
+        task_fields = {
+            "project": {"key": self._project_key},
+            "issuetype": {"id": ISSUE_TYPE_TASK},
+            "summary": d["summary"],
+            "parent": {"key": epic_key},
+            FIELD_STORY_POINTS: float(d["points"]),
+        }
+        task = self._jira.create_issue(task_fields)
+        new_mapping = JiraTaskMapping(
+            project_id=project_id,
+            jira_epic_key=epic_key,
+            deliverable_type=d["deliverable_type"],
+            module_id=d["module_id"],
+            jira_issue_key=task["key"],
+            manifest_path=d["manifest_path"],
+            default_points=d["points"],
+        )
+        db.add(new_mapping)
+    db.commit()
+    # Re-fetch mappings to include new ones
+    mappings = db.query(JiraTaskMapping).filter_by(project_id=project_id).all()
+```
+
+**Scenario 3: Module removed from manifest**
+
+A module was removed from the manifest (e.g., the workshop was scoped down from 5 to 3 modules). The mapping table has rows for deliverables that no longer exist in the manifest.
+
+Detection: During `sync_project`, compare existing mappings against `build_deliverable_list(manifest)`. Any mapping whose `(deliverable_type, module_id)` is not in the manifest deliverable list is orphaned.
+
+Behavior:
+1. Log info: "Module {id} removed from manifest — closing Jira tasks"
+2. Transition each orphaned task to Done with resolution "Done"
+3. Set story points to 0 on the Jira task (to avoid inflating totals)
+4. Add a comment: "Module removed from manifest"
+5. Update the mapping table: set `default_points = 0` (keep the row for audit trail)
+
+```python
+# After the missing-module check:
+manifest_keys = {(d["deliverable_type"], d["module_id"]) for d in manifest_deliverables}
+orphaned = [m for m in mappings
+            if (m.deliverable_type, m.module_id) not in manifest_keys]
+
+for mapping in orphaned:
+    try:
+        self._jira.transition_issue(mapping.jira_issue_key, TRANSITION_CLOSED,
+                                     fields={"resolution": {"name": "Done"}})
+        self._jira.add_comment(mapping.jira_issue_key, "Module removed from manifest")
+        # Zero out points so totals stay accurate
+        self._jira.update_issue(mapping.jira_issue_key,
+                                 fields={FIELD_STORY_POINTS: 0.0})
+        mapping.default_points = 0
+        changes.append({"issue_key": mapping.jira_issue_key, "action": "removed",
+                         "module_id": mapping.module_id})
+    except JiraError as e:
+        logger.warning("Failed to close orphaned task %s: %s", mapping.jira_issue_key, e.message)
+
+db.commit()
+```
+
+**JiraClient.update_issue method** (needed for zeroing story points):
+
+```python
+def update_issue(self, issue_key: str, fields: dict) -> None:
+    """Update fields on an existing Jira issue."""
+    self._enforce_issue_prefix(issue_key)
+    try:
+        resp = self._client.put(
+            self._url(f"/issue/{issue_key}"),
+            headers=self._headers,
+            json={"fields": fields},
+        )
+        resp.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        self._handle_error(e)
+```
+
+**Summary of edge case handling:**
+
+| Scenario | Detection | Action | Mapping Table |
+|---|---|---|---|
+| Jira task deleted | Mapped key not in JQL results | Recreate task, transition to current status | Update key |
+| New module in manifest | Deliverable has no mapping row | Create tasks under existing Epic | Add rows |
+| Module removed from manifest | Mapping has no corresponding deliverable | Close with 0 pts, add comment | Set points=0, keep row |
 
 ### Jira Data in MCP Responses
 
@@ -556,8 +824,34 @@ The sync service handles manifests with and without the new fields:
 | Jira service account provisioned | Not started (personal account used for dev) | Yes — gating dependency for **production** deployment |
 | Phase 1 (MCP Gateway) | Complete | No |
 | Publishing House Central architecture | **Complete** (2026-06-19 spec, implemented) | No |
+| JiraClient + JiraSyncService | **Complete** (2026-06-22, deployed to central-dev) | No |
+| Gate hooks + ph_get_status jira block | **Complete** (2026-06-22) | No |
+| Periodic reconciliation hook | **Complete** (2026-06-22, wired to APScheduler) | No |
+| Ansible templates for Jira credentials | **Complete** (2026-06-22) | No |
+| Custom fields (Waiting On, Dependency Note) | Not started — needs Delegated Admin or PME | No (v1 works without them) |
 
 ---
+
+## Implementation Status
+
+| Component | Status | Notes |
+|---|---|---|
+| JiraClient (HTTP client) | **Complete** | Basic auth, project key guardrail, create/transition/comment/search/get |
+| JiraClient.search_users | **Not started** | Needed for assignee from owner_email |
+| JiraClient.update_issue | **Not started** | Needed for zeroing story points on removed modules |
+| JiraTaskMapping model | **Complete** | SQLAlchemy model + Alembic migration |
+| JiraSyncService.create_project | **Complete** | Creates Epic + Tasks at approval gate |
+| JiraSyncService.sync_project | **Partial** | Status transitions work; error edge cases (deleted/missing/removed) not implemented |
+| JiraSyncService.get_open_initiatives | **Complete** | JQL query, exposed via `ph_get_open_initiatives` MCP tool |
+| JiraSyncService.get_jira_summary | **Complete** | Points total + epic URL, folded into `ph_get_status` response |
+| Gate hooks | **Complete** | `ph_request_gate` triggers Jira sync after approved gates |
+| `ph_get_status` jira block | **Complete** | Returns `jira: {epic_key, epic_url, task_count, points_total}` or null |
+| Periodic reconciliation | **Complete** | `_reconcile_jira` hooked into APScheduler `_scheduled_refresh` |
+| Dashboard sync button | **Not started** | REST endpoint + frontend button (RHDPCD-77) |
+| Assignee from owner_email | **Not started** | User lookup + set at Epic/Task creation (RHDPCD-77) |
+| Error edge cases | **Not started** | Deleted tasks, missing modules, removed modules (RHDPCD-77) |
+| Ansible templates | **Complete** | Jira credentials Secret + env vars |
+| Jira service account | **Not started** | Using personal account for dev; service account needed for prod |
 
 ## Backlog Items Identified During Design
 

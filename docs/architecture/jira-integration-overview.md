@@ -36,7 +36,8 @@ Outcome: "All Events"
               ├── Module 2: Content             [5 pts]  ● In Progress
               ├── Module 2: Automation          [8 pts]  ○ To Do
               ├── Module 2: Verified            [5 pts]  ○ To Do
-              ├── Code & Security Review        [3 pts]  ○ To Do
+              ├── Code Review                   [3 pts]  ○ To Do
+              ├── Security Review               [3 pts]  ○ To Do
               ├── E2E Test                      [8 pts]  ○ To Do
               └── Final Review                  [1 pt]   ○ To Do
 ```
@@ -52,11 +53,12 @@ Every deliverable gets a fixed point value based on its type. Points represent r
 | Module Content (each) | 5 | The actual instructional content (AsciiDoc) |
 | Module Automation (each) | 8 | Infrastructure automation code for each module |
 | Module Verified (each) | 5 | End-to-end test — content + automation work together |
-| Code & Security Review | 3 | Cross-cutting review of all code and content |
+| Code Review | 3 | Cross-cutting review of all code |
+| Security Review | 3 | Security-focused review of code and config |
 | E2E Test | 8 | Full end-to-end validation of the complete lab |
 | Final Review | 1 | Stakeholder sign-off |
 
-A 5-module workshop totals **130 points**. A 2-module quick lab totals **61 points**. The module count drives project size naturally.
+A 5-module workshop totals **133 points**. A 2-module quick lab totals **64 points**. The module count drives project size naturally.
 
 Points are defaults. A manager can adjust them in Jira if a particular module is unusually complex or simple — for example, bumping a module's Automation from 8 to 13 if it involves complex operator configuration. PH won't overwrite manually adjusted values.
 
