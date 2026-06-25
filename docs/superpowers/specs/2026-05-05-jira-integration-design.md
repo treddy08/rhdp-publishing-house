@@ -161,6 +161,7 @@ PH's role is limited to what it can derive from the manifest: issue creation and
 
 1. **Custom field creation:** Can project admins create "Waiting On" (multi-user picker) and "Dependency Note" (multi-line text) in RHDPCD via Delegated Project Admin, or does this require a PME request? If custom fields must be org-wide, we may need to check whether equivalent fields already exist.
 2. **Stale detection threshold:** What's the right N for "Task in progress with no manifest change"? 7 days? 14? Should it vary by deliverable type (automation tasks legitimately take longer)?
+3. **Epic creation timing and outline/design doc tasks (2026-06-25):** Epic+Tasks are now created at the vetting gate (moved from approval gate) so managers can see outline tasks in progress during development. However, with PH tooling, developers complete intake → outlines → vetting quickly, so outline and design doc tasks may still appear "born closed." The real question: are outline and design doc tasks worth tracking in Jira at all, or does the meaningful work start at writing? During events, managers do need outline visibility ("where's Tyrell's outline?"), but with AI-assisted intake the spec phase is fast. This needs a rethink — possibly: (a) keep all tasks but accept some are born-closed, (b) only create content/automation/review tasks and summarize earlier work in the Epic description, or (c) make it configurable per Initiative (event-driven work creates outline tasks, BAU skips them).
 
 ---
 
