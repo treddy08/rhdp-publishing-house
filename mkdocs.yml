@@ -30,25 +30,21 @@ extra_css:
 
 nav:
   - Home: index.md
-  - Overview:
-    - Executive Summary: executive-summary.md
-    - How It Works: how-it-works.md
-    - Getting Started: getting-started.md
+  - Overview: overview.md
   - Architecture:
-    - Portal: architecture/portal.md
-    - MCP Server: api/mcp-tools.md
+    - System Design: architecture/system-design.md
+    - Central Backend: architecture/central.md
+    - Skills System: architecture/skills.md
+    - Lifecycle & Phases: architecture/lifecycle-phases.md
     - RCARS Integration: architecture/rcars-integration.md
-    - Express Mode: architecture/express-mode-overview.md
-  - Proposed:
-    - Jira Integration: architecture/jira-integration-overview.md
-    - Hosted Workspace: architecture/hosted-workspace-overview.md
+    - Jira Integration: architecture/jira-integration.md
   - User Guides:
-    - Claude Code Setup: user/claude-code-setup.md
+    - Getting Started: user/getting-started.md
+    - Deployment Modes: user/deployment-modes.md
   - Admin Guides:
-    - Portal Deployment: admin/portal-deployment.md
-    - MCP Auth: admin/mcp-auth.md
-    - RCARS Service Auth: admin/rcars-service-auth.md
-    - Common Rules: admin/PH-COMMON-RULES.md
+    - Deployment: admin/deployment.md
+    - MCP Authentication: admin/mcp-auth.md
+    - Operations: admin/operations.md
 
 markdown_extensions:
   - tables
