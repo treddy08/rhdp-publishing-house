@@ -41,25 +41,25 @@ graph TD
     style C fill:#1a73e8,color:#fff
 ```
 
-Six skills run today: the orchestrator itself, intake (project onboarding and scoping), writer (lab and demo content generation), editor (content quality review), automation (AgnosticV catalog and Ansible), and worklog (session bridging). Code review, security review, and final review phases exist in the lifecycle but rely on review agents that are not yet implemented.
+Six skills run today: the orchestrator itself, intake (project onboarding and scoping), writer (lab and demo content generation), editor (content quality review), automation (environment and deployment configuration), and worklog (session bridging). Code review, security review, and final review phases exist in the lifecycle but rely on review agents that are not yet implemented.
 
 ### Manifest as Truth
 
 All project state flows from a single YAML file: `publishing-house/manifest.yaml` in the project's git repository. It records metadata, current lifecycle phase, phase completion status, and configuration. Every skill reads from it. Every phase transition updates it. Central and Jira are downstream consumers — they reflect the manifest, never the other way around.
 
-Project state is versioned, portable, and auditable. You can `git log` the manifest to see exactly when each phase completed. There is no database that disagrees with the code.
+Project state is versioned, portable, and auditable. Open the manifest to see exactly which phases are complete, who approved them, and what's next. There is no database that disagrees with the code.
 
 ### Central Backend
 
-Central is the backend that ties the system together — a FastAPI application with a FastMCP server mounted at `/mcp`, deployed on OpenShift with PostgreSQL. It serves four roles:
+Central is the backend that ties the system together, deployed on OpenShift. It serves four roles:
 
-**Gate authority.** When a project requests phase advancement, Central validates prerequisites and records the decision in a custody chain.
+**Gate authority.** When a project requests phase advancement, Central validates prerequisites and records the decision. For example, the writing phase cannot start until the approval gate passes — Central checks that spec refinement is complete and the spec meets structural and quality requirements before allowing the project to advance.
 
 **Jira sync engine.** For onboarded projects, Central creates and updates Jira tickets automatically as work progresses. Developers never touch Jira — tickets update as a side effect of doing the work.
 
-**RCARS gateway.** Central proxies content advisory requests to RCARS using Kubernetes ServiceAccount token authentication, so skills query RCARS through MCP tools rather than connecting directly.
+**RCARS gateway.** Central proxies content advisory requests to RCARS, so skills query RCARS through MCP tools rather than connecting directly.
 
-**Project dashboard.** A Next.js frontend gives content managers visibility into all active projects — pipeline board, project detail views, custody chains, and validation results.
+**Project dashboard.** A web frontend gives visibility into all active projects — pipeline board, project detail views, gate decisions, and validation results.
 
 See [Central Backend](architecture/central.md) for the full technical architecture.
 
@@ -67,7 +67,7 @@ See [Central Backend](architecture/central.md) for the full technical architectu
 
 During intake, Publishing House queries RCARS to check whether similar content already exists in the RHDP catalog. RCARS understands what each catalog item teaches — not just titles, but the actual lab content — so it detects semantic overlap that keyword searches would miss. If your proposed workshop covers the same ground as an existing one, PH surfaces that early. Reuse is always better than duplicate work.
 
-See [RCARS Integration](architecture/rcars-integration.md) for the auth model and API details.
+See [RCARS Integration](architecture/rcars-integration.md) for the gateway architecture and auth model.
 
 ### Deployment Modes
 
@@ -75,9 +75,11 @@ Publishing House supports three deployment modes, each with different levels of 
 
 **Onboarded** is the full RHDP publishing lifecycle. The project gets a git repo from the PH template, a manifest, Jira tracking, RCARS vetting, all review gates, and a path to production in the RHDP catalog. This is the mode for content that will be maintained long-term.
 
-**Self-published** follows the same lifecycle structure but with softer gates. Content developers manage their own publishing timeline. The manifest and skills still work, but Jira sync and formal review gates are not enforced.
+**Self-published** uses the same lifecycle and quality tools, but the content is not intended for the RHDP catalog. Teams use this mode to develop internal demos, training materials, or content they will host themselves. Gates are advisory rather than enforced — the author decides when to advance.
 
 **Express** is for one-off demo environments without the full publishing lifecycle — quick deployments where the infrastructure matters more than polished lab content. Express mode is currently in design.
+
+See [Deployment Modes](user/deployment-modes.md) for a detailed comparison.
 
 ### Session Continuity
 
@@ -87,14 +89,9 @@ Pick up where you left off any day, any session. The manifest preserves project 
 
 **Content developers** are the primary users. They run `/rhdp-publishing-house` in a project repository and work through the lifecycle with AI assistance. The orchestrator guides each phase, dispatches the right skill, and tracks progress automatically.
 
+!!! note "Local tool required"
+    A hosted solution is in development, but for now you must have [Claude Code](https://docs.anthropic.com/en/docs/claude-code) or [Cursor](https://www.cursor.com/) installed locally to use Publishing House.
+
 **Content managers and PMs** view progress across projects in the Central dashboard and Jira — which projects are in which phase, gate decisions, velocity across the content portfolio. They don't need Claude Code.
-
-**Platform engineers** maintain the Central backend, RCARS integration, and deployment infrastructure. They add new skills, extend the gate service, and manage the OpenShift deployments.
-
-## What It Runs On
-
-The skills plugin is a git repository that users clone and point their Claude Code installation at. The orchestrator and all agent skills run locally in Claude Code sessions.
-
-Central runs on OpenShift as a FastAPI backend with a Next.js dashboard frontend, backed by PostgreSQL. RCARS runs in a separate namespace on the same cluster. Jira Cloud handles ticket tracking for onboarded projects. GitHub hosts the project repositories and manifest storage.
 
 See [System Design](architecture/system-design.md) for the end-to-end technical architecture and [Getting Started](user/getting-started.md) for installation instructions.
