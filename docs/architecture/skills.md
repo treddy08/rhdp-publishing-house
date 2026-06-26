@@ -26,9 +26,9 @@ On every invocation, the orchestrator runs a deterministic startup sequence:
 
 ### One Gate Per Interaction
 
-The orchestrator enforces a critical invariant: **one gate per user interaction, then stop.** When a skill completes its work and the project is ready to advance, the orchestrator calls `ph_request_gate` on Central with the target phase. Central validates prerequisites, checks the manifest, records the decision in the custody chain, and returns a pass/fail result. If the gate passes, the orchestrator updates `lifecycle.current_phase` in the manifest. If the gate fails, the orchestrator reports what's missing and stops.
+The orchestrator enforces a critical invariant: **one gate per user interaction, then stop.** When a skill completes its work and the project is ready to advance, the orchestrator calls `ph_request_gate` on Central with the target phase. Central validates prerequisites, checks the manifest, records the gate decision, and returns a pass/fail result. If the gate passes, the orchestrator updates `lifecycle.current_phase` in the manifest. If the gate fails, the orchestrator reports what's missing and stops.
 
-This constraint exists because phase transitions have side effects -- Central records them in the custody chain, syncs to Jira (for onboarded projects), and updates the dashboard. Multiple transitions in a single interaction would be difficult to audit and could allow runaway agents to advance a project without human awareness.
+This constraint exists because phase transitions have side effects -- Central records them in the gate decision history, syncs to Jira (for onboarded projects), and updates the dashboard. Multiple transitions in a single interaction would be difficult to audit and could allow runaway agents to advance a project without human awareness.
 
 ### Fast Path
 
@@ -40,18 +40,7 @@ When the session ends, the orchestrator invokes the worklog skill to record what
 
 ### Tool Boundaries
 
-The orchestrator calls exactly six Central MCP tools:
-
-| Tool | When |
-|------|------|
-| `ph_register` | Startup (every session) |
-| `ph_list_projects` | Project discovery (when no manifest in CWD) |
-| `ph_get_status` | Status queries, pre-gate checks |
-| `ph_request_gate` | Phase advancement |
-| `ph_submit_results` | Forwarding skill results to Central |
-| `ph_get_history` | Custody chain queries |
-
-The orchestrator never calls RCARS directly, never queries the reporting database, and never accesses any data source outside Central MCP.
+The orchestrator calls Central MCP tools for project registration, status queries, gate requests, and result submission. It never calls RCARS directly, never queries the reporting database, and never accesses any data source outside Central MCP. See [Central Backend](central.md) for the full tool reference.
 
 ---
 
@@ -136,7 +125,7 @@ Intake also handles **spec refinement** after vetting. When RCARS identifies ove
 
 The writer generates Showroom AsciiDoc content by wrapping `showroom:create-lab` and `showroom:create-demo`. It must use headless mode (`ph_payload`) -- never writing `.adoc` files directly -- to ensure consistent formatting, navigation structure, and scaffold compliance.
 
-Modules are written sequentially. Each module after the first uses `mode: continue`, giving the Showroom skill the context of what came before. This matters for narrative continuity -- module 3 should reference concepts introduced in module 2, not re-explain them. Sequential generation is slower but produces content that reads as a coherent workshop rather than a collection of independent exercises.
+Modules are typically written in order. Each module after the first uses `mode: continue`, giving the Showroom skill the context of what came before. This matters for narrative continuity -- module 3 should reference concepts introduced in module 2, not re-explain them. Ordered generation produces content that reads as a coherent workshop rather than a collection of independent exercises.
 
 After generating each module, the writer runs post-generation verification:
 
@@ -203,7 +192,7 @@ To prevent unbounded growth, the worklog skill **squashes old entries** -- resol
 
 Four rules govern what skills can and cannot do. These are not guidelines -- they are invariants that the system depends on for correctness.
 
-**Skills don't own phase transitions.** Only the orchestrator calls `ph_request_gate`. Skills never modify `lifecycle.current_phase`. A skill signals readiness to the orchestrator, which decides whether to request a gate. This ensures every transition is recorded in Central's custody chain and synced to Jira.
+**Skills don't own phase transitions.** Only the orchestrator calls `ph_request_gate`. Skills never modify `lifecycle.current_phase`. A skill signals readiness to the orchestrator, which decides whether to request a gate. This ensures every transition is recorded in Central's gate decision history and synced to Jira.
 
 **Skills don't call external services directly.** No direct RCARS calls, no direct Jira calls, no reporting database queries. Everything flows through Central MCP tools. One scoped exception: intake path (C) may use Atlassian MCP tools to read a Jira issue, because the issue content is input -- not a side effect.
 
@@ -227,11 +216,3 @@ The distinction between levels is about **risk classification**, not capability.
 
 The autonomy level is informational only in the worklog and intake skills, which are inherently interactive.
 
----
-
-## Cross-References
-
-- See [System Design](system-design.md) for the full system architecture
-- See [Lifecycle & Phases](lifecycle-phases.md) for how phases and gates work
-- See [Central Backend](central.md) for the MCP tools the orchestrator calls
-- See [RCARS Integration](rcars-integration.md) for how vetting queries reach RCARS

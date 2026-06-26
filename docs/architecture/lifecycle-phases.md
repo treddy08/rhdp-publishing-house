@@ -108,17 +108,7 @@ Soft gates are used for self-published projects where the author owns the qualit
 
 ### Gate Records
 
-Both gate types produce a `GateRecord` in the custody chain. The record captures:
-
-- **Phase** -- which phase the project is advancing to
-- **Result** -- `approved`, `rejected`, or `overridden`
-- **Reason** -- human-readable explanation of the decision
-- **Findings** -- structured JSONB containing validation details (e.g., RCARS matches, spec review results)
-- **Requested by** -- email of the person who triggered the gate request
-- **Approved by** -- email of the person who approved (may differ from requester)
-- **Self-approval flag** -- whether the requester and approver are the same person
-
-The record is permanent. Gate decisions cannot be edited or deleted after the fact.
+Both gate types produce a permanent gate decision record. Each record captures the decision (approved, rejected, or overridden), the rationale, who requested it, and who was involved. Gate decisions cannot be edited or deleted after the fact.
 
 ---
 
@@ -134,7 +124,7 @@ When the orchestrator calls `ph_request_gate`, Central executes a multi-step val
 
 3. **Gate-type dispatch.** For soft gates, if prerequisites pass, the gate approves and records the decision. For hard gates, additional validation runs (described below).
 
-4. **GateRecord creation.** The gate decision is written to the custody chain with all findings, regardless of outcome.
+4. **Gate record creation.** The gate decision is recorded permanently with all findings, regardless of outcome.
 
 5. **Jira sync.** If the project has Jira tracking enabled and the gate approved, Central syncs the phase transition to Jira. This step is non-blocking -- Jira failures do not revert the gate decision.
 
@@ -182,20 +172,11 @@ Gates beyond approval follow the common flow without phase-specific validation. 
 
 ---
 
-## Custody Chain
+## Gate Decision History
 
-The custody chain is the complete audit trail for a project's lifecycle. Every gate decision -- approved, rejected, or overridden -- is permanently recorded with its findings, timestamps, and actors.
+Every gate decision -- approved, rejected, or overridden -- is permanently recorded with its findings, timestamps, and actors. This provides a complete audit trail for a project's lifecycle. Reviewers can inspect not just the decision but the evidence that informed it.
 
-The chain answers questions like:
-
-- Who approved this project's spec, and when?
-- What did RCARS find during vetting?
-- Were any gates overridden, and by whom?
-- What findings did the spec reviewer produce?
-
-Each `GateRecord` stores findings as JSONB, so the full context of the gate evaluation is preserved. Reviewers can inspect not just the decision but the evidence that informed it.
-
-The MCP tool `ph_get_history` returns the full custody chain for a project in chronological order. The Central dashboard's project detail page renders the chain as a timeline with expandable finding details.
+The MCP tool `ph_get_history` returns the full gate decision history for a project in chronological order. The Central dashboard renders it as a timeline with expandable finding details.
 
 ---
 
@@ -238,38 +219,3 @@ Completed phases carry a `completed_at` timestamp. Some phases carry additional 
 
 The orchestrator reads this block to determine what work is available. Individual skills read their phase's entry to understand their inputs. Neither the orchestrator nor skills modify other phases' entries -- each skill owns only its own artifacts.
 
----
-
-## Spec Validation at the Approval Gate
-
-The approval gate is the most consequential in the lifecycle. Once a spec is approved, the project enters the production phases (writing, automation, editing, review). Catching spec problems after approval means rework across multiple phases.
-
-### Layer 1: Structural Validation (SpecValidator)
-
-The SpecValidator checks `design.md` against the PH spec template. It enforces objective, unambiguous requirements:
-
-- **Required sections (9):** Project overview, learning objectives, target audience, module map, infrastructure requirements, estimated duration, success criteria, risks and mitigations, timeline. Missing sections are hard failures.
-- **Learning objectives (minimum 3):** Each objective should be specific and measurable. The validator checks count, not quality -- quality is the LLM reviewer's job.
-- **Placeholder detection:** Scans for common unfilled markers (`[TODO]`, `<FILL IN>`, `__BLANK__`, `TBD`, `FIXME`). Any match is a hard failure.
-- **Module map completeness:** At least one module with a title and description. Modules without descriptions suggest the spec is incomplete.
-
-### Layer 2: LLM Quality Review (SpecReviewer)
-
-The SpecReviewer passes the spec to Claude Haiku for qualitative assessment. The LLM evaluates three dimensions:
-
-- **Content quality:** Are the learning objectives achievable in the proposed format? Is the scope realistic for the estimated duration? Are the modules logically sequenced?
-- **Infrastructure feasibility:** Can the described infrastructure be provisioned on RHDP? Are there resource requirements that exceed typical quotas? Are the technology versions compatible?
-- **Actionability:** Could a content writer produce modules from this spec without ambiguity? Are the module descriptions detailed enough to write from?
-
-The reviewer returns a structured verdict (`approve`, `needs_work`, `reject`) with per-dimension feedback. A `reject` blocks hard gates. A `needs_work` allows the author to revise and re-request.
-
-If no LLM provider is configured (e.g., in a test environment), the quality review is skipped entirely. The gate falls back to structural validation only.
-
----
-
-## Cross-References
-
-- See [Central Backend](central.md) for the gate service implementation and MCP tool details
-- See [Deployment Modes](../user/deployment-modes.md) for how gate types differ across onboarded, self-published, and express modes
-- See [RCARS Integration](rcars-integration.md) for how the vetting gate queries RCARS
-- See [Jira Integration](jira-integration.md) for how gate approvals trigger Jira task creation

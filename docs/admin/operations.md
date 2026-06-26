@@ -105,21 +105,21 @@ The manifest's `project.autonomy` field controls agent behavior:
 Check logs:
 
 ```bash
-oc logs deploy/central-backend -n publishing-house-central-dev
+oc logs deploy/central-backend -n <central-namespace>
 ```
 
 Common causes:
 
 - **Missing env vars.** Verify all required variables are set in `ansible/vars/dev.yml`. Check the pod's environment with `oc set env deploy/central-backend --list`.
-- **DB connection failure.** Confirm PostgreSQL is running: `oc get pods -l app=postgresql -n publishing-house-central-dev`. Check the `DATABASE_URL` connection string.
+- **DB connection failure.** Confirm PostgreSQL is running: `oc get pods -l app=postgresql -n <central-namespace>`. Check the `DATABASE_URL` connection string.
 - **Missing API key Secret.** The `ph-mcp-api-keys` Secret must exist. See [MCP Authentication](mcp-auth.md) for API key management.
 
 ### MCP Tools Not Responding
 
 1. Verify the MCP route is reachable: `curl -s https://<mcp-route-host>/health`.
 2. Check API key validity. See [MCP Authentication](mcp-auth.md) for key rotation and hash generation.
-3. Confirm the backend pod is healthy: `oc get pods -l app=central-backend -n publishing-house-central-dev`.
-4. Check backend logs for request errors: `oc logs deploy/central-backend -n publishing-house-central-dev --tail=50`.
+3. Confirm the backend pod is healthy: `oc get pods -l app=central-backend -n <central-namespace>`.
+4. Check backend logs for request errors: `oc logs deploy/central-backend -n <central-namespace> --tail=50`.
 
 ### Jira Sync Failures
 
@@ -128,7 +128,7 @@ Jira sync is non-blocking. Failures do not prevent phase transitions or gate eva
 Check Central logs for Jira client errors:
 
 ```bash
-oc logs deploy/central-backend -n publishing-house-central-dev | grep -i jira
+oc logs deploy/central-backend -n <central-namespace> | grep -i jira
 ```
 
 Common causes:
@@ -141,8 +141,8 @@ Common causes:
 RCARS unavailability blocks hard vetting gates but not soft ones. Content creation and phase transitions unrelated to vetting continue normally.
 
 - Check SA token validity. Tokens rotate after 1 hour on OCP 4.11+. The backend re-reads the token per request -- verify the token file is mounted.
-- Verify cross-namespace DNS resolution: `rcars-api.rcars-dev.svc.cluster.local`.
-- Check the RCARS pod is running: `oc get pods -l app=rcars-api -n rcars-dev`.
+- Verify cross-namespace DNS resolution: `rcars-api.<rcars-namespace>.svc.cluster.local`.
+- Check the RCARS pod is running: `oc get pods -l app=rcars-api -n <rcars-namespace>`.
 - See [RCARS Service Auth](mcp-auth.md) for SA token and allowlist configuration.
 
 ### Stale Dashboard Data
@@ -150,10 +150,4 @@ RCARS unavailability blocks hard vetting gates but not soft ones. Content creati
 The GitHub manifest refresh runs every 30 minutes. For immediate updates:
 
 - Trigger a refresh via MCP tools (`ph_register` or `ph_get_status` with force).
-- Restart the backend pod to clear any caches: `oc rollout restart deploy/central-backend -n publishing-house-central-dev`.
-
-## Cross-References
-
-- [Deployment Guide](deployment.md) -- first-time setup, Ansible configuration, playbook tags
-- [MCP Authentication](mcp-auth.md) -- API key management, SA token auth, cross-namespace access
-- [Skills System](../architecture/skills.md) -- detailed skill behavior, dispatch model, and development rules
+- Restart the backend pod to clear any caches: `oc rollout restart deploy/central-backend -n <central-namespace>`.

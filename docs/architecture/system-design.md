@@ -217,8 +217,8 @@ Two authentication boundaries protect the system, each using a different mechani
 
 Claude Code users authenticate to the PH MCP endpoint using API keys sent as `Authorization: Bearer <raw-key>` headers over HTTPS.
 
-- **Key storage:** API keys are stored as SHA-256 hashes in a Kubernetes Secret, volume-mounted into the backend pod. The YAML file maps key names to hex-encoded SHA-256 digests.
-- **Validation:** The FastMCP auth middleware intercepts every tool call, hashes the incoming raw key with SHA-256, and compares against stored hashes using a timing-safe comparison.
+- **Key storage:** API keys are stored securely in a Kubernetes Secret, volume-mounted into the backend pod.
+- **Validation:** The MCP auth middleware validates the key on every tool call before dispatching.
 - **Scope:** Authentication is all-or-nothing -- a valid key grants access to all MCP tools. There is no per-project or per-user scoping at the auth layer; any authenticated user can interact with any project. Fine-grained access control is a future consideration.
 - **Key lifecycle:** Keys are currently provisioned and revoked through the Ansible deployer. The backend reads the key file at startup; adding or revoking a key requires a redeployment. A more robust key management system is planned. See [MCP Auth Admin Guide](../admin/mcp-auth.md).
 
@@ -227,7 +227,7 @@ Claude Code users authenticate to the PH MCP endpoint using API keys sent as `Au
 The Central backend authenticates to RCARS using its Kubernetes ServiceAccount token for cross-namespace calls within the OpenShift cluster.
 
 - **Token source:** Auto-mounted by Kubernetes. The RCARS client re-reads this token from the filesystem on every request -- it is never cached in memory, because bound service account tokens rotate automatically.
-- **Validation:** RCARS validates the token via the Kubernetes TokenReview API, then checks the authenticated identity against its ServiceAccount allowlist.
+- **Validation:** RCARS validates the token and checks the authenticated identity against an allowlist.
 - **No secrets to manage:** Kubernetes handles the entire token lifecycle -- creation, rotation, and revocation are automatic.
 
 The dashboard uses a third auth mechanism (OpenShift OAuth proxy for SSO), but this sits outside the PH system boundary -- it is standard OpenShift infrastructure.
