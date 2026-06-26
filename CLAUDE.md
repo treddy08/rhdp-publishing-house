@@ -4,6 +4,12 @@ AI-powered content lifecycle management for Red Hat Demo Platform. One command (
 
 Content developers become content architects: design the architecture, agents handle the writing, editing, automation, and review.
 
+## Jira Tracking
+
+**Parent Epic:** [RHDPCD-26](https://redhat.atlassian.net/browse/RHDPCD-26) — all PH platform backlog items live under this Epic. New tasks should be created as children of RHDPCD-26. RCARS backlog lives under [RHDPCD-25](https://redhat.atlassian.net/browse/RHDPCD-25).
+
+**BACKLOG.md is deprecated.** All work tracking lives in Jira under RHDPCD-26. Do NOT write backlog items, findings, or task lists to BACKLOG.md. If there's no appropriate Jira ticket for new work, create one (or ask the user) as a child of RHDPCD-26.
+
 ## Repository Structure
 
 Four repos, one project. This repo (`rhdp-publishing-house`) is the central hub for development, planning, and documentation. It contains two submodules that point to published repos.
@@ -13,7 +19,7 @@ rhdp-publishing-house/              ← YOU ARE HERE (dev + planning + docs)
 ├── skills-plugin/                  ← submodule → rhdp-publishing-house-skills
 ├── template/                       ← submodule → rhdp-publishing-house-template
 ├── docs/                           ← all project documentation
-├── BACKLOG.md                      ← roadmap and work queue
+├── BACKLOG.md                      ← DEPRECATED — use Jira (RHDPCD-26)
 ├── WORKLOG.md                      ← session handoff notes between developers
 └── CLAUDE.md                       ← this file
 
@@ -171,14 +177,8 @@ Required phases: intake, writing, code_review, security_review, final_review. Op
 - API key auth for MCP endpoint
 - Ansible deployer with per-component build tags
 
-### What's Next (see BACKLOG.md)
-- **Phase 3: Jira Integration** — spec complete, ready for implementation planning
-- **Phase 4: Central Chatbot** — needs brainstorm
-- **Express skill** — unblocked, needs own brainstorm+spec
-
-### Known Blockers
-- Jira service account on redhat.atlassian.net — gating dependency for Phase 3 deployment
-- Anthropic SDK issue #1020 (Vertex AI streaming+tools) — affects Phase 4 chatbot
+### What's Next
+See [RHDPCD-26](https://redhat.atlassian.net/browse/RHDPCD-26) for the active backlog.
 
 ## Development Guidelines
 
