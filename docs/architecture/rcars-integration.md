@@ -18,7 +18,7 @@ graph TD
         subgraph BE["PH Central Backend (FastAPI)"]
             MCP["FastMCP 3.2+ Server<br/>mounted at /mcp"]
             Auth["ApiKeyAuth Middleware<br/>on_call_tool hook<br/>SHA-256 hash + hmac.compare_digest<br/>Keys from volume-mount"]
-            Tools["MCP Tools<br/>• ph_rcars_query<br/>• ph_rcars_catalog_search<br/>• ph_rcars_catalog_item<br/>• ph_list_projects<br/>• ph_get_launch_instructions<br/>• + 7 more"]
+            Tools["MCP Tools<br/>• ph_rcars_query<br/>• ph_rcars_catalog_search<br/>• ph_rcars_catalog_item<br/>• ph_list_projects<br/>• ph_get_launch_instructions<br/>• + 15+ more"]
             Client["RCARS HTTP Client (httpx)<br/>Async, 3x exponential backoff<br/>SA token from filesystem<br/>Timeout: 120s (advisor)"]
             Health["/health endpoint<br/>probes RCARS health"]
 
@@ -57,7 +57,7 @@ The PH backend authenticates to RCARS using its Kubernetes ServiceAccount token.
 - **Validation:** RCARS middleware validates the token via the Kubernetes TokenReview API, then checks the authenticated identity against the `RCARS_SA_ALLOWLIST_STR` environment variable
 - **Allowlist entry:** `system:serviceaccount:publishing-house-central-dev:default`
 - **No secrets to manage:** K8s handles token lifecycle -- no creation, rotation, or revocation required
-- **Configuration:** See [RCARS Service Auth Admin Guide](../admin/rcars-service-auth.md)
+- **Configuration:** See [RCARS Service Auth Admin Guide](../admin/mcp-auth.md)
 
 ## Network Topology
 
@@ -87,7 +87,7 @@ graph LR
 |-----------|------|---------|------------|
 | RCARS SA token auth middleware | `rcars-advisory` | New TokenReview + allowlist auth dependency | RCARS Ansible deployer |
 | RCARS HTTP client (`rcars_client.py`) | `rhdp-publishing-house-central` | New httpx async client with retry and SA token | PH Ansible deployer |
-| ApiKeyAuth middleware (`auth.py`) | `rhdp-publishing-house-central` | FastMCP 3.2+ Middleware subclass, replaces Keycloak scaffolding | PH Ansible deployer |
+| ApiKeyAuth middleware (`auth.py`) | `rhdp-publishing-house-central` | FastMCP 3.2+ Middleware subclass | PH Ansible deployer |
 | RCARS MCP tools (`rcars_tools.py`) | `rhdp-publishing-house-central` | Three new tools: query, catalog search, catalog item | PH Ansible deployer |
 | MCP Route | `rhdp-publishing-house-central` | OpenShift Route for `/mcp` path with TLS edge | PH Ansible deployer |
 | API key Secret | `rhdp-publishing-house-central` | K8s Secret volume-mounted into backend pod | PH Ansible deployer |
@@ -119,6 +119,6 @@ If RCARS is unavailable at step 8, the RCARSClient retries 3 times with exponent
 ## Related Documentation
 
 - [MCP Auth Admin Guide](../admin/mcp-auth.md) -- API key lifecycle management
-- [RCARS Service Auth Admin Guide](../admin/rcars-service-auth.md) -- SA token auth and allowlist config
-- [Claude Code Setup Guide](../user/claude-code-setup.md) -- End-user MCP configuration
-- [MCP Tools Reference](../api/mcp-tools.md) -- Tool parameters, return shapes, examples
+- [RCARS Service Auth Admin Guide](../admin/mcp-auth.md) -- SA token auth and allowlist config
+- [Claude Code Setup Guide](../user/getting-started.md) -- End-user MCP configuration
+- [MCP Tools Reference](central.md) -- Tool parameters, return shapes, examples

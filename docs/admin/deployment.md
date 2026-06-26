@@ -21,6 +21,8 @@ graph LR
 - **Database:** PostgreSQL 16 with persistent storage.
 - **Auth:** OpenShift OAuth proxy on the frontend. Backend trusts internal traffic.
 
+For full architecture details, see [Central Architecture](../architecture/central.md).
+
 ## Prerequisites
 
 - Ansible with `kubernetes.core` collection
@@ -55,7 +57,16 @@ Fill in all `CHANGEME` values:
 | `rcars_internal_url` | RCARS cluster-internal URL (e.g., `http://rcars-api.rcars-dev.svc.cluster.local:8080`) |
 | `rcars_stages` | RCARS catalog stages to query. Default: `prod`. Set to `prod,zt` or `prod,event,zt` to include other stages. |
 | `mcp_route_host` | Hostname for the MCP endpoint Route (e.g., `ph-mcp-dev.apps.<cluster-domain>`) |
-| `mcp_api_keys` | Dict of `name: sha256-hash` pairs for MCP API key auth. See [MCP Auth Admin Guide](admin/mcp-auth.md) |
+| `mcp_api_keys` | Dict of `name: sha256-hash` pairs for MCP API key auth. See [MCP Auth Admin Guide](mcp-auth.md) |
+| `jira_url` | Jira Cloud instance URL (e.g., `https://redhat.atlassian.net`) |
+| `jira_email` | Jira service account email |
+| `jira_api_token` | Jira API token |
+| `jira_project_key` | Jira project key (default: `RHDPCD`) |
+| `litemaas_url` | LiteMaaS endpoint URL (preferred LLM provider) |
+| `litemaas_key` | LiteMaaS API key |
+| `vertex_project_id` | Google Vertex AI project ID (fallback) |
+| `anthropic_api_key` | Anthropic API key (fallback) |
+| `spec_review_model` | Model for spec review at approval gate (default: `claude-haiku-4-5`) |
 
 **NEVER commit `dev.yml` or `prod.yml`** — they are gitignored. Only `.example` files are tracked.
 

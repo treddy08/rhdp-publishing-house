@@ -1,138 +1,241 @@
-# Central
+---
+title: Central Backend Architecture
+description: MCP gateway, gate authority, Jira sync engine, and project dashboard — the backend that powers Publishing House
+---
 
-The RHDP Publishing House Central provides cross-project visibility into the content lifecycle. While individual authors interact with the CLI skills, Central gives managers, PMs, and stakeholders a single view across all active projects — without needing Claude Code.
+# Central Backend Architecture
 
-The Central has two data paths: the **refresh engine** pulls project state from GitHub repos on a schedule, and **MCP tools** accept writes from Claude Code skills in real time. The manifest in git remains the source of truth for onboarded and self-published projects; the Central database also stores intake session data and express metrics that have no git representation.
+Central is the backend service that powers Publishing House. It runs as a single deployment on OpenShift and serves four distinct roles: **MCP gateway** for skill-to-backend communication, **gate authority** for lifecycle phase transitions, **Jira sync engine** for management reporting, and **project dashboard** for stakeholder visibility. All four roles share one codebase, one database, and one deployment.
 
-## Architecture
+The Central backend lives in the `rhdp-publishing-house-central` repository. Skills, the dashboard, and future chatbot integrations all interact with the same service instance.
+
+## Architecture Overview
 
 ```mermaid
 graph TD
-    GH["GitHub<br/>(manifest.yaml, worklog.yaml)"] -->|"refresh engine<br/>(scheduled + on-demand)"| PG[(PostgreSQL)]
-    MCP["MCP tools<br/>(real-time writes from Claude Code)"] -->|"ph_sync_manifest,<br/>ph_store_intake_results,<br/>ph_record_express_run"| PG
-    PG --> BE["FastAPI backend"]
-    BE -->|"/mcp endpoint<br/>(API key auth)"| CC[Claude Code]
-    BE --> FE["Next.js frontend"]
+    CC["Claude Code<br/>(Skills Plugin)"] -->|"MCP tools<br/>API key auth"| MCP
+
+    subgraph Central["Central Backend (FastAPI)"]
+        MCP["FastMCP Server<br/>(/mcp endpoint)"]
+        GS["Gate Service"]
+        PE["Phase Engine"]
+        JS["Jira Sync Service"]
+        RC["RCARS Client"]
+        GH["GitHub Client"]
+        REST["REST API<br/>(/api/v1)"]
+        SCHED["APScheduler<br/>(GitHub Refresh)"]
+
+        MCP --> GS
+        MCP --> RC
+        MCP --> JS
+        GS --> PE
+        GS --> JS
+        GS --> RC
+        SCHED --> GH
+    end
+
+    subgraph External["External Services"]
+        JIRA["Jira Cloud<br/>(RHDPCD project)"]
+        RCARS["RCARS<br/>(cluster-internal)"]
+        GHAPI["GitHub API"]
+    end
+
+    GH --> GHAPI
+    RC --> RCARS
+    JS --> JIRA
+    REST --> DB[(PostgreSQL 16)]
+    MCP --> DB
+    SCHED --> DB
+    FE["Next.js Dashboard<br/>(PatternFly 6)"] --> REST
 ```
 
-The refresh engine checks each registered project's GitHub repo and syncs manifest and worklog data to the database. It runs on a schedule and on-demand when you trigger a manual refresh.
+## MCP Server
 
-MCP tools provide a second write path: Claude Code skills call `ph_sync_manifest` after every manifest write (keeping Central in sync without waiting for the next refresh cycle), `ph_store_intake_results` to persist intake session data across Claude Code restarts, and `ph_record_express_run` for lightweight express usage metrics.
+Central exposes a FastMCP 3.2+ server mounted at `/mcp` on the FastAPI application. All communication between Claude Code skills and Central flows through MCP tools. Skills never call REST endpoints or external services directly — they call MCP tools, and Central handles the rest.
 
-## Registering a Project
+### Authentication
 
-Navigate to the **Register** page and provide the GitHub repository URL. The Central fetches the manifest, reads project metadata (name, owner, type, deployment mode), parses lifecycle phases, and adds the project. You'll be redirected to the project detail page.
+MCP requests are authenticated via API key middleware. Each request must include a Bearer token in the Authorization header. Keys are stored as SHA-256 hashes in a Kubernetes Secret (`ph-mcp-api-keys`). The middleware hashes the incoming key and compares it against stored hashes using `hmac.compare_digest` (constant-time comparison to prevent timing attacks). See [MCP Authentication](../admin/mcp-auth.md) for key management procedures.
 
-Registration requires only a repo URL — all other metadata comes from the manifest.
+### Tool Registration
 
-## Pipeline View
+MCP tools are defined as decorated functions across three modules: `tools.py` (gate and project tools), `rcars_tools.py` (RCARS gateway tools), and `session_tools.py` (session continuity and metrics tools). Each module is imported via side-effect import in `main.py`, which triggers tool registration with the FastMCP server instance. Adding a new tool means defining the function with `@mcp.tool()` and adding the import.
 
-The **Pipeline** page shows a kanban board with columns mapping to lifecycle phases:
+## MCP Tools
 
-| Column | Phases |
-|--------|--------|
-| Intake | intake, vetting, spec_refinement |
-| Approval | approval |
-| Writing | writing |
-| Automation | automation |
-| Editing | editing |
-| Review | editing, code_review, security_review |
-| Ready | e2e_testing, final_review, ready_for_publishing |
+Every skill-to-backend interaction uses one of these tools. The table below is the canonical reference — it replaces the standalone MCP tools reference doc.
 
-Each project appears as a card in its current active phase column. Cards show the project name, module count, and assignees.
+### Gate Service Tools
 
-## Projects Table
+| Tool | Purpose |
+|------|---------|
+| `ph_register(repo_url, branch)` | Fetch manifest from GitHub, create or update the project record, cache phase status. For onboarded projects, creates a Jira Epic and Intake task. Returns the project status. |
+| `ph_list_projects(owner_email)` | List all projects registered by a given owner. Searches by both GitHub username and email address. |
+| `ph_get_status(repo_url, branch)` | Fetch the manifest from GitHub, compute phase status via the Phase Engine, and return the current phase, next recommended action, and Jira summary (if synced). |
+| `ph_request_gate(repo_url, branch, target_phase, requested_by)` | The core gate mechanism. Validates prerequisites against the Phase Engine, runs phase-specific checks (RCARS evaluation for vetting, spec validation for approval), records a GateRecord with findings, and syncs the result to Jira. Async. |
+| `ph_submit_results(repo_url, branch, phase, result_type, results, submitted_by)` | Store structured results from local skill runs (verify-content reports, automation status checks). Results are considered when evaluating future gates. |
+| `ph_get_history(repo_url, branch)` | Return the full custody chain — every gate decision, validation, and approval in chronological order. |
+| `ph_get_open_initiatives()` | Query Jira for open Initiatives in the RHDPCD project. Used during intake to let the developer associate their project with an Initiative. |
 
-The **Projects** page shows a searchable table of all registered projects:
+### RCARS Tools
 
-- **Project name** — clickable link to the detail page
-- **Type** — workshop or demo
-- **Deployment mode** — `rhdp_published` or `self_published`
-- **Module count** — number of writing modules
-- **Assignees** — everyone assigned across all phases
-- **Phase progress bar** — colored segments showing which phases are complete, active, or pending
-- **Actions** — refresh (re-fetch from GitHub), edit (update name or repo URL), delete
+| Tool | Purpose |
+|------|---------|
+| `ph_rcars_query(query)` | Submit a natural-language content vetting query to RCARS. Polls until the advisor job completes and returns relevance-tiered results with rationale. Async. |
+| `ph_rcars_catalog_search(query, limit)` | Browse or search the RCARS catalog. Returns slim metadata per item — use `ph_rcars_catalog_item` for full details. Async. |
+| `ph_rcars_catalog_item(ci_name)` | Get full metadata and analysis for a specific RCARS catalog item, including display name, stage, analysis summary, content hash, staleness info, and tags. Async. |
 
-## Project Detail
+### Session and Legacy Tools
 
-Click a project name to see the full detail view.
+| Tool | Purpose |
+|------|---------|
+| `ph_store_intake_results(owner_email, mode, intake_data, project_name)` | Persist intake interview data to the Central database for session continuity. Survives Claude Code restarts. Used by all three deployment modes. |
+| `ph_get_intake_results(session_id)` | Retrieve stored intake data by session ID for resuming a previously started intake interview. |
+| `ph_list_intake_sessions(owner_email, status)` | List intake sessions for a user, optionally filtered by status (active, converted, abandoned). Ordered by creation date, newest first. |
+| `ph_sync_manifest(project_id, manifest_yaml)` | Push manifest YAML content from a skill to the Central database. Sets `sync_source='mcp'` to distinguish MCP-pushed manifests from GitHub-refreshed ones, preventing circular sync. |
+| `ph_record_express_run(owner_email, base_ci, automated)` | Record a completed express mode run for metrics tracking. |
+| `ph_get_launch_instructions(project_id)` | Generate step-by-step deployment ordering instructions for a project. Sources from the automation manifest and catalog configuration. |
+| `ph_store_validation_results(project_id, phase, validator, status, summary, findings, run_by)` | Store validation results from `agnosticv:validator` or `showroom:verify-content` runs. |
+| `ph_get_validation_results(project_id, phase)` | Retrieve stored validation results, optionally filtered by lifecycle phase. |
 
-### Overview Tab
+## Gate Service
 
-**Phase accordions** — each lifecycle phase is an expandable section showing:
+The gate service is Central's decision authority for lifecycle phase transitions. Every advancement from one phase to the next passes through the gate service, which validates prerequisites, runs phase-specific checks, records the decision, and syncs the result to Jira.
 
-- **Completion date** — when the phase was finished
-- **Assignees** — who worked on this phase
-- **Artifacts** — file paths linked directly to the file in the GitHub repo
-- **Phase-specific content:**
-  - **Writing** — module list with individual status and links to content and review files
-  - **Automation** — substep status (requirements, catalog item, automation code, testing), catalog path, AgnosticV repo/branch
-  - **Approval** — who approved it and when
-  - **Vetting** — RCARS result (approved, revise, rejected)
+### Gate Decisions
 
-Pending phases show a dependency hint explaining what must complete first.
+Every gate request produces a **GateRecord** — an immutable record in the custody chain. Each record captures the decision (approved, rejected, or overridden), findings that informed it, who requested it, who or what approved it, and the spec commit hash at decision time. The custody chain is append-only; decisions are never modified or deleted.
 
-### Worklog Tab
+### Hard Gates and Soft Gates
 
-A chronological timeline of entries from `publishing-house/worklog.yaml`:
+Gates come in two types. **Hard gates** enforce prerequisites and run phase-specific validation — the gate service actively evaluates whether the project is ready and can reject advancement. **Soft gates** enforce prerequisites only — once prerequisite phases are complete, the gate automatically approves. The gate type is determined by the project's deployment mode profile (see Phase Engine below).
 
-- Decisions (open and resolved)
-- Action items
-- Handoff notes
-- Session summaries
+### Phase-Specific Behavior
 
-Open items are highlighted. Resolved items show who resolved them and when.
+Most gates perform only prerequisite checking. Two phases have additional logic:
 
-### Artifacts Tab
+**Vetting gate.** When a project requests advancement to the vetting phase, the gate service submits the project's learning objectives and topic description to RCARS for content overlap evaluation. RCARS returns relevance-tiered matches against the existing RHDP catalog. The gate service includes the RCARS findings in the GateRecord. The orchestrator skill uses these findings to guide the author through revision or proceed to spec refinement.
 
-Aggregated list of all artifacts across all phases — specs, module outlines, review reports, automation files — with links to the files in the GitHub repo.
+**Approval gate.** The approval gate is the most complex. It validates the specification document, runs an LLM-assisted review for completeness, prevents self-approval (the requestor cannot be the approver), and on approval creates Phase 2 Jira tasks — per-module content tasks and review tasks for the writing phase. This progressive task creation keeps Jira clean until a project actually reaches writing.
 
-### Launch Instructions Tab
+See [Lifecycle & Phases](lifecycle-phases.md) for the full gate logic and prerequisite chain for each phase.
 
-For deployed projects: how to order the environment and what users need to get started. Source: the automation manifest and catalog configuration. For `self_published` projects, includes the Field Source CI order instructions and the GitOps repo URL.
+## Phase Engine
 
-## Sidebar
+The Phase Engine is a pure-logic component that determines what phase a project should be in and what it needs to do next. It has no database access, no I/O, and makes no external calls — it operates entirely on the manifest data passed to it.
 
-Each project detail page shows a sidebar with:
+### Deployment Mode Profiles
 
-- **Project Info** — type, deployment mode, owner, autonomy level, created date
-- **Links** — GitHub repo, Showroom repo, automation repo
-- **Assignees** — listed with their phase assignment
+The engine defines three phase profiles that control which phases exist and whether their gates are hard or soft:
 
-## Refreshing Data
+| Profile | Phases | Gate Style | Used By |
+|---------|--------|------------|---------|
+| `ONBOARDED_PHASES` | 12 phases (intake through ready_for_publishing) | Mostly hard gates — vetting, approval, code review, security review, final review are hard | `rhdp_published` projects |
+| `SELF_PUBLISHED_PHASES` | 12 phases (same set) | All soft gates — prerequisites enforced, but no active validation | `self_published` projects |
+| `EXPRESS_PHASES` | 3 phases (intake, automation, ready_for_publishing) | All soft gates | `express` mode projects |
 
-Data is refreshed in two ways:
+### Core Methods
 
-- **Scheduled** — the refresh engine checks all registered projects periodically
-- **Manual** — click the refresh button (⟳) on any project in the table or detail view
+`check_prerequisites(manifest, target_phase)` examines the manifest to determine whether a project can advance to the target phase. It returns whether prerequisites are met, the reason if not, and the gate type (hard or soft) for that phase in the project's deployment mode.
 
-The refresh engine is incremental: it checks the repo's last-push timestamp before fetching, so unchanged repos are skipped. Parallel fetching keeps refresh time low even at scale.
+`get_next_action(manifest)` scans the manifest's phase statuses to determine the next phase the project should advance to and produces a human-readable action recommendation. The orchestrator skill calls this to decide what to do next.
 
-## Manifest Requirements
+## Jira Sync
 
-For a project to display correctly, its `publishing-house/manifest.yaml` must include:
+Central maintains one-directional sync from Publishing House to Jira Cloud. Jira is a downstream reporting target — it receives state changes from PH but never drives PH state. The sync is non-blocking: Jira API failures are logged but never block gate decisions or phase transitions.
 
-```yaml
-project:
-  name: "Project Title"
-  owner_github: "jsmith"
-  owner_email: "jsmith@redhat.com"
-  type: "workshop"              # workshop | demo
-  deployment_mode: "rhdp_published"  # rhdp_published | self_published
-  autonomy: "guided"
-  created: "2026-04-01"
+### Progressive Task Creation
 
-lifecycle:
-  phases:
-    <phase_name>:
-      status: "pending"         # pending | in_progress | completed | skipped
-      completed_at: null        # ISO datetime when completed (YYYY-MM-DD HH:mm)
-      assignees: []             # GitHub usernames working on this phase
-      artifacts: []             # File paths (linked to GitHub in Central)
-```
+Jira tasks are created incrementally as a project advances, not all at once during registration:
 
-The `completed_at`, `assignees`, and `artifacts` fields drive what appears in the phase accordions.
+**Phase 1 — At registration.** When a project registers via `ph_register`, the sync service creates a Jira Epic for the project and an Intake task. The Epic lives under the RHDPCD project and is optionally linked to an Initiative if the developer selected one during intake.
 
-## Deployment
+**Phase 2 — At approval gate.** When a project passes the approval gate, the sync service creates per-module content tasks and review tasks for the upcoming writing phase. Supporting pages (intro, conclusion, overview modules) are excluded from task creation — they do not represent meaningful deliverables.
 
-The Central runs on OpenShift. See [Central Deployment](central-deployment.md) for deployment instructions.
+### Sync Logic
+
+The sync service operates on three rules: create tasks that should exist but do not, close tasks for deliverables that have been removed from the manifest (orphaned tasks), and transition task statuses to match the manifest's phase statuses. Each sync operation diffs the manifest's deliverable list against the `JiraTaskMapping` table to determine what has changed.
+
+### Deliverable Types and Points
+
+Each Jira task maps to a `DeliverableType` with an assigned story point value that reflects relative effort:
+
+| Deliverable Type | Points | Created When |
+|------------------|--------|--------------|
+| `INTAKE_SPEC` | 13 | Registration |
+| `MODULE_CONTENT` | 5 | Approval gate |
+| `MODULE_AUTOMATION` | 8 | Approval gate |
+| `MODULE_VERIFIED` | 5 | Approval gate |
+| `CODE_REVIEW` | 3 | Approval gate |
+| `SECURITY_REVIEW` | 3 | Approval gate |
+| `E2E_TEST` | 8 | Approval gate |
+| `FINAL_REVIEW` | 1 | Approval gate |
+
+See [Jira Integration](jira-integration.md) for the full ticket hierarchy, Initiative linking, and the points model rationale.
+
+## GitHub Refresh
+
+Central maintains cached copies of project manifests and phase statuses. A background scheduler (APScheduler) refreshes this cache every 30 minutes by default (configurable via the `refresh_interval_minutes` setting).
+
+The refresh engine reads manifests from the GitHub API — it never clones repositories. For each registered project, it fetches the manifest file, parses it, and updates the cached phase status, current phase, and next action in the database.
+
+The refresh engine respects the `sync_source` field on manifest records. If a manifest was recently pushed via MCP (`sync_source='mcp'`), the refresh engine skips overwriting it. This prevents the circular sync pitfall where a skill pushes a manifest to Central, then the refresh engine overwrites it with a stale version from GitHub before the skill's commit has been pushed.
+
+## Database Models
+
+Central uses PostgreSQL 16 with SQLAlchemy ORM. Migrations are managed by Alembic.
+
+| Model | Purpose |
+|-------|---------|
+| `Project` | Core project record — name, owner, repo URL, deployment mode, cached phase status, Jira Epic key |
+| `Manifest` | Stores the full manifest YAML and a parsed JSONB representation. Tracks `sync_source` to distinguish MCP-pushed vs GitHub-refreshed manifests. |
+| `Phase` | Per-phase status tracking — status, completion timestamp, assignees, artifacts |
+| `GateRecord` | The custody chain. Every gate decision (approved, rejected, overridden) with findings, requestor, approver, and spec commit hash. Append-only. |
+| `SubmittedResult` | Structured results from local skill runs (verify-content reports, automation checks). Referenced during future gate evaluations. |
+| `JiraTaskMapping` | Maps manifest deliverables to Jira issue keys. Used by the sync service to diff and reconcile tasks. |
+| `IntakeSession` | Persists intake interview data across Claude Code restarts. Stores the full intake data dict, deployment mode, and session status. |
+| `ExpressMetric` | Express mode usage tracking for aggregate reporting. |
+| `ValidationRun` | Validation results from `showroom:verify-content` or `agnosticv:validator` runs, with severity-tagged findings. |
+| `WorklogEntry` | Mirrors `worklog.yaml` entries for dashboard visibility — decisions, action items, handoff notes, session summaries. |
+
+## Dashboard
+
+The project dashboard is a Next.js application styled with PatternFly 6, served behind an OpenShift OAuth proxy for access control. It provides stakeholder visibility into project state without requiring Claude Code.
+
+### Pipeline Board
+
+A kanban-style board with columns grouped by lifecycle phase. Each project appears as a card in its current active phase column, showing the project name, module count, and assignees. Cards link to the project detail view.
+
+### Project Detail
+
+The detail view organizes project state into phase accordions — each lifecycle phase is an expandable section showing its completion date, assignees, artifacts (linked to the GitHub repository), and phase-specific content. The writing phase shows per-module status. The automation phase shows substep progress. The vetting phase shows RCARS evaluation results.
+
+Pending phases display a dependency hint explaining which prerequisite phases must complete first.
+
+### Custody Chain Viewer
+
+A chronological view of every gate decision for a project. Each entry shows the decision (approved, rejected, overridden), who requested it, when, and the findings that informed the decision. This provides a complete audit trail for content governance.
+
+### Worklog Timeline
+
+A timeline of entries from the project's worklog — decisions (open and resolved), action items, handoff notes, and session summaries. Open items are highlighted; resolved items show who resolved them and when.
+
+## REST API
+
+The backend exposes REST endpoints under `/api/v1` organized into three route groups:
+
+| Route Group | Purpose |
+|-------------|---------|
+| `/api/v1/health` | Liveness and readiness probes for OpenShift |
+| `/api/v1/projects` | Project CRUD, phase status, manifest data, custody chain — consumed by the dashboard |
+| `/api/v1/validations` | Validation result storage and retrieval |
+
+The dashboard reads exclusively from these REST endpoints. MCP tools share the same database session factory but run within the FastMCP server lifecycle rather than the FastAPI request lifecycle. Both paths use the same SQLAlchemy models and service layer.
+
+## Cross-References
+
+- See [System Design](system-design.md) for the end-to-end architecture across all Publishing House components
+- See [Lifecycle & Phases](lifecycle-phases.md) for gate logic details, prerequisite chains, and phase ordering
+- See [Jira Integration](jira-integration.md) for the full ticket hierarchy, Initiative linking, and points model
+- See [RCARS Integration](rcars-integration.md) for the RCARS gateway auth model and cross-namespace connectivity
+- See [MCP Authentication](../admin/mcp-auth.md) for key management procedures
