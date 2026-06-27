@@ -1,28 +1,15 @@
 # Jira Integration
 
-## The Problem
+Publishing House automatically creates and updates Jira tickets as onboarded projects progress through the lifecycle. Developers never touch Jira — tickets update as a side effect of doing the work. Jira sync only runs for onboarded (`rhdp_published`) projects.
 
-Content development progress is invisible to leadership. During Summit 2026, we had checkpoints where projects were supposed to be at a certain percentage — but we had no data to assess that and no way to make cut decisions. Developers track everything in git-based manifests, which is great for the work but useless for management reporting.
+## Hierarchy
 
-Jira integration bridges this gap. The Publishing House (PH) system that manages content development automatically creates and updates Jira tickets as projects progress. No developer has to remember to update Jira — it happens as a side effect of doing the work.
+PH maps to standard Jira issue types:
 
-## Current State
-
-The RHDPCD Jira project is live and active, using the OJA-ITS-003 issue type scheme. A personal API token is used for dev environments; service account provisioning is pending for production.
-
-## How It Works
-
-### Four-Level Hierarchy
-
-Everything maps to standard Jira issue types and their built-in hierarchy levels:
-
-**Outcomes** are organizational groupings — broad categories that organize the team's work. Examples: "All Events", "Non-Event Content", "Architecture & Infrastructure". Manually created in Jira.
-
-**Initiatives** are events or efforts — each event, program, or work stream gets one Initiative. Examples: Summit 2027, RH1, BAU Content Dev, Arcade Development. Each Initiative can have a due date for event-driven work (content freeze deadlines) or remain open-ended for ongoing work. Manually created in Jira.
-
-**Epics** are projects — each content project (lab, workshop, demo) gets one Epic. PH auto-creates it at registration time. Lives under its parent Initiative if one is set.
-
-**Tasks** are deliverables — each piece of work within a project gets a Task with story points. PH auto-creates tasks progressively as the project advances through gates.
+- **Outcomes** — broad organizational groupings (e.g., "All Events", "Non-Event Content"). Manually created.
+- **Initiatives** — events or work streams (e.g., Summit 2027, RH1, BAU Content Dev). Each can have a due date for content freeze deadlines. Manually created.
+- **Epics** — one per content project. Auto-created by PH at registration.
+- **Tasks** — one per deliverable within a project. Auto-created progressively as the project advances.
 
 ```
 Outcome: "All Events"
@@ -41,98 +28,114 @@ Outcome: "All Events"
               └── Final Review                     [1 pt]   ○ To Do
 ```
 
-### Progressive Task Creation
+---
 
-Jira tickets are not created all at once. They are created in two phases, matching the points where PH has enough information to define them.
+## Progressive Task Creation
 
-**Phase 1 — At `ph_register`:** When a project is first registered with Central, PH creates:
+Jira tickets are created in two phases, matching the points where PH has enough information to define them.
 
-- **Epic** for the project, parented under the Initiative if one is set in the manifest.
-- **Intake & Spec task** (13 story points) covering spec development, vetting, and approval.
-- **Assignee** resolved from the manifest's `owner_email` via Jira user search.
+### Phase 1 — At Registration
 
-At this point, the module list is not finalized (it can change during spec refinement), so per-module tasks are not yet created.
+When a project registers with Central (`ph_register`), PH creates:
 
-**Phase 2 — At approval gate:** When the spec is frozen and the approval gate passes, PH creates the full set of per-module and review tasks:
+- A **Jira Epic** for the project, parented under the Initiative if one is set
+- An **Intake & Spec** task (13 story points) covering spec development, vetting, and approval
+- **Assignee** resolved from the manifest's `owner_email`
 
-- **Per-module tasks** for each non-supporting module:
-    - `MODULE_CONTENT` (5 pts) — the actual instructional content
-    - `MODULE_AUTOMATION` (8 pts) — infrastructure automation code
-    - `MODULE_VERIFIED` (5 pts) — end-to-end test for that module
+At this point the module list isn't finalized, so per-module tasks aren't created yet.
+
+### Phase 2 — At Approval Gate
+
+When the approval gate passes and the spec is locked, PH creates the full task set:
+
+- **Epic summary** updated to the finalized project name
+- **Per-module tasks** for each content module:
+    - `Content` (5 pts) — the instructional AsciiDoc content
+    - `Automation` (8 pts) — infrastructure and deployment code
+    - `Verified` (5 pts) — confirmation that content and automation work together for this module
 - **Cross-cutting review tasks:**
-    - `CODE_REVIEW` (3 pts)
-    - `SECURITY_REVIEW` (3 pts)
-    - `E2E_TEST` (8 pts)
-    - `FINAL_REVIEW` (1 pt)
-- **Epic summary** updated to the finalized project name.
+    - `Code Review` (3 pts)
+    - `Security Review` (3 pts)
+    - `E2E Test` (8 pts) — full end-to-end validation of the complete lab
+    - `Final Review` (1 pt)
 
-#### Supporting Page Exclusion
+---
 
-Intro, conclusion, overview, and summary modules are excluded from per-module Jira task creation. These are detected by title (case-insensitive match for "introduction", "conclusion", "overview", "summary") or by ID patterns like `-00-` or `-99-` in the module identifier. Supporting pages are part of the content but don't represent independent development effort — they're boilerplate or wrapper modules that don't need individual tracking.
+## Points
 
-### Points = Estimated Effort
+Points represent relative effort — not hours or days. They're fixed defaults based on deliverable type.
 
-Every deliverable gets a fixed point value based on its type. Points represent relative effort — not hours or days, but "how much work is this compared to other deliverables."
+| Deliverable | Points |
+|---|---|
+| Intake & Spec | 13 |
+| Module Content (each) | 5 |
+| Module Automation (each) | 8 |
+| Module Verified (each) | 5 |
+| Code Review | 3 |
+| Security Review | 3 |
+| E2E Test | 8 |
+| Final Review | 1 |
 
-| Deliverable | Points | What It Represents |
-|---|---|---|
-| Intake & Spec | 13 | Spec development, RCARS vetting, approval |
-| Module Content (each) | 5 | The actual instructional content (AsciiDoc) |
-| Module Automation (each) | 8 | Infrastructure automation code for each module |
-| Module Verified (each) | 5 | End-to-end test — content + automation work together |
-| Code Review | 3 | Cross-cutting review of all code |
-| Security Review | 3 | Security-focused review of code and config |
-| E2E Test | 8 | Full end-to-end validation of the complete lab |
-| Final Review | 1 | Stakeholder sign-off |
+A 5-module workshop totals **118 points**. A 2-module quick lab totals **64 points**. The module count drives project size naturally.
 
-A 5-module workshop totals **118 points** (13 + 5x18 + 15). A 2-module quick lab totals **64 points**. The module count drives project size naturally.
+Points are defaults — a manager can adjust them in Jira for unusually complex or simple modules. PH won't overwrite manually adjusted values.
 
-Points are defaults. A manager can adjust them in Jira if a particular module is unusually complex or simple — for example, bumping a module's Automation from 8 to 13 if it involves complex operator configuration. PH won't overwrite manually adjusted values.
+---
 
-### Automatic Status Updates
+## Automatic Status Sync
 
-PH updates Jira as work progresses — no one has to remember to do it. When a developer finishes writing Module 3's content, the corresponding Jira task moves to Done. When automation starts on Module 2, the task moves to In Progress.
+PH updates Jira as work progresses. Three paths keep things current:
 
-Three sync paths ensure Jira stays current:
-
-1. **Real-time during active development.** When a developer works in PH, every manifest update syncs to the Central backend, which immediately updates Jira.
-2. **Periodic polling.** A background job checks project repos every 15-30 minutes for manifest changes made outside PH (manual edits, CI pipelines). Catches anything the real-time path missed.
-3. **Manual refresh.** A "Sync now" button in the Central dashboard for on-demand sync.
+- **Real-time** — during active development, gate transitions immediately sync to Jira
+- **Background polling** — Central checks repos every 30 minutes for manifest changes made outside PH
+- **Manual** — "Sync now" in the Central dashboard
 
 ### Sync Behavior
 
-Sync is designed to be idempotent and self-healing:
+Sync is designed to be self-correcting:
 
-- **Creates missing tasks.** If a new module is added to the manifest after approval, sync creates the corresponding MODULE_CONTENT, MODULE_AUTOMATION, and MODULE_VERIFIED tasks.
-- **Closes orphaned tasks.** If a module is removed from the manifest, sync sets its tasks' story points to 0 and transitions them to Closed. The tasks are not deleted — they remain for audit trail.
-- **Diffs and transitions status.** Sync compares the manifest's phase/module status with the Jira task status and transitions tasks to match (To Do, In Progress, Done).
-- **Detects externally-deleted tasks.** If someone deletes a Jira task that PH created, sync detects the missing task and recreates it with the correct status and points.
+- **Creates missing tasks** — new modules added to the manifest after approval get their tasks created
+- **Closes orphaned tasks** — removed modules get their tasks zeroed out and closed (not deleted)
+- **Transitions status in both directions** — if a task is closed in Jira but the manifest shows that phase is still open, sync will reopen it to match the manifest
+- **Recreates deleted tasks** — if someone deletes a PH-created task in Jira, sync detects the gap and recreates it
 
-### What You Can See
+The manifest is always the source of truth. Jira is brought into alignment with whatever the manifest says.
 
-**Organization view:** Open the Jira dashboard. See all Outcomes with total points, completed points, and percentage done across all events and programs.
+---
 
-**Effort view:** Click an Outcome. See all Initiatives under it — each event or program — with per-effort progress. "Summit 2027 is at 62% with 3 weeks to go. RH1 is at 28%."
+## Example: What a Developer Sees vs. What Jira Shows
 
-**Event view:** Click an Initiative. See all Epics under it with per-project progress. "OCP Getting Started is 85%. AI Observability is 40%."
+```
+Developer runs:  /rhdp-publishing-house
+Orchestrator:    Registering project with Central...
+                 ✓ Jira Epic created: RHDPCD-200 "OCP Getting Started Workshop"
+                 ✓ Jira Task created: RHDPCD-201 "Intake & Spec" [13 pts]
+                 Starting intake...
 
-**Project view:** Click an Epic. See every deliverable — which are done, which are in progress, which haven't started. Instantly see where a project is stuck. "Content is done on all modules but automation is behind on modules 3-5."
+[Developer completes intake, vetting, spec refinement]
 
-**Checkpoint decisions:** Due dates on Initiatives enable timeline views. Before a content freeze, you can see which projects are on track and which should be cut — based on actual point completion, not guesswork.
+Orchestrator:    Requesting approval gate...
+                 ✓ Gate passed
+                 ✓ Jira tasks created:
+                   - RHDPCD-202 "Module 1: Content" [5 pts]
+                   - RHDPCD-203 "Module 1: Automation" [8 pts]
+                   - RHDPCD-204 "Module 1: Verified" [5 pts]
+                   - RHDPCD-205 "Module 2: Content" [5 pts]
+                   - ... (remaining module + review tasks)
+                 ✓ RHDPCD-201 "Intake & Spec" → Done
 
-**Cross-cutting views:** Labels on Initiatives enable queries like "show me all event-driven work" or "how much BAU content are we producing this quarter."
+[Developer writes Module 1 content]
 
-## Who Does What
+Orchestrator:    Module 1 content drafted.
+                 ✓ RHDPCD-202 "Module 1: Content" → Done
+```
 
-| Role | Jira Responsibility |
-|------|---------------------|
-| **Developers** | Nothing. PH handles Jira automatically. Developers can glance at their Epic if curious. |
-| **Direct managers** | Create Initiatives for their events/efforts. Verify Jira reflects reality. Adjust points if defaults are wrong. Pull reports for their teams. |
-| **PM** | Use Initiatives and Outcomes for portfolio tracking. Set due dates on Initiatives. Build dashboards for cross-effort views. |
-| **Senior director** | Create Outcomes for organizational groupings. Consume dashboards. Drill into Initiatives and Epics. Make checkpoint/cut decisions based on point data. |
+In Jira, a manager sees the Epic with all tasks, point totals, and real-time status — without anyone having to update a ticket manually.
+
+---
 
 ## What Jira Does NOT Track
 
-- **How developers work.** PH session logs, worklog entries, and internal decision-making stay in PH. Jira shows what's done, not how it got done.
-- **Express mode projects.** Express environments are disposable one-offs — no Jira tracking. Only projects going through the full content pipeline (onboarded or self-published) appear in Jira.
-- **Implementation details of automation.** Whether automation is lab-wide or per-module is a developer concern. Jira tracks "is the automation for this module working," not how it's structured.
+- **How developers work.** PH session logs, worklog entries, and internal decisions stay in PH. Jira shows what's done, not how it got done.
+- **Express mode projects.** Express environments are transient — no Jira tracking.
+- **Self-published projects.** No automatic Jira sync unless the author opts in.
