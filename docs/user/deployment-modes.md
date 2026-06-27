@@ -1,71 +1,18 @@
 # Deployment Modes
 
-Publishing House supports three deployment modes that determine how your project is built, tracked, and published. Every project starts with the same intake process — describe what you need, and PH generates a spec — but the modes diverge after intake based on the project's purpose and intended durability.
-
-The mode is selected during intake. It cannot be changed after the project is created.
-
-## At a Glance
+Publishing House supports three deployment modes. You choose during intake — the choice determines how much process your project goes through and where it ends up.
 
 | | Onboarded | Self-Published | Express |
 |---|-----------|---------------|---------|
-| **Internal name** | `rhdp_published` | `self_published` | `express` |
-| **Purpose** | Published RHDP catalog item | Self-managed content | One-off demo environment |
+| **Purpose** | RHDP catalog item | Your own content | One-off demo |
 | **Git repo** | Yes | Yes | No |
-| **State location** | Git manifest | Git manifest | Central DB |
-| **Gate type** | Hard (blocks progress) | Soft (advisory) | None |
-| **Jira tracking** | Automatic | No | No |
-| **Review phases** | Required | Optional | None |
-| **Automation** | AgnosticV + GitOps/Ansible | GitOps (Helm + ArgoCD) | Purpose-built, not stored |
-| **Content format** | Full Showroom lab | Full Showroom lab | Optional lightweight docs |
-| **Durability** | Permanent catalog item | Permanent, self-managed | Transient, disposable |
-
-All three modes use the same intake agent and the same RCARS vetting system. The differences emerge in what happens after intake: how many phases you pass through, whether gates block or advise, and where the project state lives.
-
-## Onboarded
-
-Onboarded mode builds a published RHDP catalog item — a workshop or demo that appears in the Red Hat Demo Platform catalog for anyone to order. This is the full-commitment path for content developers building official RHDP content.
-
-The git manifest (`publishing-house/manifest.yaml`) is the source of truth. Central and Jira are downstream consumers — they reflect the manifest, never drive it. PH automatically creates a Jira Epic when the project registers with Central, creates per-deliverable tasks, and syncs status as phases progress.
-
-Onboarded projects pass through all 12 lifecycle phases. Gates are hard — they block progress until requirements are met. The approval phase requires a reviewer who is not the project owner. Code review and security review must both pass before e2e testing begins. These gates exist because published catalog items represent Red Hat to every user who orders them.
-
-The automation phase produces an AgnosticV catalog item and environment automation (Ansible, GitOps, or both). Content is a full Showroom lab — the writer agent generates AsciiDoc from approved spec outlines, and the editor reviews it against Red Hat quality standards.
-
-## Self-Published
-
-Self-published mode uses the same quality lifecycle as onboarded, but the author retains full control. The content is not published to the RHDP catalog — the author hosts and manages it. This mode is for teams building internal demos, training materials, or anything that benefits from a structured process but does not need to appear in the catalog.
-
-State management is identical to onboarded. The same 12 phases are available. The difference is enforcement: all gates are soft. PH flags issues but will not prevent the author from advancing. Every gate runs the same validation logic and produces the same findings — a failure produces a warning instead of a stop.
-
-No automatic Jira sync. Automation is GitOps only — Helm charts and ArgoCD patterns. The AgnosticV catalog item sub-phase (7b) is automatically skipped. To make the content orderable, the author uses an existing Field Source catalog item and points it at their repository URL.
-
-## Express
-
-Express mode solves a different problem: get a working demo environment quickly. A customer meeting next week. A conference booth next month. A one-off need that does not justify building a full lab.
-
-Express mode is in design. The intake path exists and routes correctly, but the environment creation skill is not yet built.
-
-No git repo, no manifest file. Express sessions are stored in the Central database — queryable through MCP tools but not version-controlled. The lifecycle is minimal: intake and vetting. RCARS identifies the closest existing base environment, and the express skill (once built) will provision and customize it. No writing, no editing, no review gates, no Jira.
-
-Automation is purpose-built and disposable. The express skill will generate configuration on the fly, provision the environment, and discard it. If the demo proves valuable enough to justify a permanent catalog item, the user starts a new onboarded or self-published project from scratch.
-
-## Choosing a Mode
-
-PH presents all three modes during intake. The choice is yours — PH does not steer you toward a particular mode. The decision comes down to three questions:
-
-**Is this for the RHDP catalog?** Choose onboarded. This is the only mode that produces an AgnosticV catalog item and passes through the full review pipeline.
-
-**Is this permanent content you will maintain?** Choose self-published. You get the same quality tools without the enforcement overhead — same lifecycle, same validation, soft gates instead of hard ones.
-
-**Do you just need a demo environment?** Choose express. No repo, no review process, no long-term commitment.
-
-If you are unsure, onboarded and self-published can always be started and paused. Express is the only mode that cannot be converted — if the demo proves valuable, you start fresh with a git-based mode.
-
-## How Modes Affect the Lifecycle
+| **Gates** | Hard (enforce quality) | Soft (advisory) | None |
+| **Jira** | Automatic | No | No |
+| **Durability** | Permanent | Permanent | Disposable |
 
 ```mermaid
 graph TD
-    I["Intake<br/>(all modes)"] --> V["Vetting<br/>(all modes)"]
+    I["Intake"] --> V["Vetting"]
 
     V --> SR["Spec Refinement"] --> AP["Approval"]
     AP --> W["Writing"]
@@ -79,19 +26,108 @@ graph TD
     E2E --> FR["Final Review"]
     FR --> PUB["Ready for Publishing"]
 
-    V --> EXP["Environment Creation<br/>(express only)"]
+    V --> EXP["Environment Creation"]
     EXP --> HAND["Handoff"]
 
     style I fill:#1a73e8,color:#fff
     style V fill:#1a73e8,color:#fff
+    style SR fill:#2a6496,color:#fff
+    style AP fill:#d4a017,color:#000
+    style W fill:#3c763d,color:#fff
+    style AU fill:#3c763d,color:#fff
+    style ED fill:#8a6d3b,color:#fff
+    style CR fill:#31708f,color:#fff
+    style SEC fill:#31708f,color:#fff
+    style E2E fill:#8a6d3b,color:#fff
+    style FR fill:#8a6d3b,color:#fff
+    style PUB fill:#4caf50,color:#fff
     style EXP fill:#e8711a,color:#fff
     style HAND fill:#e8711a,color:#fff
 ```
 
-Onboarded projects traverse every phase in the upper path, with hard gates at approval, editing, code review, security review, e2e testing, and final review. Self-published projects traverse the same path with soft gates — the author chooses when to advance. Express projects exit after vetting and take the lower path directly to environment creation and handoff.
+Onboarded and self-published projects take the upper path (all 12 phases). Express takes the lower path after vetting.
 
-## Cross-References
+---
 
-- [Lifecycle and Phases](../architecture/lifecycle-phases.md) — detailed phase definitions, gate logic, and how hard vs. soft gates are evaluated
-- [Overview](../overview.md) — what PH is and how it works
-- [Getting Started](getting-started.md) — how to install PH and start your first project
+## Onboarded
+
+For content going into the RHDP catalog — workshops and demos that anyone can order.
+
+**What makes it different:**
+
+- Hard gates enforce quality at each phase boundary
+- Jira Epic and tasks created automatically, synced as work progresses
+- AgnosticV catalog item produced during automation
+- All review phases required before publishing
+
+**Example:**
+
+```
+You: /rhdp-publishing-house
+PH:  What deployment mode?
+You: onboarded
+
+     → Intake captures requirements, generates spec and module outlines
+     → RCARS checks for content overlap
+     → Spec reviewed and approved (cannot self-approve)
+     → Writer generates AsciiDoc modules
+     → Automation builds AgnosticV catalog + deployment code
+     → Editor reviews against spec and Red Hat standards
+     → Code review, security review, e2e testing, final review
+     → Ready for publishing in the RHDP catalog
+```
+
+---
+
+## Self-Published
+
+For content you'll host and manage yourself — internal demos, training materials, team-specific workshops. Same quality tools as onboarded, but you control the pace.
+
+**What makes it different:**
+
+- Soft gates — PH flags issues but never blocks you from advancing
+- No automatic Jira tracking
+- GitOps automation only (Helm + ArgoCD) — no AgnosticV catalog item
+- You decide when it's ready
+
+**Example:**
+
+```
+You: /rhdp-publishing-house
+PH:  What deployment mode?
+You: self-published
+
+     → Same intake and spec process as onboarded
+     → Same writing and editing tools
+     → Gates produce findings but don't block — you choose when to advance
+     → No Jira tasks created
+     → You deploy using your own infrastructure
+```
+
+---
+
+## Express
+
+For when you need a working demo environment quickly — a customer meeting next week, a conference next month. No full lab, no review process.
+
+!!! note "In development"
+    The intake path for express mode exists and routes correctly. The environment creation skill is not yet built.
+
+**What makes it different:**
+
+- No git repo — state lives in Central only
+- Minimal lifecycle: intake, vetting, then environment creation
+- No writing, editing, or review phases
+- Environment is disposable
+
+If an express demo proves valuable enough to maintain, start a new onboarded or self-published project from scratch.
+
+---
+
+## Choosing a Mode
+
+PH presents all three during intake. Three questions to decide:
+
+1. **Is this going in the RHDP catalog?** → Onboarded
+2. **Is this content you'll maintain but host yourself?** → Self-published
+3. **Do you just need a demo environment?** → Express
