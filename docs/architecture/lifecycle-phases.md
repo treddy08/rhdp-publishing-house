@@ -1,15 +1,13 @@
 # Lifecycle Phases
 
-The Publishing House lifecycle is a directed acyclic graph of 12 phases (onboarded/self-published) or 3 phases (express) that tracks a content project from initial idea through catalog readiness, with hard or soft gates controlling advancement at each boundary.
+The Publishing House lifecycle is a set of phases that tracks a content project from initial idea through catalog readiness. Phases have dependencies — some run in parallel, others must wait for earlier work to finish. Gates between phases control whether a project can advance.
 
 ## Phase Definitions
 
-Every project progresses through a defined set of phases. Onboarded and self-published projects share the same 12-phase structure but differ in gate strictness. Express mode uses a minimal 3-phase lifecycle because the author is reusing an existing catalog item rather than building new content.
+Every project progresses through a defined set of phases. Onboarded and self-published projects share the same 12-phase structure but differ in how strictly gates are enforced.
 
-### Onboarded and Self-Published Phases
-
-| Phase | Gate Type (Onboarded) | Gate Type (Self-Published) | Prerequisites |
-|-------|----------------------|---------------------------|---------------|
+| Phase | Gate (Onboarded) | Gate (Self-Published) | Prerequisites |
+|-------|-----------------|----------------------|---------------|
 | `intake` | hard | hard | none |
 | `vetting` | hard | hard | intake |
 | `spec_refinement` | hard | soft | vetting |
@@ -23,44 +21,38 @@ Every project progresses through a defined set of phases. Onboarded and self-pub
 | `final_review` | hard | soft | e2e_testing |
 | `ready_for_publishing` | hard | soft | final_review |
 
-**Note on the approval gate:** The onboarded approval gate is currently soft. This is a known TODO -- it should be hard to enforce spec quality before content production begins. The current soft state allows projects to advance past approval without formal sign-off, which is temporary while the gate validation logic matures.
+!!! note "Approval gate"
+    The onboarded approval gate is currently soft while the gate validation logic matures. This will become a hard gate to enforce spec quality before content production begins.
 
-### Express Phases
-
-| Phase | Gate Type | Prerequisites |
-|-------|-----------|---------------|
-| `intake` | hard | none |
-| `vetting` | soft | intake |
-| `base_finding` | soft | vetting |
-
-Express projects skip the full lifecycle because the author is selecting an existing base catalog item (via RCARS) and ordering it for a specific event. There is no content to write, automate, or review.
+!!! note "Express mode"
+    Express mode uses a minimal phase set (intake and vetting only) that is still being designed. See [Deployment Modes](../user/deployment-modes.md) for the current concept.
 
 ---
 
-## The Phase DAG
+## Phase Flow
 
-The lifecycle is not a linear sequence. Two pairs of phases run in parallel, creating a DAG with fan-out and fan-in points:
+The lifecycle is not a linear sequence — it's a directed graph where some phases run in parallel. Two pairs of phases fan out and converge:
 
 ```mermaid
 flowchart TD
-    intake[intake] --> vetting[vetting]
-    vetting --> spec_refinement[spec_refinement]
-    spec_refinement --> approval[approval]
+    intake[Intake] --> vetting[Vetting]
+    vetting --> spec_refinement[Spec Refinement]
+    spec_refinement --> approval[Approval]
 
-    approval --> writing[writing]
-    approval --> automation[automation]
+    approval --> writing[Writing]
+    approval --> automation[Automation]
 
-    writing --> editing[editing]
+    writing --> editing[Editing]
     automation --> editing
 
-    editing --> code_review[code_review]
-    editing --> security_review[security_review]
+    editing --> code_review[Code Review]
+    editing --> security_review[Security Review]
 
-    code_review --> e2e_testing[e2e_testing]
+    code_review --> e2e_testing[E2E Testing]
     security_review --> e2e_testing
 
-    e2e_testing --> final_review[final_review]
-    final_review --> ready_for_publishing[ready_for_publishing]
+    e2e_testing --> final_review[Final Review]
+    final_review --> ready_for_publishing[Ready for Publishing]
 
     style intake fill:#2a6496,color:#fff
     style vetting fill:#2a6496,color:#fff
@@ -76,131 +68,81 @@ flowchart TD
     style ready_for_publishing fill:#4caf50,color:#fff
 ```
 
-The structural features of this DAG:
+Key structural features:
 
-1. **Writing and automation run in parallel after approval.** A content author writes lab modules while the automation engineer builds the AgnosticV catalog item and deployment code. Neither blocks the other.
-
-2. **Editing requires BOTH writing AND automation to complete.** The editor needs the full picture -- content and infrastructure -- before reviewing. This is the first fan-in point.
-
-3. **Code review and security review run in parallel after editing.** Different reviewers can work simultaneously. Code review focuses on Showroom content quality, automation correctness, and catalog configuration. Security review checks for credential exposure, network policies, and RBAC configuration.
-
-4. **E2E testing requires BOTH reviews to complete.** The second fan-in point. End-to-end testing should only run after all review findings are resolved.
-
-5. **The tail is linear.** Final review and ready-for-publishing are sequential -- there is no reason to parallelize the final stages.
+1. **Writing and automation run in parallel after approval.** A content author writes lab modules while the automation engineer builds deployment code. Neither blocks the other.
+2. **Editing requires both writing and automation to complete.** The editor needs the full picture — content and infrastructure — before reviewing.
+3. **Code review and security review run in parallel after editing.** Different reviewers can work simultaneously.
+4. **E2E testing requires both reviews to complete.** End-to-end testing runs after all review findings are resolved.
 
 ---
 
-## Hard vs. Soft Gates
+## Hard and Soft Gates
 
-Every phase boundary has a gate. The gate type determines whether the system can block progress.
+Every phase boundary has a gate. The gate type determines whether the system can prevent advancement.
 
-### Hard Gates
+**Hard gates** check prerequisites and may run additional validation — RCARS overlap analysis at vetting, spec quality review at approval. If validation fails, the project stays in its current phase until the issue is resolved.
 
-A hard gate blocks advancement until all prerequisites are met and Central's gate service explicitly approves. The gate service may run additional validation beyond prerequisite checking -- RCARS queries at vetting, spec validation at approval, structural checks at later phases. If any validation fails, the gate rejects the request and the project stays in its current phase.
+**Soft gates** check the same prerequisites. Once all required prior phases are complete, the gate approves automatically. Validation still runs and findings are still recorded, but they're informational — the author decides whether to act on them.
 
-Hard gates are used for onboarded projects because these items will appear in the RHDP catalog. Quality enforcement at phase boundaries prevents incomplete or substandard content from reaching production.
+Hard gates are used for onboarded projects because those items will appear in the RHDP catalog. Soft gates are used for self-published projects where the author owns the quality decision.
 
-### Soft Gates
-
-A soft gate checks the same prerequisites as a hard gate. If all required prior phases are completed (or skipped), the gate automatically approves. Validation still runs and findings are still recorded, but they are informational -- they never block progress.
-
-Soft gates are used for self-published projects where the author owns the quality decision. The system provides feedback; the author decides whether to act on it.
-
-### Gate Records
-
-Both gate types produce a permanent gate decision record. Each record captures the decision (approved, rejected, or overridden), the rationale, who requested it, and who was involved. Gate decisions cannot be edited or deleted after the fact.
+Both gate types record the decision — what phase was requested, whether it was approved, the rationale, and who was involved. These records build up a history of how the project moved through its lifecycle.
 
 ---
 
 ## Gate Service
 
-When the orchestrator calls `ph_request_gate`, Central executes a multi-step validation pipeline. The steps vary by phase, but the overall flow is consistent.
+When the orchestrator calls `ph_request_gate`, Central runs this flow:
 
-### Common Flow (All Gates)
+1. **Fetch the manifest** from GitHub to ensure it's evaluating the latest committed state.
+2. **Check prerequisites.** Are all required prior phases completed or skipped? If not, reject immediately — regardless of gate type.
+3. **Run gate-specific logic.** For soft gates, approve once prerequisites pass. For hard gates, additional validation may run (see below).
+4. **Record the decision** with findings, regardless of outcome.
+5. **Sync to Jira** if the project has Jira tracking enabled and the gate approved.
 
-1. **Manifest fetch.** Central reads the project's `manifest.yaml` from GitHub at the specified branch. This ensures the gate evaluates the committed state, not a local working copy.
+### Vetting Gate
 
-2. **Prerequisite check.** The PhaseEngine inspects the manifest's `lifecycle.phases` block. For each prerequisite phase, it verifies the status is `completed` or `skipped`. If any prerequisite is still `pending` or `in_progress`, the gate rejects immediately -- regardless of gate type.
+The vetting gate checks whether similar content already exists in the RHDP catalog.
 
-3. **Gate-type dispatch.** For soft gates, if prerequisites pass, the gate approves and records the decision. For hard gates, additional validation runs (described below).
+Central submits the project's learning objectives and topic description to RCARS, which returns catalog items grouped by relevance. If there are several close matches, the author needs to explain how their content differs before advancing.
 
-4. **Gate record creation.** The gate decision is recorded permanently with all findings, regardless of outcome.
+If RCARS is unavailable, the gate still passes — with a note that overlap analysis was skipped. An infrastructure issue should not block content development. The author can re-run vetting later when RCARS is back.
 
-5. **Jira sync.** If the project has Jira tracking enabled and the gate approved, Central syncs the phase transition to Jira. This step is non-blocking -- Jira failures do not revert the gate decision.
+### Approval Gate
 
-### Vetting Gate (Hard)
+The approval gate is the most consequential — once a spec is approved, the project enters production phases where rework is expensive.
 
-The vetting gate evaluates content overlap with existing RHDP catalog items using RCARS.
+**Structural validation** checks the spec against the PH template: required sections present, minimum learning objectives defined, no unfilled placeholders, module map populated. These are objective checks — failures are clear.
 
-- Central submits a query to RCARS combining the project's learning objectives, topics, and target products.
-- RCARS returns catalog items grouped by relevance tier (high, medium, low).
-- **3 or more high-relevance matches:** The gate requires the author to articulate how the proposed content differs from existing items. Without clear differentiation, the gate rejects.
-- **No matches at all:** The gate flags this for review -- either the spec is too vague to produce matches, or it genuinely covers new ground. The author should verify the spec is specific enough.
-- **RCARS unavailability:** If RCARS cannot be reached or returns an error, hard gates block. The system does not let projects bypass vetting when it cannot verify content overlap.
+**Quality review** uses an LLM to assess whether the spec is realistic, the infrastructure is feasible, and a writer could produce modules from it without ambiguity. The reviewer returns approve, needs-work, or reject with feedback.
 
-### Approval Gate (Hard)
-
-The approval gate runs two validation layers before deciding:
-
-**1. Structural validation (SpecValidator).** Checks the project's `design.md` against the PH spec template:
-
-- 9 required sections must be present (project overview, learning objectives, audience, module map, infrastructure, duration, success criteria, risks, and timeline)
-- A minimum of 3 learning objectives must be defined
-- No unfilled placeholders (e.g., `[TODO]`, `<FILL IN>`, `__BLANK__`)
-- Module map must list at least one module with a title and description
-
-Structural failures block the gate immediately. These are objective checks with no ambiguity.
-
-**2. LLM quality review (SpecReviewer).** Claude Haiku assesses the spec for quality, infrastructure feasibility, and actionability:
-
-- Returns one of: `approve`, `needs_work`, or `reject`
-- A `reject` verdict blocks the hard gate
-- A `needs_work` verdict includes specific feedback for the author
-- If no LLM provider is configured, the quality review degrades gracefully -- it is skipped, not treated as a failure
-
-**Self-approval prevention.** For onboarded projects, the project owner cannot approve their own spec. The `approved_by` field must differ from the project owner's email. Self-published projects do not enforce this restriction.
-
-**Jira task creation (Phase 2).** When the approval gate passes, Central creates per-module Jira tasks for the downstream phases:
-
-- One content task, one automation task, and one verification task per module
-- One task each for code review, security review, e2e testing, and final review
-- Supporting pages (introduction, conclusion, overview) are excluded from task generation -- only substantive modules get tracked
-
-### Later Gates
-
-Gates beyond approval follow the common flow without phase-specific validation. The hard/soft distinction still applies: hard gates block if prerequisites are not met, soft gates approve once prerequisites are satisfied.
-
----
-
-## Gate Decision History
-
-Every gate decision -- approved, rejected, or overridden -- is permanently recorded with its findings, timestamps, and actors. This provides a complete audit trail for a project's lifecycle. Reviewers can inspect not just the decision but the evidence that informed it.
-
-The MCP tool `ph_get_history` returns the full gate decision history for a project in chronological order. The Central dashboard renders it as a timeline with expandable finding details.
+**Jira task creation.** When the approval gate passes, Central creates per-module Jira tasks for the upcoming work — content, automation, and verification tasks for each module, plus cross-cutting review tasks. Supporting pages (intro, conclusion, overview) are excluded.
 
 ---
 
 ## Phase Statuses
 
-Each phase in the manifest tracks its status through a simple state machine:
+Each phase in the manifest tracks its status:
 
-```
-pending → in_progress → completed
-                      → skipped
-```
+- **`pending`** — not started yet
+- **`in_progress`** — work has begun
+- **`completed`** — done, gate passed
+- **`skipped`** — intentionally bypassed (e.g., automation for a project reusing an existing catalog item)
 
-- **`pending`** -- the phase has not started. This is the initial state for all phases.
-- **`in_progress`** -- work has begun. The orchestrator sets this when it dispatches a skill to work on a phase.
-- **`completed`** -- the phase is done and the gate passed. The orchestrator sets this after a successful gate request.
-- **`skipped`** -- the phase was intentionally bypassed. Used for phases that do not apply to a particular project (e.g., automation for a demo that reuses an existing catalog item).
+The orchestrator sets `in_progress` when it dispatches a skill, and `completed` after a successful gate request. There is no backward transition.
 
-The manifest's `current_phase` field indicates which phase is currently active. For parallel phases (writing/automation, code_review/security_review), the orchestrator manages both and advances `current_phase` to the fan-in point (editing or e2e_testing) once both parallel tracks complete.
+---
+
+## Gate Decision History
+
+Every gate decision is recorded. This gives visibility into how a project moved through its lifecycle — who requested advancement, whether it was approved, and what findings were produced at each step. The `ph_get_history` tool returns the full history for a project, and the Central dashboard renders it as a timeline.
 
 ---
 
 ## Manifest Structure
 
-The manifest's `lifecycle` block tracks phase state. Each phase entry records its status and phase-specific metadata:
+The manifest's `lifecycle` block tracks phase state:
 
 ```yaml
 lifecycle:
@@ -212,10 +154,7 @@ lifecycle:
     approval: { status: completed, approved_by: "reviewer@redhat.com" }
     writing: { status: in_progress, modules: [...] }
     automation: { status: pending, substeps: { requirements: pending, ... } }
-    # ... remaining phases follow the same pattern
+    # ... remaining phases
 ```
 
-Completed phases carry a `completed_at` timestamp. Some phases carry additional metadata: `vetting` stores the RCARS response, `approval` stores the approver's identity, `writing` tracks per-module progress, and `automation` breaks down into substeps (requirements, catalog item, code, testing).
-
-The orchestrator reads this block to determine what work is available. Individual skills read their phase's entry to understand their inputs. Neither the orchestrator nor skills modify other phases' entries -- each skill owns only its own artifacts.
-
+Completed phases carry a timestamp. Some carry additional metadata: `vetting` stores the RCARS response, `approval` stores the approver, `writing` tracks per-module progress, and `automation` breaks into substeps.
