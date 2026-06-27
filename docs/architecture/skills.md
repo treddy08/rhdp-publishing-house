@@ -1,46 +1,100 @@
 # Skill System
 
-The Publishing House skill system is a dispatch architecture where a single orchestrator reads project state from the manifest, maps user intent to one of five specialized skills, and enforces phase transitions through Central's gate service -- ensuring that every interaction advances the project by exactly one step.
+The Publishing House skill system is a dispatch architecture where a single orchestrator reads project state from the manifest, maps user intent to specialized skills, and manages phase transitions through Central's gate service.
 
 ## The Orchestrator
 
-The orchestrator is the entry point for all Publishing House interactions. Users invoke it with `/rhdp-publishing-house` followed by an optional autonomy level:
+The orchestrator is the entry point for all Publishing House interactions. Users invoke it with `/rhdp-publishing-house` followed by an optional [autonomy level](#autonomy-levels):
 
 ```
-/rhdp-publishing-house guided
+/rhdp-publishing-house
 /rhdp-publishing-house assisted
-/rhdp-publishing-house autonomous
 ```
 
 When no level is specified, the default is `guided`.
 
-### Startup Sequence
+### What Happens When You Run It
 
-On every invocation, the orchestrator runs a deterministic startup sequence:
+The orchestrator's first job is figuring out what project you're working on.
 
-1. **Sync** -- `git pull --rebase --autostash` to pick up changes from humans and other agents.
-2. **Read state** -- parse `publishing-house/manifest.yaml` and `publishing-house/worklog.yaml` from disk.
-3. **Register with Central** -- call `ph_register` with the repo URL and branch. Idempotent -- already-registered projects get a no-op update.
-4. **Determine phase** -- read `lifecycle.current_phase` from the manifest to constrain what skills can be dispatched.
-5. **Map intent** -- based on the user's first message, determine which skill to dispatch.
+**If you're in a project directory** (a repo with `publishing-house/manifest.yaml`), the orchestrator syncs the repo, reads the manifest and worklog, and registers the project with Central. It then tells you where the project stands and asks what you want to do.
 
-### One Gate Per Interaction
+**If you're not in a project directory**, the orchestrator searches for PH projects — locally and via Central. It presents what it finds and offers options: point it at an existing project, clone one from a remote, start a new project from the template, or launch express mode (no repo needed).
 
-The orchestrator enforces a critical invariant: **one gate per user interaction, then stop.** When a skill completes its work and the project is ready to advance, the orchestrator calls `ph_request_gate` on Central with the target phase. Central validates prerequisites, checks the manifest, records the gate decision, and returns a pass/fail result. If the gate passes, the orchestrator updates `lifecycle.current_phase` in the manifest. If the gate fails, the orchestrator reports what's missing and stops.
+**For new projects**, the orchestrator walks you through creating a repo from the PH template, sets initial manifest fields (owner, email, deployment mode), and dispatches the intake skill.
 
-This constraint exists because phase transitions have side effects -- Central records them in the gate decision history, syncs to Jira (for onboarded projects), and updates the dashboard. Multiple transitions in a single interaction would be difficult to audit and could allow runaway agents to advance a project without human awareness.
+### One Gate, Then Stop
+
+When a skill completes its work and the project is ready to move to the next phase, the orchestrator requests a gate from Central. Central checks prerequisites, records the decision, and returns pass or fail. If it passes, the orchestrator updates the manifest. If it fails, the orchestrator reports what's missing and stops.
+
+Only one phase transition happens per interaction. This keeps transitions auditable and prevents an agent from advancing a project through multiple phases without the developer being aware.
 
 ### Fast Path
 
-Not every interaction needs a skill dispatch. Status queries -- "what's next?", "where are we?", "show me the worklog" -- are answered directly from the manifest and worklog on disk. The orchestrator reads the files, formats the response, and returns without loading reference docs, dispatching skills, or calling Central. This keeps status checks fast and token-efficient.
+Not every interaction needs a skill dispatch. Status queries — "what's next?", "where are we?", "show me the worklog" — are answered directly from the manifest and worklog on disk, without calling Central or dispatching skills.
 
 ### Session End
 
-When the session ends, the orchestrator invokes the worklog skill to record what happened, then commits and pushes all changes -- ensuring a clean handoff for the next session.
+Before ending a session, the orchestrator invokes the worklog skill to record a session summary — what was accomplished, what decisions were made, and what should happen next. It then commits and pushes any remaining changes. This ensures whoever picks up the project next (including the same developer days later) has context.
 
-### Tool Boundaries
+---
 
-The orchestrator calls Central MCP tools for project registration, status queries, gate requests, and result submission. It never calls RCARS directly, never queries the reporting database, and never accesses any data source outside Central MCP. See [Central Backend](central.md) for the full tool reference.
+## Example: Starting a New Onboarded Project
+
+```
+You: /rhdp-publishing-house
+
+Orchestrator: I don't see a PH manifest in this directory. Let me check Central
+              for your projects... No existing projects found.
+
+              What would you like to do?
+              1. I have a PH project cloned locally — tell me the path
+              2. I have a PH project in a remote repo — give me the git URL
+              3. I'm starting a new project
+              4. I need a customized environment (express mode)
+
+You: 3
+
+Orchestrator: Create a new repo from the PH template:
+              gh repo create rhpds/my-workshop --template rhpds/rhdp-publishing-house-template --clone
+
+              [You create and clone the repo]
+
+You: /rhdp-publishing-house
+
+Orchestrator: Found manifest in publishing-house/manifest.yaml.
+              Project is new — starting intake.
+              What deployment mode?
+              - RHDP Published (onboarded) — full lifecycle, Jira tracking, catalog publishing
+              - Self-Published — same tools, softer gates, no catalog
+              - Express — one-off environment, no repo needed
+
+You: onboarded
+
+Orchestrator: [Dispatches intake skill]
+              Intake runs — captures requirements, generates design.md and module outlines.
+              Intake complete. Requesting vetting gate from Central...
+              Gate passed. Project is now in vetting phase.
+              [Commits and pushes]
+```
+
+## Example: Continuing an Existing Project
+
+```
+You: /rhdp-publishing-house
+
+Orchestrator: Syncing repo... pulled 2 new commits.
+              Project: "OCP Getting Started Workshop"
+              Current phase: writing (3 of 5 modules drafted)
+              Next: Write module 4 — Canary Serving
+
+You: let's keep going
+
+Orchestrator: [Dispatches writer skill for module 4]
+              Writer generates module-04-canary-serving.adoc via showroom:create-lab.
+              Module 4 drafted. 4 of 5 modules complete.
+              [Commits and pushes]
+```
 
 ---
 
@@ -53,152 +107,95 @@ The orchestrator maps user intent to skill dispatch based on what the user says 
 | Start a new project | intake |
 | Refine the spec | intake (spec_refinement mode) |
 | Write module N | writer |
-| Review/edit content | editor |
 | Build automation | automation |
+| Review/edit content | editor |
 | What happened / handoff notes | worklog |
 
-The mapping is not purely keyword-based. The orchestrator considers the current phase -- if the project is in `writing` and the user says "let's keep going," the orchestrator dispatches the writer for the next unwritten module. If the project is in `automation` and the user says "review my content," the orchestrator dispatches the editor (content can always be revised, regardless of phase). Skills receive the manifest state, autonomy level, and user input as context, and return structured results the orchestrator uses to decide whether a gate request is appropriate.
-
-```mermaid
-flowchart TD
-    User["/rhdp-publishing-house assisted"] --> Startup
-
-    subgraph Startup
-        Pull["git pull --rebase --autostash"]
-        Read["Read manifest + worklog"]
-        Register["ph_register (Central MCP)"]
-        Pull --> Read --> Register
-    end
-
-    Register --> Phase{"Current phase?"}
-
-    Phase --> Intent{"User intent?"}
-
-    Intent -->|"Start / refine spec"| Intake["intake skill"]
-    Intent -->|"Write module"| Writer["writer skill"]
-    Intent -->|"Review content"| Editor["editor skill"]
-    Intent -->|"Build automation"| Auto["automation skill"]
-    Intent -->|"Status / handoff"| Fast["Fast path or worklog"]
-
-    Intake --> Gate
-    Writer --> Gate
-    Editor --> Gate
-    Auto --> Gate
-
-    Gate{"Ready for\nnext phase?"} -->|Yes| RequestGate["ph_request_gate\n(Central MCP)"]
-    Gate -->|No| Report["Report progress,\nstop"]
-
-    RequestGate --> Result{"Gate passed?"}
-    Result -->|Yes| Update["Update manifest\ncurrent_phase"]
-    Result -->|No| Fail["Report missing\nprerequisites"]
-
-    Update --> End["Commit + push\n+ worklog"]
-    Fail --> End
-    Report --> End
-    Fast --> End
-```
+The mapping is not purely keyword-based. The orchestrator considers the current phase — if the project is in `writing` and the user says "let's keep going," the orchestrator dispatches the writer for the next unwritten module. If the project is in `automation` and the user says "review my content," the orchestrator dispatches the editor (content can always be revised, regardless of phase).
 
 ---
 
 ## Individual Skills
 
-### Intake (Opus 4.6)
+### Intake
 
 The intake skill handles the transition from "I want to build something" to a structured spec that the writer can execute against. It supports three entry paths:
 
-**(A) Spec-first** -- the user has a design document (Google Doc, Confluence page, or local file). Intake extracts learning objectives, module structure, duration targets, and product requirements.
+**(A) Spec-first** — the user has a design document (Google Doc, Confluence page, or local file). Intake extracts learning objectives, module structure, duration targets, and product requirements.
 
-**(B) Conversational** -- the user has an idea but no document. Intake runs a structured interview covering topic, audience, learning outcomes, duration, and products.
+**(B) Conversational** — the user has an idea but no document. Intake runs a structured interview covering topic, audience, learning outcomes, duration, and products.
 
-**(C) Jira-driven** -- the user has a Jira issue with requirements attached. Intake reads the issue via Atlassian MCP tools and fills gaps conversationally.
+**(C) Jira-driven** — the user has a Jira issue with requirements attached. Intake reads the issue via Atlassian MCP tools and fills gaps conversationally.
 
 All three paths produce the same outputs:
 
-- `publishing-house/spec/design.md` -- the master spec with learning objectives, audience, duration, product list, and module plan
-- `publishing-house/spec/modules/` -- one outline file per module, with section structure, key concepts, and estimated duration
+- `publishing-house/spec/design.md` — the master spec with learning objectives, audience, duration, product list, and module plan
+- `publishing-house/spec/modules/` — one outline file per module, with section structure, key concepts, and estimated duration
 
-Intake does not call Central MCP tools. It works entirely locally -- reading and writing files in the project repo. Fields that the orchestrator has already set in the manifest (owner name, email, deployment mode) are pre-filled and not re-asked.
+Fields that the orchestrator has already set in the manifest (owner name, email, deployment mode) are pre-filled and not re-asked.
 
-Intake also handles **spec refinement** after vetting. When RCARS identifies overlapping content during the vetting phase, the orchestrator re-dispatches intake in `spec_refinement` mode. In this mode, intake receives the RCARS findings and helps the user differentiate their content -- adjusting scope, depth, or angle to complement rather than duplicate existing catalog items.
+Intake also handles **spec refinement** after vetting. When RCARS identifies overlapping content during the vetting phase, the orchestrator re-dispatches intake in `spec_refinement` mode. In this mode, intake receives the RCARS findings and helps the user differentiate their content — adjusting scope, depth, or angle to complement rather than duplicate existing catalog items.
 
-### Writer (Sonnet 4.6)
+### Writer
 
-The writer generates Showroom AsciiDoc content by wrapping `showroom:create-lab` and `showroom:create-demo`. It must use headless mode (`ph_payload`) -- never writing `.adoc` files directly -- to ensure consistent formatting, navigation structure, and scaffold compliance.
+The writer generates Showroom AsciiDoc content by wrapping `showroom:create-lab` and `showroom:create-demo`. It uses headless mode (`ph_payload`) — never writing `.adoc` files directly — to ensure consistent formatting, navigation structure, and scaffold compliance.
 
-Modules are typically written in order. Each module after the first uses `mode: continue`, giving the Showroom skill the context of what came before. This matters for narrative continuity -- module 3 should reference concepts introduced in module 2, not re-explain them. Ordered generation produces content that reads as a coherent workshop rather than a collection of independent exercises.
+Modules are typically written in order, with each module receiving the context of what came before. This produces content that reads as a coherent workshop rather than a collection of independent exercises.
 
-After generating each module, the writer runs post-generation verification:
+After generating each module, the writer runs post-generation verification: scaffold files exist, the generated `.adoc` file is at the expected path, and the module has an entry in `nav.adoc`. Verification failures are reported but do not block progress — the editor handles quality issues in a later phase.
 
-- Scaffold files exist and are well-formed (`site.yml`, `antora.yml`, `nav.adoc`)
-- The generated `.adoc` file exists at the expected path
-- The module has an entry in `nav.adoc`
-- The generated content covers the sections specified in the module outline
-
-Verification failures are reported but do not block progress. The editor skill handles quality issues in a later phase.
-
-### Editor (Sonnet 4.6)
-
-The editor runs a two-layer review on content that the writer (or a human) has produced.
-
-**Layer 1 -- Showroom quality.** The editor dispatches `showroom:verify-content`, which checks AsciiDoc syntax, scaffold compliance, formatting standards, and Showroom-specific conventions (callout blocks, code annotation, prerequisite sections). This is a mechanical check -- does the content meet the platform's technical requirements?
-
-**Layer 2 -- Spec alignment.** The editor compares the content against the spec and module outlines, checking:
-
-- **Outline coverage** -- does the module address every section in its outline?
-- **Learning objectives** -- do the exercises actually teach what the spec says they should?
-- **Duration alignment** -- is the content roughly appropriate for the target duration?
-- **Cross-module consistency** -- do modules use the same terminology, variable names, and environment assumptions?
-- **Product accuracy** -- are product names and versions correct and consistent?
-
-**Content on disk is authoritative.** If a human edited a module and it now diverges from the spec, the editor reports the divergence as informational, not as an error. It asks before reverting human work.
-
-### Automation (Opus 4.6)
+### Automation
 
 The automation skill handles the most complex phase in the lifecycle, broken into four sub-phases:
 
-**7a -- Requirements manifest.** Reads the spec, content, and module outlines to produce a structured requirements document: what infrastructure the workshop needs (clusters, VMs, storage, networking), what software must be pre-installed, what credentials users need, and what post-deployment configuration is required.
+**7a — Requirements manifest.** Reads the spec, content, and module outlines to produce a structured requirements document: what infrastructure the workshop needs, what software must be pre-installed, what credentials users need, and what post-deployment configuration is required.
 
-**7b -- AgnosticV catalog.** Generates the AgnosticV catalog item (`common.yaml`, environment-specific overrides) that RHDP uses to provision the workshop environment. This sub-phase is **skipped for `self_published` projects** -- they don't use RHDP's provisioning system and manage their own infrastructure.
+**7b — AgnosticV catalog.** Generates the AgnosticV catalog item that RHDP uses to provision the workshop environment. This sub-phase is **skipped for self-published projects** — they don't use RHDP's provisioning system.
 
-**7c -- Automation code.** Generates the deployment automation itself. Three approaches are supported:
+**7c — Automation code.** Generates the deployment automation itself. Three approaches are supported: Ansible (collections with roles), GitOps (Helm charts with ArgoCD), or both.
 
-- **Ansible** -- collections with roles, following RHDP's established patterns for AgnosticD workloads
-- **GitOps** -- Helm charts with ArgoCD Application resources, consistent with RHDP's GitOps catalog items
-- **Both** -- Ansible for infrastructure provisioning, GitOps for application deployment (common for complex workshops)
+**7d — Testing gate.** This is a human gate, not an automated test. The automation skill tracks whether the user has deployed and tested the environment, but it does not deploy or run tests itself.
 
-**7d -- Testing gate.** This is a human gate, not an automated test. The automation skill tracks whether the user has deployed and tested the environment, but it does not deploy or run tests itself. It prompts the user to confirm that provisioning works, the environment matches requirements, and the workshop exercises can be completed. The skill records the testing outcome but does not attempt to validate it.
+### Editor
 
-### Worklog (Sonnet 4.6)
+The editor runs a two-layer review on content that the writer (or a human) has produced.
 
-The worklog manages `publishing-house/worklog.yaml` -- the human-context layer that captures what the manifest cannot: why a decision was made, what was tried and abandoned, what the next person should know, what's blocked and why.
+**Layer 1 — Showroom quality.** The editor dispatches `showroom:verify-content`, which checks AsciiDoc syntax, scaffold compliance, formatting standards, and Showroom-specific conventions. This is a mechanical check — does the content meet the platform's technical requirements?
 
-Entry types:
+**Layer 2 — Spec alignment.** The editor compares the content against the spec and module outlines, checking outline coverage, learning objectives, duration alignment, cross-module consistency, and product name accuracy.
+
+**Content on disk is authoritative.** If a human edited a module and it now diverges from the spec, the editor reports the divergence as informational, not as an error. It asks before reverting human work.
+
+### Worklog
+
+The worklog manages `publishing-house/worklog.yaml` — the human-context layer that captures what the manifest cannot: why a decision was made, what was tried and abandoned, what the next person should know, what's blocked and why.
 
 | Type | Purpose |
 |------|---------|
 | `note` | Freeform observation or context |
 | `decision` | A choice that was made, with rationale |
 | `handoff` | What the next person needs to know |
-| `action` | Something that needs to happen (not a task tracker -- just a flag) |
+| `action` | Something that needs to happen |
 | `summary` | End-of-session recap |
 
-The worklog is not a task tracker -- the manifest handles structured progress. The worklog captures what falls between the cracks: reasoning, false starts, and tribal knowledge.
-
-To prevent unbounded growth, the worklog skill **squashes old entries** -- resolved entries older than one week are compressed into a summary that preserves key decisions and outcomes but drops the play-by-play.
+The worklog is also invoked automatically at the end of every session to capture a summary. It is not a task tracker — the manifest handles structured progress. The worklog captures what falls between the cracks.
 
 ---
 
 ## Skill Boundaries
 
-Four rules govern what skills can and cannot do. These are not guidelines -- they are invariants that the system depends on for correctness.
+Rules that govern what skills can and cannot do:
 
-**Skills don't own phase transitions.** Only the orchestrator calls `ph_request_gate`. Skills never modify `lifecycle.current_phase`. A skill signals readiness to the orchestrator, which decides whether to request a gate. This ensures every transition is recorded in Central's gate decision history and synced to Jira.
+**Skills don't own phase transitions.** Only the orchestrator calls `ph_request_gate`. Skills never modify `lifecycle.current_phase`. A skill signals readiness to the orchestrator, which decides whether to request a gate.
 
-**Skills don't call external services directly.** No direct RCARS calls, no direct Jira calls, no reporting database queries. Everything flows through Central MCP tools. One scoped exception: intake path (C) may use Atlassian MCP tools to read a Jira issue, because the issue content is input -- not a side effect.
+**Skills don't call external services directly.** No direct RCARS calls, no direct Jira calls, no reporting database queries. Everything flows through Central MCP tools.
 
-**Manifest is read-before-write.** Before modifying any YAML file, skills must read the current version from disk. Never assume a file matches what an agent last wrote -- humans edit between sessions and git operations during startup may have pulled new content.
+!!! note "Exception"
+    Intake path (C) may use Atlassian MCP tools to read a Jira issue that contains requirements. This is input gathering, not a side effect.
 
-**Content on disk is authoritative.** If a human modified an `.adoc` file, a module outline, or the manifest itself, the on-disk version is ground truth. Skills report divergence from specs as informational findings and ask before reverting human work.
+**Manifest is read-before-write.** Before modifying any file, skills must read the current version from disk. Never assume a file matches what an agent last wrote — humans edit between sessions.
+
+**Content on disk is authoritative.** If a human modified a file, the skill treats the on-disk version as ground truth, even if it diverges from the spec.
 
 ---
 
@@ -208,11 +205,8 @@ Three levels control how much confirmation skills require from the user. The lev
 
 | Level | Behavior |
 |-------|----------|
-| **Guided** | Every action requires user confirmation. The skill explains what it plans to do and waits for approval before proceeding. Default for new users and unfamiliar projects. |
-| **Assisted** | Low-risk and medium-risk actions (fixing AsciiDoc syntax, adding missing nav entries, correcting product names) are applied automatically. High-risk changes (rewriting a section, deleting content, changing module structure) require confirmation. |
-| **Autonomous** | All clear-cut issues are fixed automatically. The skill only stops for genuinely ambiguous decisions -- cases where two reasonable approaches exist and the user's preference is unknowable. |
+| **Guided** | Every action requires user confirmation. Default. |
+| **Assisted** | Low-risk actions (fixing AsciiDoc syntax, correcting product names) are applied automatically. Structural changes require confirmation. |
+| **Autonomous** | All clear-cut issues are fixed automatically. The skill only stops for genuinely ambiguous decisions. |
 
-The distinction between levels is about **risk classification**, not capability. All three levels use the same skills; they differ in how aggressively those skills act without asking. The editor in autonomous mode fixes typos, reformats code blocks, and corrects product names without asking -- but still stops when a section diverges from the spec and two reasonable approaches exist.
-
-The autonomy level is informational only in the worklog and intake skills, which are inherently interactive.
-
+The distinction between levels is about risk, not capability. All three levels use the same skills — they differ in how aggressively those skills act without asking.
