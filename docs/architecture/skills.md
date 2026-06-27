@@ -83,7 +83,19 @@ Orchestrator: [Dispatches intake skill]
 ```
 You: /rhdp-publishing-house
 
-Orchestrator: Syncing repo... pulled 2 new commits.
+Orchestrator: I don't see a PH manifest in this directory. Let me check
+              for your projects...
+
+              Found 2 projects:
+              1. OCP Getting Started Workshop (writing phase) — ~/devel/ocp-workshop
+              2. AI Observability Lab (intake phase) — ~/devel/ai-obs-lab
+
+              Which project would you like to work on?
+
+You: 1
+
+Orchestrator: Switching to ~/devel/ocp-workshop
+              Syncing repo... pulled 2 new commits.
               Project: "OCP Getting Started Workshop"
               Current phase: writing (3 of 5 modules drafted)
               Next: Write module 4 — Canary Serving
@@ -95,6 +107,47 @@ Orchestrator: [Dispatches writer skill for module 4]
               Module 4 drafted. 4 of 5 modules complete.
               [Commits and pushes]
 ```
+
+## Lifecycle Flow
+
+The lifecycle is not a linear sequence. Writing and automation run in parallel after approval, and code review and security review run in parallel after editing:
+
+```mermaid
+flowchart TD
+    intake[Intake] --> vetting[Vetting]
+    vetting --> spec_refinement[Spec Refinement]
+    spec_refinement --> approval[Approval]
+
+    approval --> writing[Writing]
+    approval --> automation[Automation]
+
+    writing --> editing[Editing]
+    automation --> editing
+
+    editing --> code_review[Code Review]
+    editing --> security_review[Security Review]
+
+    code_review --> e2e_testing[E2E Testing]
+    security_review --> e2e_testing
+
+    e2e_testing --> final_review[Final Review]
+    final_review --> ready_for_publishing[Ready for Publishing]
+
+    style intake fill:#2a6496,color:#fff
+    style vetting fill:#2a6496,color:#fff
+    style spec_refinement fill:#2a6496,color:#fff
+    style approval fill:#d4a017,color:#000
+    style writing fill:#3c763d,color:#fff
+    style automation fill:#3c763d,color:#fff
+    style editing fill:#8a6d3b,color:#fff
+    style code_review fill:#31708f,color:#fff
+    style security_review fill:#31708f,color:#fff
+    style e2e_testing fill:#8a6d3b,color:#fff
+    style final_review fill:#8a6d3b,color:#fff
+    style ready_for_publishing fill:#4caf50,color:#fff
+```
+
+See [Lifecycle & Phases](lifecycle-phases.md) for the full phase definitions, gate types, and prerequisite chain.
 
 ---
 
