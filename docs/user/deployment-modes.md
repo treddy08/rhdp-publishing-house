@@ -51,13 +51,13 @@ Onboarded and self-published projects take the upper path (all 12 phases). Expre
 
 ## Onboarded
 
-For content going into the RHDP catalog — workshops and demos that anyone can order.
+For content going into the RHDP catalog.
 
 **What makes it different:**
 
 - Hard gates enforce quality at each phase boundary
 - Jira Epic and tasks created automatically, synced as work progresses
-- AgnosticV catalog item produced during automation
+- Content and automation built for you, ready to onboard
 - All review phases required before publishing
 
 **Example:**
@@ -71,7 +71,7 @@ You: onboarded
      → RCARS checks for content overlap
      → Spec reviewed and approved (cannot self-approve)
      → Writer generates AsciiDoc modules
-     → Automation builds AgnosticV catalog + deployment code
+     → Automation builds catalog configuration + deployment code
      → Editor reviews against spec and Red Hat standards
      → Code review, security review, e2e testing, final review
      → Ready for publishing in the RHDP catalog
@@ -81,13 +81,12 @@ You: onboarded
 
 ## Self-Published
 
-For content you'll host and manage yourself — internal demos, training materials, team-specific workshops. Same quality tools as onboarded, but you control the pace.
+For content that won't be published in the RHDP catalog. You can still use RHDP to order and provision it — you just manage the lifecycle yourself.
 
 **What makes it different:**
 
 - Soft gates — PH flags issues but never blocks you from advancing
 - No automatic Jira tracking
-- GitOps automation only (Helm + ArgoCD) — no AgnosticV catalog item
 - You decide when it's ready
 
 **Example:**

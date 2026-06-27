@@ -203,7 +203,7 @@ The automation skill handles the most complex phase in the lifecycle, broken int
 
 **7a — Requirements manifest.** Reads the spec, content, and module outlines to produce a structured requirements document: what infrastructure the workshop needs, what software must be pre-installed, what credentials users need, and what post-deployment configuration is required.
 
-**7b — AgnosticV catalog.** Generates the AgnosticV catalog item that RHDP uses to provision the workshop environment. This sub-phase is **skipped for self-published projects** — they don't use RHDP's provisioning system.
+**7b — Catalog item.** Generates the RHDP catalog configuration that makes the workshop orderable. This sub-phase is **skipped for self-published projects**.
 
 **7c — Automation code.** Generates the deployment automation itself. Three approaches are supported: Ansible (collections with roles), GitOps (Helm charts with ArgoCD), or both.
 

@@ -9,11 +9,11 @@ description: What Publishing House is, why it exists, and how it works
 
 Publishing House is an AI-powered content lifecycle management system for Red Hat Demo Platform — a Claude Code plugin that gives content developers a persistent, state-aware orchestrator managing the entire content lifecycle through specialized AI agent skills. Run `/rhdp-publishing-house` in a project repo and you have an assistant that knows where your project is, what's been done, and what needs to happen next.
 
-Say you're building a new OpenShift workshop. Instead of manually writing AsciiDoc modules, creating AgnosticV catalog configurations, developing Ansible automation, and tracking progress in Jira — you tell Publishing House what you want to build, and it dispatches specialized agents to handle each phase while you focus on the design decisions that matter.
+Say you're building a new OpenShift workshop. Instead of manually writing AsciiDoc modules, creating catalog configurations, developing automation, and tracking progress in Jira — you tell Publishing House what you want to build, and it dispatches specialized agents to handle each phase while you focus on the design decisions that matter.
 
 ## The Problem It Solves
 
-Building an RHDP workshop or demo means juggling multiple tools and skill sets — AsciiDoc for lab content, YAML for AgnosticV catalog items, Ansible or GitOps for automation, security reviews for compliance, Jira for tracking. Each step requires different expertise. Most time is spent on toil — formatting, boilerplate, configuration syntax — not on designing the learning experience.
+Building an RHDP workshop or demo means juggling multiple tools and skill sets — AsciiDoc for lab content, YAML for catalog configuration, Ansible or GitOps for automation, security reviews for compliance, Jira for tracking. Each step requires different expertise. Most time is spent on toil — formatting, boilerplate, configuration syntax — not on designing the learning experience.
 
 There's also no single system that tracks where a project stands. Progress lives in scattered places: partially written modules in a git repo, a Jira ticket that may or may not be current, tribal knowledge about which reviews have happened. When someone picks up a project after a break, the first hour goes to figuring out where things left off.
 
