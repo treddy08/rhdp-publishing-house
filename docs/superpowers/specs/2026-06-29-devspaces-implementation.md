@@ -1386,16 +1386,14 @@ FROM registry.redhat.io/devspaces/udi-base-rhel10:latest
 
 USER 0
 
-# Install Claude Code CLI
+# Install Claude Code CLI (fallback version - updated at startup)
 RUN npm install -g @anthropic-ai/claude-code@latest
 
 # Install Ansible collections
 RUN ansible-galaxy collection install kubernetes.core community.general
 
-# Pre-clone PH skills plugin and capture git version
-RUN mkdir -p /opt/ph && \
-    git clone https://github.com/rhpds/rhdp-publishing-house-skills.git /opt/ph/skills && \
-    cd /opt/ph/skills && git rev-parse --short HEAD > /opt/ph/skills/.git-version
+# Clone PH skills to well-known path (updated via git pull at startup)
+RUN git clone https://github.com/rhpds/rhdp-publishing-house-skills.git /home/user/rhdp-publishing-house-skills
 
 # Add workspace startup script
 COPY workspace-startup.sh /opt/ph/scripts/workspace-startup.sh
@@ -1404,7 +1402,7 @@ RUN chmod +x /opt/ph/scripts/workspace-startup.sh
 # Pre-configure MCP endpoint (can be overridden by env var)
 ENV MCP_ENDPOINT=https://publishing-house-central-dev.apps.ocpv-infra01.dal12.infra.demo.redhat.com/mcp
 
-# Record image build date
+# Record image build date for diagnostics
 RUN date -u +"%Y-%m-%d" > /opt/ph/.image-version
 
 USER 1001
@@ -1412,46 +1410,51 @@ USER 1001
 LABEL \
     io.openshift.tags="devspaces,publishing-house,claude-code" \
     summary="Publishing House Universal Developer Image" \
-    description="Custom UDI with Claude Code, PH skills, and tooling for RHDP content development"
+    description="Custom UDI with Claude Code, PH skills (multi-plugin), and tooling for RHDP content development"
 ```
 
-**Version tracking:**
-- `/opt/ph/.image-version` - Image build date (YYYY-MM-DD)
-- `/opt/ph/skills/.git-version` - Git short hash of skills at build time
-- Startup script reads these files and reports versions at workspace startup
+**Key changes to align with consolidation architecture:**
+- ✅ **Skills at well-known path** - `/home/user/rhdp-publishing-house-skills` matches `~/rhdp-publishing-house-skills`
+- ✅ **Git-based updates** - Startup script runs `git pull` to get latest skills
+- ✅ **Multi-plugin support** - Cloned repo contains all 4 plugins (rhdp-publishing-house, showroom, agnosticv, ftl)
+- ✅ **Version gates work** - Orchestrator can read each plugin's version from `.claude-plugin/plugin.json`
+- ✅ **Image is base only** - No version capture, skills update independently via git
 
 ### Update Strategy
 
-**Everything is baked into the image** - no runtime updates needed.
+**Aligned with PH Skills Consolidation Architecture:**
 
-**Claude Code is installed in two places:**
-1. **CLI** (`@anthropic-ai/claude-code`) - Baked into image at build time
-2. **VS Code Extension** - Auto-installed by Dev Spaces from marketplace
+The Dev Spaces workspace follows the same update model as local Claude Code installations — **git-based updates** for PH skills, not image-baked versions.
 
-**Skills are baked into the image** - no git pull on startup
+| Component | Installation | Update Mechanism |
+|-----------|--------------|------------------|
+| **Claude Code CLI** | Image: `npm install -g @latest` | Startup: `npm update -g` (fallback: use image version) |
+| **Claude Code VS Code Extension** | Dev Spaces marketplace | Auto-update by Dev Spaces |
+| **PH Skills (multi-plugin)** | Image: `git clone` to well-known path | Startup: `git pull` to get latest |
+| **Custom UDI Image** | Quay.io registry | Manual rebuild for base dependencies only |
 
-### How Components Update
+**Key Principles:**
+- ✅ **Skills use git flow** - Matches local CC installation (`git pull` to update)
+- ✅ **Version gates work** - Orchestrator checks plugin versions at session start
+- ✅ **Image is base only** - Rebuilt only for Node/Python/Ansible updates, not skill changes
+- ✅ **Fast iteration** - Skill updates via git, no image rebuild needed
 
-| Component | Installation | Update Mechanism | When |
-|-----------|--------------|------------------|------|
-| **Claude Code CLI** | Image: `npm install -g @latest` | Image rebuild | Weekly or on CC release |
-| **Claude Code VS Code Extension** | Dev Spaces marketplace | Auto-update by Dev Spaces | On extension release |
-| **PH Skills** | Image: `git clone` at build time | Image rebuild | Weekly or on skills update |
-| **Custom UDI Image** | Quay.io registry | Automated rebuild pipeline | Weekly + on-demand |
+**Image Rebuild Triggers (rare):**
+- **Base dependency changes** - Node, Python, Ansible version bumps
+- **Security patches** - CVE fixes in base image layers
+- **Monthly maintenance** - Keep base tooling current
 
-**Key Benefits:**
-- ✅ **Fast workspace startup** - No npm/git operations on start (~30s faster)
-- ✅ **No network dependencies** - Works offline, no npm registry/GitHub failures
-- ✅ **Predictable versions** - All workspaces use same tested image
-- ✅ **Simpler startup script** - Just configure environment
-
-**Image Rebuild Triggers:**
-- **Weekly automated build** - Gets latest CC CLI + skills
-- **On CC release** - Manual rebuild when new Claude Code version drops
-- **On skills update** - Manual rebuild when new PH skills are merged
-- **On base dependency change** - Node, Python, Ansible updates
+**Skill Update Flow (frequent):**
+```bash
+# Users trigger this from workspace terminal or it runs on startup
+cd ~/rhdp-publishing-house-skills
+git pull
+# Orchestrator version gate validates minimum versions on next /rhdp-publishing-house call
+```
 
 ### Startup Script
+
+**Aligned with git-based skills update flow:**
 
 ```bash
 #!/bin/bash
@@ -1464,7 +1467,24 @@ echo "[PH] =========================================="
 echo "[PH] Publishing House Workspace Initialization"
 echo "[PH] =========================================="
 
-# 1. Sync project repo (user's content, not our tools)
+# 1. Update Claude Code CLI to latest
+echo "[PH] Updating Claude Code CLI..."
+npm update -g @anthropic-ai/claude-code 2>/dev/null || {
+    echo "[PH] WARNING: npm update failed, using pre-installed CC CLI"
+}
+
+# 2. Update PH skills (multi-plugin package)
+echo "[PH] Updating PH skills..."
+if [ -d ~/rhdp-publishing-house-skills ]; then
+    cd ~/rhdp-publishing-house-skills
+    git pull --rebase --autostash || {
+        echo "[PH] WARNING: Failed to update skills, using current version"
+    }
+else
+    echo "[PH] WARNING: Skills not found at ~/rhdp-publishing-house-skills"
+fi
+
+# 3. Sync project repo (user's content)
 if [ -n "$PROJECT_REPO_NAME" ] && [ -d "/projects/${PROJECT_REPO_NAME}" ]; then
     echo "[PH] Syncing project repository..."
     cd "/projects/${PROJECT_REPO_NAME}"
@@ -1473,7 +1493,7 @@ if [ -n "$PROJECT_REPO_NAME" ] && [ -d "/projects/${PROJECT_REPO_NAME}" ]; then
     }
 fi
 
-# 2. Validate MaaS key
+# 4. Validate MaaS key
 if [ -n "$MAAS_API_KEY" ] && [ -n "$LITELLM_URL" ]; then
     echo "[PH] Validating MaaS API key..."
     HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
@@ -1490,14 +1510,10 @@ else
     echo "[PH] ⚠ WARNING: MaaS key not configured"
 fi
 
-# 3. Configure Claude Code environment
+# 5. Configure Claude Code environment
 echo "[PH] Configuring Claude Code..."
 export ANTHROPIC_API_KEY="${MAAS_API_KEY}"
 export ANTHROPIC_BASE_URL="${LITELLM_URL}/v1"
-
-# Link skills to CC config directory (already in image, just symlink)
-mkdir -p ~/.config/claude-code/skills
-ln -sf /opt/ph/skills ~/.config/claude-code/skills/publishing-house || true
 
 # Configure VS Code settings for Claude Code
 mkdir -p ~/.vscode-server/data/Machine
@@ -1505,6 +1521,7 @@ cat > ~/.vscode-server/data/Machine/settings.json <<EOF
 {
   "claude-code.apiKey": "${MAAS_API_KEY}",
   "claude-code.baseUrl": "${LITELLM_URL}/v1",
+  "pluginDirectories": ["~/rhdp-publishing-house-skills"],
   "claude-code.mcpServers": {
     "publishing-house": {
       "endpoint": "${MCP_ENDPOINT}"
@@ -1515,22 +1532,28 @@ EOF
 
 echo "[PH] =========================================="
 echo "[PH] ✓ Workspace ready!"
-echo "[PH] Image version: $(cat /opt/ph/.image-version 2>/dev/null || echo 'unknown')"
-echo "[PH] Skills version: $(cat /opt/ph/skills/.git-version 2>/dev/null || echo 'unknown')"
-echo "[PH] CC CLI version: $(claude-code --version 2>/dev/null || echo 'unknown')"
+echo "[PH] Image built: $(cat /opt/ph/.image-version 2>/dev/null || echo 'unknown')"
+echo "[PH] CC CLI: $(claude-code --version 2>/dev/null || echo 'unknown')"
+echo "[PH] PH Skills: $(cd ~/rhdp-publishing-house-skills && git log -1 --format='%h %s' 2>/dev/null || echo 'unknown')"
 echo "[PH] =========================================="
 ```
 
-**What changed:**
-- ❌ Removed: `npm update -g` (CC CLI baked in)
-- ❌ Removed: `git pull` for skills (skills baked in)
-- ✅ Kept: Project repo sync (user's content changes)
-- ✅ Kept: MaaS key validation
-- ✅ Kept: Environment configuration
+**Key changes to match consolidation architecture:**
+- ✅ **Restored npm update** - CC CLI updates on every start (with fallback to image version)
+- ✅ **Restored git pull for skills** - Pulls latest from multi-plugin package
+- ✅ **Well-known path** - Skills always at `~/rhdp-publishing-house-skills`
+- ✅ **Plugin dir in settings** - VS Code knows where to find all 4 plugins
+- ✅ **Version reporting** - Shows git commit for traceability
 
 ### VS Code Extension Installation
 
-**Claude Code VS Code extension is NOT in the custom image.** Dev Spaces automatically installs it from the marketplace.
+**Claude Code VS Code extension** - Auto-installed by Dev Spaces from the marketplace.
+
+**Plugin discovery** - Claude Code extension automatically discovers all 4 plugins in `~/rhdp-publishing-house-skills`:
+1. `rhdp-publishing-house` (root `.claude-plugin/plugin.json`)
+2. `showroom` (`showroom/.claude-plugin/plugin.json`)
+3. `agnosticv` (`agnosticv/.claude-plugin/plugin.json`)
+4. `ftl` (`ftl/.claude-plugin/plugin.json`)
 
 **Devfile contribution** (optional - to pre-install extension):
 
@@ -1547,6 +1570,40 @@ spec:
         - name: VSCODE_DEFAULT_EXTENSIONS
           value: "anthropic.claude-code"
 ```
+
+### Version Gates at Session Start
+
+**Aligned with consolidation architecture** - The PH orchestrator validates plugin versions before executing any skills.
+
+When a user invokes `/rhdp-publishing-house`, the orchestrator:
+
+1. **Reads each plugin version** from `~/rhdp-publishing-house-skills`:
+   - `rhdp-publishing-house`: Read `.claude-plugin/plugin.json` → `"version"`
+   - `showroom`: Read `showroom/.claude-plugin/plugin.json` → `"version"`
+   - `agnosticv`: Read `agnosticv/.claude-plugin/plugin.json` → `"version"`
+   - `ftl`: Read `ftl/.claude-plugin/plugin.json` → `"version"`
+
+2. **Validates minimum versions**:
+   ```yaml
+   MINIMUM_REQUIRED:
+     rhdp-publishing-house: "0.2.0"
+     showroom: "2.14.0"      # ph_payload headless mode support
+     agnosticv: "2.15.0"     # ph_payload + agent decomposition
+     ftl: "TBD"
+   ```
+
+3. **Surfaces clear errors if version too old**:
+   ```
+   ❌ showroom v2.13.0 is below minimum v2.14.0
+   → Update: cd ~/rhdp-publishing-house-skills && git pull
+   ```
+
+4. **Stops execution** - Session does not proceed until all versions meet minimum requirements
+
+**Benefits:**
+- ✅ **Prevents silent failures** - No more "writer can't find showroom:create-lab"
+- ✅ **Clear resolution** - User knows exactly what to run (`git pull`)
+- ✅ **Single repo update** - One pull updates all 4 plugins simultaneously
 
 **Alternative:** Let users install manually once (Dev Spaces persists extensions across restarts)
 
