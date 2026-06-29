@@ -263,10 +263,50 @@ class Settings(BaseSettings):
     
     # LiteLLM (MaaS) settings
     LITELLM_URL: str
-    LITELLM_MASTER_KEY: str
+    LITELLM_MASTER_KEY: str  # Loaded from K8s Secret
     LITELLM_KEY_DURATION: str = "30d"
     LITELLM_MODELS: list[str] = ["claude-sonnet-4-5"]
 ```
+
+**Security: LiteLLM Master Key Storage**
+
+The LiteLLM master key is **never stored in code or environment variables**. It is securely stored in an OpenShift Secret with access restricted to the Publishing House application pod only.
+
+```yaml
+# manifests/secrets/litellm-credentials.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: litellm-credentials
+  namespace: publishing-house-central-dev
+type: Opaque
+stringData:
+  master-key: "sk-1234..."  # LiteLLM master key (set manually or via Ansible vault)
+```
+
+**Secret mounted to backend pod:**
+
+```yaml
+# manifests/deployment-backend.yaml (excerpt)
+spec:
+  template:
+    spec:
+      containers:
+      - name: backend
+        env:
+        - name: LITELLM_MASTER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: litellm-credentials
+              key: master-key
+```
+
+**Access control:**
+
+- Secret accessible only to pods in `publishing-house-central-dev` namespace
+- No other applications can read this Secret
+- Secret not logged or exposed in pod specs
+- Rotation: Update Secret, restart pods (no code changes required)
 
 ### 2. DevSpacesClient
 
@@ -958,11 +998,32 @@ podman build -t quay.io/rhpds/ph-udi:latest .
 podman push quay.io/rhpds/ph-udi:latest
 ```
 
-3. **LiteLLM Accessible**
+3. **LiteLLM Master Key Secret Created**
+
+```bash
+# Create Secret with LiteLLM master key
+oc create secret generic litellm-credentials \
+  --from-literal=master-key='sk-1234...' \
+  -n publishing-house-central-dev
+
+# Or via Ansible vault (recommended for production)
+ansible-playbook ansible/deploy.yml \
+  -e env=dev \
+  --tags secrets \
+  -e litellm_master_key='{{ vault_litellm_master_key }}'
+```
+
+**Security notes:**
+- Secret is namespace-scoped (only accessible to `publishing-house-central-dev`)
+- Master key never stored in git, environment files, or ConfigMaps
+- Ansible vault encrypts the key in playbooks
+- Key rotation: Update Secret + restart pods (no code changes)
+
+4. **LiteLLM Accessible**
 
 Network policy or route to allow Central namespace to reach LiteLLM endpoint.
 
-4. **Service Account Permissions**
+5. **Service Account Permissions**
 
 ```yaml
 # Grant Central SA permissions to manage DevWorkspaces
@@ -1004,6 +1065,21 @@ Add to existing `ansible/deploy.yml`:
   hosts: localhost
   tasks:
   
+  - name: Create LiteLLM credentials Secret
+    kubernetes.core.k8s:
+      state: present
+      definition:
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: litellm-credentials
+          namespace: "{{ namespace }}"
+        type: Opaque
+        stringData:
+          master-key: "{{ litellm_master_key }}"
+    tags: [secrets, deploy]
+    no_log: true  # Don't log the Secret content
+  
   - name: Apply DevWorkspace RBAC
     kubernetes.core.k8s:
       state: present
@@ -1018,13 +1094,35 @@ Add to existing `ansible/deploy.yml`:
     tags: [migrate, deploy]
 ```
 
+**Ansible vault for production:**
+
+```yaml
+# ansible/group_vars/dev/vault.yml (encrypted with ansible-vault)
+vault_litellm_master_key: sk-production-master-key-here
+```
+
 Run deployment:
 
 ```bash
 cd rhdp-publishing-house-central
 
-# Full deploy with migration
-ansible-playbook ansible/deploy.yml -e env=dev --tags deploy
+# Full deploy with migration (includes Secret creation)
+ansible-playbook ansible/deploy.yml \
+  -e env=dev \
+  -e litellm_master_key='sk-your-master-key' \
+  --tags deploy
+
+# Or use vault for production
+ansible-playbook ansible/deploy.yml \
+  -e env=prod \
+  --ask-vault-pass \
+  --tags deploy
+
+# Just create/update Secret
+ansible-playbook ansible/deploy.yml \
+  -e env=dev \
+  -e litellm_master_key='sk-your-master-key' \
+  --tags secrets
 
 # Just apply RBAC
 ansible-playbook ansible/deploy.yml -e env=dev --tags rbac
@@ -1032,6 +1130,13 @@ ansible-playbook ansible/deploy.yml -e env=dev --tags rbac
 # Just run migration
 ansible-playbook ansible/deploy.yml -e env=dev --tags migrate
 ```
+
+**Security checklist:**
+- ✅ LiteLLM master key stored in K8s Secret (not git, not env files)
+- ✅ Secret scoped to `publishing-house-central-dev` namespace only
+- ✅ Production key encrypted with `ansible-vault`
+- ✅ Secret not logged in Ansible output (`no_log: true`)
+- ✅ Key rotation: update Secret + restart pods (no code deploy)
 
 ---
 
