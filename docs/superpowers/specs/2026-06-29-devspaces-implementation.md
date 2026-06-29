@@ -1817,6 +1817,29 @@ From Jira ticket description:
 
 **User Action:** Clicks "Launch Workspace" button
 
+```mermaid
+sequenceDiagram
+    actor User
+    participant Browser
+    participant Portal
+    participant LiteLLM
+    participant K8s
+    participant Database
+    
+    User->>Browser: Click "Launch Workspace"
+    Browser->>Portal: POST /workspace
+    Portal->>LiteLLM: POST /key/generate
+    LiteLLM-->>Portal: {key, key_id}
+    Portal->>K8s: Create namespace
+    Portal->>K8s: Create DevWorkspace CR<br/>(with MAAS_API_KEY env)
+    K8s-->>Portal: Workspace created
+    Portal->>Database: INSERT workspaces
+    Portal->>Database: INSERT workspace_key_history
+    Portal-->>Browser: {url, status}
+    Browser->>User: Redirect to workspace URL
+    Note over User: VS Code opens in browser<br/>Startup script runs<br/>Claude Code ready
+```
+
 **Steps:**
 1. Portal provisions MaaS key via LiteLLM (`POST /key/generate`)
 2. Portal creates K8s namespace + DevWorkspace CR with key as env var
@@ -1834,6 +1857,22 @@ From Jira ticket description:
 
 **User Action:** Clicks "Open Workspace" button
 
+```mermaid
+sequenceDiagram
+    actor User
+    participant Browser
+    participant Portal
+    participant Database
+    
+    User->>Browser: Click "Open Workspace"
+    Browser->>Portal: GET /workspace
+    Portal->>Database: SELECT workspace
+    Database-->>Portal: {workspace_url}
+    Portal-->>Browser: {url, status}
+    Browser->>User: Redirect to workspace URL
+    Note over User: Workspace auto-starts<br/>User lands in VS Code
+```
+
 **Steps:**
 1. Portal queries database for workspace URL
 2. Browser redirects to workspace URL
@@ -1848,6 +1887,39 @@ From Jira ticket description:
 ### 3. Resume with Expired Key (Auto-Rotation)
 
 **User Action:** Clicks "Resume Workspace" after 30+ days
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Browser
+    participant Portal
+    participant LiteLLM
+    participant K8s
+    participant Database
+    
+    User->>Browser: Click "Resume Workspace"
+    Browser->>Portal: POST /workspace/start
+    Portal->>Database: SELECT workspace
+    Portal->>LiteLLM: GET /key/info
+    LiteLLM-->>Portal: 404 Not Found (expired)
+    
+    rect rgb(255, 240, 240)
+        Note over Portal,Database: Key Rotation
+        Portal->>Database: UPDATE old key:<br/>expired_at=NOW()
+        Portal->>LiteLLM: POST /key/generate (new)
+        LiteLLM-->>Portal: {new_key, new_key_id}
+        Portal->>Database: UPDATE workspace.maas_key_id
+        Portal->>Database: INSERT new key_history
+        Portal->>LiteLLM: POST /key/delete (old)
+        Portal->>Database: UPDATE old key:<br/>revoked_at=NOW()
+        Portal->>K8s: PATCH DevWorkspace<br/>(update MAAS_API_KEY env)
+    end
+    
+    Portal->>K8s: PATCH DevWorkspace<br/>(started=true)
+    Portal-->>Browser: {url, status}
+    Browser->>User: Redirect to workspace URL
+    Note over User: Workspace starts with new key<br/>Full audit trail preserved
+```
 
 **Steps:**
 1. Portal validates key via LiteLLM (`GET /key/info`) → 404 (expired)
@@ -1870,6 +1942,29 @@ From Jira ticket description:
 
 **User Action:** Clicks "Delete Workspace" button
 
+```mermaid
+sequenceDiagram
+    actor User
+    participant Browser
+    participant Portal
+    participant LiteLLM
+    participant K8s
+    participant Database
+    
+    User->>Browser: Click "Delete Workspace"
+    Browser->>Portal: DELETE /workspace
+    Portal->>Database: UPDATE key_history:<br/>revoked_at=NOW()<br/>reason='workspace_deleted'
+    Portal->>K8s: DELETE DevWorkspace CR
+    Portal->>K8s: DELETE namespace<br/>(cascades pod, PVCs)
+    Portal->>LiteLLM: POST /key/delete
+    Note over LiteLLM: Key permanently disabled<br/>All API calls fail
+    Portal->>Database: COMMIT<br/>(preserves key_history)
+    Portal->>Database: DELETE workspace
+    Portal-->>Browser: 204 No Content
+    Browser->>User: Workspace deleted
+    Note over Database: Audit trail preserved<br/>(if using SET NULL FK)
+```
+
 **Steps:**
 1. Mark current key in DB: `revoked_at=NOW()`, `reason='workspace_deleted'`
 2. Delete DevWorkspace CR from K8s
@@ -1887,6 +1982,23 @@ From Jira ticket description:
 ### 5. View Key History (Audit)
 
 **User Action:** Administrator views audit trail
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant Browser
+    participant Portal
+    participant Database
+    
+    Admin->>Browser: Click "View Key History"
+    Browser->>Portal: GET /workspace/key-history
+    Portal->>Database: SELECT * FROM workspace_key_history
+    Database-->>Portal: [key records]
+    Portal-->>Browser: JSON response
+    Browser->>Admin: Display audit table
+    
+    Note over Admin: Shows:<br/>- All keys (current + expired)<br/>- Timestamps<br/>- Revocation reasons<br/>- Model access
+```
 
 **Steps:**
 1. Portal queries `workspace_key_history` table
