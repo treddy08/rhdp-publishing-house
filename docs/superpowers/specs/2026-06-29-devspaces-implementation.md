@@ -1411,6 +1411,29 @@ LABEL \
     description="Custom UDI with Claude Code, PH skills, and tooling for RHDP content development"
 ```
 
+### Update Strategy
+
+**Claude Code is installed in two places:**
+1. **CLI** (`@anthropic-ai/claude-code`) - Pre-installed in image, updated on every start
+2. **VS Code Extension** - Auto-installed by Dev Spaces from marketplace
+
+**Skills are updated on every workspace start** via `git pull`
+
+### How Components Update
+
+| Component | Installation | Update Mechanism | Frequency |
+|-----------|--------------|------------------|-----------|
+| **Claude Code CLI** | Image: `npm install -g` | Startup: `npm update -g` | Every workspace start |
+| **Claude Code VS Code Extension** | Dev Spaces marketplace | Auto-update by Dev Spaces | On extension release |
+| **PH Skills** | Image: `git clone` | Startup: `git pull` | Every workspace start |
+| **Custom UDI Image** | Quay.io registry | Manual rebuild + push | Monthly or on-demand |
+
+**Key Benefits:**
+- ✅ **Claude Code CLI always latest** - No stale versions
+- ✅ **Skills always latest** - Users get new skills immediately
+- ✅ **VS Code extension auto-updates** - No manual intervention
+- ✅ **Image rarely needs rebuild** - Only for base dependency changes
+
 ### Startup Script
 
 ```bash
@@ -1430,13 +1453,20 @@ npm update -g @anthropic-ai/claude-code 2>/dev/null || {
     echo "[PH] WARNING: Failed to update CC CLI, using pre-installed version"
 }
 
-# 2. Update PH skills to latest
+# 2. Check if VS Code extension is installed (Dev Spaces handles this)
+if command -v code >/dev/null 2>&1; then
+    echo "[PH] Claude Code VS Code extension managed by Dev Spaces"
+else
+    echo "[PH] WARNING: VS Code command not found"
+fi
+
+# 3. Update PH skills to latest
 echo "[PH] Updating PH skills..."
 cd /opt/ph/skills && git pull --rebase --autostash || {
     echo "[PH] WARNING: Failed to update skills, using pre-cloned version"
 }
 
-# 3. Sync project repo
+# 4. Sync project repo
 if [ -n "$PROJECT_REPO_NAME" ] && [ -d "/projects/${PROJECT_REPO_NAME}" ]; then
     echo "[PH] Syncing project repository..."
     cd "/projects/${PROJECT_REPO_NAME}"
@@ -1447,7 +1477,7 @@ else
     echo "[PH] No project repo to sync"
 fi
 
-# 4. Validate MaaS key
+# 5. Validate MaaS key
 if [ -n "$MAAS_API_KEY" ] && [ -n "$LITELLM_URL" ]; then
     echo "[PH] Validating MaaS API key..."
     HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
@@ -1464,7 +1494,7 @@ else
     echo "[PH] ⚠ WARNING: MaaS key not configured"
 fi
 
-# 5. Configure Claude Code environment
+# 6. Configure Claude Code environment
 echo "[PH] Configuring Claude Code..."
 export ANTHROPIC_API_KEY="${MAAS_API_KEY}"
 export ANTHROPIC_BASE_URL="${LITELLM_URL}/v1"
@@ -1473,9 +1503,70 @@ export ANTHROPIC_BASE_URL="${LITELLM_URL}/v1"
 mkdir -p ~/.config/claude-code/skills
 ln -sf /opt/ph/skills ~/.config/claude-code/skills/publishing-house || true
 
+# Configure VS Code settings for Claude Code
+mkdir -p ~/.vscode-server/data/Machine
+cat > ~/.vscode-server/data/Machine/settings.json <<EOF
+{
+  "claude-code.apiKey": "${MAAS_API_KEY}",
+  "claude-code.baseUrl": "${LITELLM_URL}/v1",
+  "claude-code.mcpServers": {
+    "publishing-house": {
+      "endpoint": "${MCP_ENDPOINT}"
+    }
+  }
+}
+EOF
+
 echo "[PH] =========================================="
 echo "[PH] ✓ Workspace ready!"
+echo "[PH] Skills version: $(cd /opt/ph/skills && git rev-parse --short HEAD)"
+echo "[PH] CC CLI version: $(claude-code --version 2>/dev/null || echo 'unknown')"
 echo "[PH] =========================================="
+```
+
+### VS Code Extension Installation
+
+**Claude Code VS Code extension is NOT in the custom image.** Dev Spaces automatically installs it from the marketplace.
+
+**Devfile contribution** (optional - to pre-install extension):
+
+```yaml
+# In DevWorkspace CR spec
+spec:
+  template:
+    components:
+    - name: dev
+      container:
+        # ... existing config ...
+        env:
+        # VS Code extensions to auto-install
+        - name: VSCODE_DEFAULT_EXTENSIONS
+          value: "anthropic.claude-code"
+```
+
+**Alternative:** Let users install manually once (Dev Spaces persists extensions across restarts)
+
+### Image Rebuild Triggers
+
+**Rebuild custom UDI image when:**
+- Base UDI image updates (monthly)
+- Node.js version needs upgrade
+- Ansible version needs upgrade
+- Python packages need upgrade
+- Security patches required
+
+**Don't rebuild for:**
+- Claude Code CLI updates (handled by startup script)
+- PH skills updates (handled by git pull)
+- VS Code extension updates (handled by Dev Spaces)
+
+**Rebuild command:**
+```bash
+cd rhdp-publishing-house-central/docker/ph-udi
+podman build -t quay.io/rhpds/ph-udi:$(date +%Y%m%d) -f Containerfile .
+podman tag quay.io/rhpds/ph-udi:$(date +%Y%m%d) quay.io/rhpds/ph-udi:latest
+podman push quay.io/rhpds/ph-udi:$(date +%Y%m%d)
+podman push quay.io/rhpds/ph-udi:latest
 ```
 
 ### Build & Push
