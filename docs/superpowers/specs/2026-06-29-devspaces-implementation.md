@@ -1811,6 +1811,99 @@ From Jira ticket description:
 
 ---
 
+## Workflows
+
+### 1. Create Workspace
+
+**User Action:** Clicks "Launch Workspace" button
+
+**Steps:**
+1. Portal provisions MaaS key via LiteLLM (`POST /key/generate`)
+2. Portal creates K8s namespace + DevWorkspace CR with key as env var
+3. Portal saves workspace + key_history records to database
+4. Browser redirects to workspace URL
+5. Workspace starts, startup script runs, Claude Code auto-configured
+
+**Duration:** ~45-60 seconds
+
+**Result:** User lands in VS Code with Claude Code ready
+
+---
+
+### 2. Open Existing Workspace
+
+**User Action:** Clicks "Open Workspace" button
+
+**Steps:**
+1. Portal queries database for workspace URL
+2. Browser redirects to workspace URL
+3. Dev Spaces auto-starts workspace if stopped
+
+**Duration:** ~10-20 seconds
+
+**Result:** User lands in existing workspace
+
+---
+
+### 3. Resume with Expired Key (Auto-Rotation)
+
+**User Action:** Clicks "Resume Workspace" after 30+ days
+
+**Steps:**
+1. Portal validates key via LiteLLM (`GET /key/info`) → 404 (expired)
+2. Mark old key: `expired_at=NOW()`, `is_current=false`, `reason='expired'`
+3. Provision new key via LiteLLM (`POST /key/generate`)
+4. Update workspace: `maas_key_id` points to new key
+5. Record new key in history: `is_current=true`
+6. Revoke old key from LiteLLM (`POST /key/delete`)
+7. Update old key: `revoked_at=NOW()`
+8. Patch DevWorkspace CR: Update `MAAS_API_KEY` env var
+9. Start workspace with new key
+
+**Duration:** ~15-25 seconds
+
+**Result:** User lands in workspace with new key, full audit trail preserved
+
+---
+
+### 4. Delete Workspace
+
+**User Action:** Clicks "Delete Workspace" button
+
+**Steps:**
+1. Mark current key in DB: `revoked_at=NOW()`, `reason='workspace_deleted'`
+2. Delete DevWorkspace CR from K8s
+3. Delete namespace from K8s (cascades pod, PVCs, etc.)
+4. Revoke key from LiteLLM (`POST /key/delete`) → key permanently disabled
+5. Commit key_history updates (preserves audit trail)
+6. Delete workspace record from database
+
+**Duration:** ~10-30 seconds
+
+**Result:** All resources cleaned up, audit trail preserved (if using SET NULL FK)
+
+---
+
+### 5. View Key History (Audit)
+
+**User Action:** Administrator views audit trail
+
+**Steps:**
+1. Portal queries `workspace_key_history` table
+2. Returns all keys (current + expired + revoked) with timestamps
+
+**Query:**
+```sql
+SELECT maas_key_id, provisioned_at, expired_at, revoked_at, revocation_reason
+FROM workspace_key_history
+WHERE workspace_id = {uuid}
+ORDER BY provisioned_at DESC;
+```
+
+**Result:** Complete key rotation history for compliance
+
+---
+
 ## Success Criteria
 
 **MVP is complete when:**
