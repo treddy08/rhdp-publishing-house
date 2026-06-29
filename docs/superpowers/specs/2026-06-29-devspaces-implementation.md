@@ -1853,40 +1853,9 @@ sequenceDiagram
 
 ---
 
-### 2. Open Existing Workspace
+### 2. Open/Resume Workspace
 
-**User Action:** Clicks "Open Workspace" button
-
-```mermaid
-sequenceDiagram
-    actor User
-    participant Browser
-    participant Portal
-    participant Database
-    
-    User->>Browser: Click "Open Workspace"
-    Browser->>Portal: GET /workspace
-    Portal->>Database: SELECT workspace
-    Database-->>Portal: {workspace_url}
-    Portal-->>Browser: {url, status}
-    Browser->>User: Redirect to workspace URL
-    Note over User: Workspace auto-starts<br/>User lands in VS Code
-```
-
-**Steps:**
-1. Portal queries database for workspace URL
-2. Browser redirects to workspace URL
-3. Dev Spaces auto-starts workspace if stopped
-
-**Duration:** ~10-20 seconds
-
-**Result:** User lands in existing workspace
-
----
-
-### 3. Resume with Expired Key (Auto-Rotation)
-
-**User Action:** Clicks "Resume Workspace" after 30+ days
+**User Action:** Clicks "Open Workspace" button (same button regardless of key state)
 
 ```mermaid
 sequenceDiagram
@@ -1897,48 +1866,61 @@ sequenceDiagram
     participant K8s
     participant Database
     
-    User->>Browser: Click "Resume Workspace"
-    Browser->>Portal: POST /workspace/start
+    User->>Browser: Click "Open Workspace"
+    Browser->>Portal: GET /workspace
     Portal->>Database: SELECT workspace
-    Portal->>LiteLLM: GET /key/info
-    LiteLLM-->>Portal: 404 Not Found (expired)
+    Database-->>Portal: {workspace record}
     
-    rect rgb(255, 240, 240)
-        Note over Portal,Database: Key Rotation
-        Portal->>Database: UPDATE old key:<br/>expired_at=NOW()
-        Portal->>LiteLLM: POST /key/generate (new)
-        LiteLLM-->>Portal: {new_key, new_key_id}
-        Portal->>Database: UPDATE workspace.maas_key_id
-        Portal->>Database: INSERT new key_history
-        Portal->>LiteLLM: POST /key/delete (old)
-        Portal->>Database: UPDATE old key:<br/>revoked_at=NOW()
-        Portal->>K8s: PATCH DevWorkspace<br/>(update MAAS_API_KEY env)
+    alt Key is valid
+        Portal-->>Browser: {url, status}
+        Browser->>User: Redirect to workspace URL
+        Note over User: Workspace auto-starts<br/>Duration: ~10-20s
+    else Key is expired
+        Portal->>LiteLLM: GET /key/info
+        LiteLLM-->>Portal: 404 Not Found (expired)
+        
+        rect rgb(255, 240, 240)
+            Note over Portal,Database: Automatic Key Rotation
+            Portal->>Database: UPDATE old key: expired_at=NOW()
+            Portal->>LiteLLM: POST /key/generate (new)
+            LiteLLM-->>Portal: {new_key, new_key_id}
+            Portal->>Database: UPDATE workspace.maas_key_id
+            Portal->>Database: INSERT new key_history
+            Portal->>LiteLLM: POST /key/delete (old)
+            Portal->>Database: UPDATE old key: revoked_at=NOW()
+            Portal->>K8s: PATCH DevWorkspace (MAAS_API_KEY)
+        end
+        
+        Portal-->>Browser: {url, status}
+        Browser->>User: Redirect to workspace URL
+        Note over User: Workspace starts with new key<br/>Duration: ~15-25s
     end
-    
-    Portal->>K8s: PATCH DevWorkspace<br/>(started=true)
-    Portal-->>Browser: {url, status}
-    Browser->>User: Redirect to workspace URL
-    Note over User: Workspace starts with new key<br/>Full audit trail preserved
 ```
 
-**Steps:**
-1. Portal validates key via LiteLLM (`GET /key/info`) → 404 (expired)
-2. Mark old key: `expired_at=NOW()`, `is_current=false`, `reason='expired'`
+**Backend Logic:**
+- Portal always checks key validity on workspace access
+- If valid: redirect immediately
+- If expired: auto-rotate key, then redirect
+
+**Key Rotation Steps (automatic if needed):**
+1. Validate key via LiteLLM (`GET /key/info`)
+2. If expired (404): Mark old key `expired_at=NOW()`
 3. Provision new key via LiteLLM (`POST /key/generate`)
-4. Update workspace: `maas_key_id` points to new key
-5. Record new key in history: `is_current=true`
+4. Update workspace `maas_key_id` → new key
+5. Record new key in history `is_current=true`
 6. Revoke old key from LiteLLM (`POST /key/delete`)
-7. Update old key: `revoked_at=NOW()`
-8. Patch DevWorkspace CR: Update `MAAS_API_KEY` env var
-9. Start workspace with new key
+7. Update old key `revoked_at=NOW()`
+8. Patch DevWorkspace CR with new `MAAS_API_KEY` env var
 
-**Duration:** ~15-25 seconds
+**Duration:** 
+- Valid key: ~10-20 seconds
+- Expired key (auto-rotation): ~15-25 seconds
 
-**Result:** User lands in workspace with new key, full audit trail preserved
+**Result:** User lands in workspace (key rotation transparent to user)
 
 ---
 
-### 4. Delete Workspace
+### 3. Delete Workspace
 
 **User Action:** Clicks "Delete Workspace" button
 
@@ -1979,7 +1961,7 @@ sequenceDiagram
 
 ---
 
-### 5. View Key History (Audit)
+### 4. View Key History (Audit)
 
 **User Action:** Administrator views audit trail
 
