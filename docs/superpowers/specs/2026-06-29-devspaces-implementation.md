@@ -1386,15 +1386,16 @@ FROM registry.redhat.io/devspaces/udi-base-rhel10:latest
 
 USER 0
 
-# Install Claude Code CLI (fallback version)
+# Install Claude Code CLI
 RUN npm install -g @anthropic-ai/claude-code@latest
 
 # Install Ansible collections
 RUN ansible-galaxy collection install kubernetes.core community.general
 
-# Pre-clone PH skills plugin
+# Pre-clone PH skills plugin and capture git version
 RUN mkdir -p /opt/ph && \
-    git clone https://github.com/rhpds/rhdp-publishing-house-skills.git /opt/ph/skills
+    git clone https://github.com/rhpds/rhdp-publishing-house-skills.git /opt/ph/skills && \
+    cd /opt/ph/skills && git rev-parse --short HEAD > /opt/ph/skills/.git-version
 
 # Add workspace startup script
 COPY workspace-startup.sh /opt/ph/scripts/workspace-startup.sh
@@ -1402,6 +1403,9 @@ RUN chmod +x /opt/ph/scripts/workspace-startup.sh
 
 # Pre-configure MCP endpoint (can be overridden by env var)
 ENV MCP_ENDPOINT=https://publishing-house-central-dev.apps.ocpv-infra01.dal12.infra.demo.redhat.com/mcp
+
+# Record image build date
+RUN date -u +"%Y-%m-%d" > /opt/ph/.image-version
 
 USER 1001
 
@@ -1411,28 +1415,41 @@ LABEL \
     description="Custom UDI with Claude Code, PH skills, and tooling for RHDP content development"
 ```
 
+**Version tracking:**
+- `/opt/ph/.image-version` - Image build date (YYYY-MM-DD)
+- `/opt/ph/skills/.git-version` - Git short hash of skills at build time
+- Startup script reads these files and reports versions at workspace startup
+
 ### Update Strategy
 
+**Everything is baked into the image** - no runtime updates needed.
+
 **Claude Code is installed in two places:**
-1. **CLI** (`@anthropic-ai/claude-code`) - Pre-installed in image, updated on every start
+1. **CLI** (`@anthropic-ai/claude-code`) - Baked into image at build time
 2. **VS Code Extension** - Auto-installed by Dev Spaces from marketplace
 
-**Skills are updated on every workspace start** via `git pull`
+**Skills are baked into the image** - no git pull on startup
 
 ### How Components Update
 
-| Component | Installation | Update Mechanism | Frequency |
-|-----------|--------------|------------------|-----------|
-| **Claude Code CLI** | Image: `npm install -g` | Startup: `npm update -g` | Every workspace start |
+| Component | Installation | Update Mechanism | When |
+|-----------|--------------|------------------|------|
+| **Claude Code CLI** | Image: `npm install -g @latest` | Image rebuild | Weekly or on CC release |
 | **Claude Code VS Code Extension** | Dev Spaces marketplace | Auto-update by Dev Spaces | On extension release |
-| **PH Skills** | Image: `git clone` | Startup: `git pull` | Every workspace start |
-| **Custom UDI Image** | Quay.io registry | Manual rebuild + push | Monthly or on-demand |
+| **PH Skills** | Image: `git clone` at build time | Image rebuild | Weekly or on skills update |
+| **Custom UDI Image** | Quay.io registry | Automated rebuild pipeline | Weekly + on-demand |
 
 **Key Benefits:**
-- ✅ **Claude Code CLI always latest** - No stale versions
-- ✅ **Skills always latest** - Users get new skills immediately
-- ✅ **VS Code extension auto-updates** - No manual intervention
-- ✅ **Image rarely needs rebuild** - Only for base dependency changes
+- ✅ **Fast workspace startup** - No npm/git operations on start (~30s faster)
+- ✅ **No network dependencies** - Works offline, no npm registry/GitHub failures
+- ✅ **Predictable versions** - All workspaces use same tested image
+- ✅ **Simpler startup script** - Just configure environment
+
+**Image Rebuild Triggers:**
+- **Weekly automated build** - Gets latest CC CLI + skills
+- **On CC release** - Manual rebuild when new Claude Code version drops
+- **On skills update** - Manual rebuild when new PH skills are merged
+- **On base dependency change** - Node, Python, Ansible updates
 
 ### Startup Script
 
@@ -1447,37 +1464,16 @@ echo "[PH] =========================================="
 echo "[PH] Publishing House Workspace Initialization"
 echo "[PH] =========================================="
 
-# 1. Update CC CLI to latest
-echo "[PH] Updating Claude Code CLI..."
-npm update -g @anthropic-ai/claude-code 2>/dev/null || {
-    echo "[PH] WARNING: Failed to update CC CLI, using pre-installed version"
-}
-
-# 2. Check if VS Code extension is installed (Dev Spaces handles this)
-if command -v code >/dev/null 2>&1; then
-    echo "[PH] Claude Code VS Code extension managed by Dev Spaces"
-else
-    echo "[PH] WARNING: VS Code command not found"
-fi
-
-# 3. Update PH skills to latest
-echo "[PH] Updating PH skills..."
-cd /opt/ph/skills && git pull --rebase --autostash || {
-    echo "[PH] WARNING: Failed to update skills, using pre-cloned version"
-}
-
-# 4. Sync project repo
+# 1. Sync project repo (user's content, not our tools)
 if [ -n "$PROJECT_REPO_NAME" ] && [ -d "/projects/${PROJECT_REPO_NAME}" ]; then
     echo "[PH] Syncing project repository..."
     cd "/projects/${PROJECT_REPO_NAME}"
     git pull --rebase --autostash || {
         echo "[PH] WARNING: Failed to sync project repo"
     }
-else
-    echo "[PH] No project repo to sync"
 fi
 
-# 5. Validate MaaS key
+# 2. Validate MaaS key
 if [ -n "$MAAS_API_KEY" ] && [ -n "$LITELLM_URL" ]; then
     echo "[PH] Validating MaaS API key..."
     HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
@@ -1494,12 +1490,12 @@ else
     echo "[PH] ⚠ WARNING: MaaS key not configured"
 fi
 
-# 6. Configure Claude Code environment
+# 3. Configure Claude Code environment
 echo "[PH] Configuring Claude Code..."
 export ANTHROPIC_API_KEY="${MAAS_API_KEY}"
 export ANTHROPIC_BASE_URL="${LITELLM_URL}/v1"
 
-# Link skills to CC config directory
+# Link skills to CC config directory (already in image, just symlink)
 mkdir -p ~/.config/claude-code/skills
 ln -sf /opt/ph/skills ~/.config/claude-code/skills/publishing-house || true
 
@@ -1519,10 +1515,18 @@ EOF
 
 echo "[PH] =========================================="
 echo "[PH] ✓ Workspace ready!"
-echo "[PH] Skills version: $(cd /opt/ph/skills && git rev-parse --short HEAD)"
+echo "[PH] Image version: $(cat /opt/ph/.image-version 2>/dev/null || echo 'unknown')"
+echo "[PH] Skills version: $(cat /opt/ph/skills/.git-version 2>/dev/null || echo 'unknown')"
 echo "[PH] CC CLI version: $(claude-code --version 2>/dev/null || echo 'unknown')"
 echo "[PH] =========================================="
 ```
+
+**What changed:**
+- ❌ Removed: `npm update -g` (CC CLI baked in)
+- ❌ Removed: `git pull` for skills (skills baked in)
+- ✅ Kept: Project repo sync (user's content changes)
+- ✅ Kept: MaaS key validation
+- ✅ Kept: Environment configuration
 
 ### VS Code Extension Installation
 
