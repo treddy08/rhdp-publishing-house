@@ -75,7 +75,51 @@ CREATE INDEX ix_workspace_user_email ON workspaces(user_email);
 CREATE INDEX ix_workspace_maas_key_alias ON workspaces(maas_key_alias);
 ```
 
+### New Table: `workspace_key_history`
+
+**Purpose:** Maintain audit trail of all MaaS keys provisioned for a workspace, including expired/rotated keys.
+
+```sql
+CREATE TABLE workspace_key_history (
+    -- Primary key
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Workspace reference
+    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    
+    -- Key details
+    maas_key_id VARCHAR NOT NULL,          -- LiteLLM key ID
+    maas_key_alias VARCHAR NOT NULL,       -- e.g., "ph-treddy-abc123ef"
+    
+    -- Lifecycle tracking
+    provisioned_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    expired_at TIMESTAMP,                  -- When key expired (null if still active)
+    revoked_at TIMESTAMP,                  -- When key was manually revoked (null if expired naturally)
+    revocation_reason VARCHAR,             -- "expired", "workspace_deleted", "user_requested", "security_rotation"
+    
+    -- Key metadata snapshot
+    duration VARCHAR NOT NULL,             -- "30d", "7d"
+    models JSONB NOT NULL,                 -- List of models this key had access to
+    
+    -- Audit info
+    is_current BOOLEAN NOT NULL DEFAULT TRUE,  -- Only one current key per workspace
+    
+    -- Constraints
+    CONSTRAINT uq_one_current_key_per_workspace 
+        EXCLUDE USING gist (workspace_id WITH =) 
+        WHERE (is_current = TRUE)
+);
+
+-- Indexes for audit queries
+CREATE INDEX ix_key_history_workspace_id ON workspace_key_history(workspace_id);
+CREATE INDEX ix_key_history_maas_key_id ON workspace_key_history(maas_key_id);
+CREATE INDEX ix_key_history_is_current ON workspace_key_history(is_current) WHERE is_current = TRUE;
+CREATE INDEX ix_key_history_expired_at ON workspace_key_history(expired_at) WHERE expired_at IS NOT NULL;
+```
+
 ### Why Each Field
+
+#### `workspaces` Table
 
 | Field | Purpose | Used For |
 |-------|---------|----------|
@@ -83,8 +127,27 @@ CREATE INDEX ix_workspace_maas_key_alias ON workspaces(maas_key_alias);
 | `user_email` | Full email for identification | Support, audit trail, LiteLLM metadata |
 | `workspace_namespace` | K8s namespace where DevWorkspace lives | Deletion without K8s list query |
 | `workspace_name` | K8s resource name | Direct CR deletion |
-| `maas_key_id` | LiteLLM key ID | Primary deletion method |
+| `maas_key_id` | **Current active** LiteLLM key ID | Primary deletion method |
 | `maas_key_alias` | Human-readable key name | Fallback deletion, troubleshooting |
+
+#### `workspace_key_history` Table
+
+| Field | Purpose | Used For |
+|-------|---------|----------|
+| `provisioned_at` | When key was created | Audit trail, lifespan calculation |
+| `expired_at` | When key expired | Distinguish expired vs revoked |
+| `revoked_at` | When key was manually revoked | Manual rotation tracking |
+| `revocation_reason` | Why key was revoked | Security audits, compliance |
+| `is_current` | Only one current key per workspace | Fast lookup of active key |
+| `models` | Snapshot of model access | Audit what models were available |
+
+**Key rotation flow:**
+1. New key provisioned → New row in `workspace_key_history` with `is_current=true`
+2. Old key marked as rotated → Set `is_current=false`, `expired_at=NOW()`, `revocation_reason='expired'`
+3. Workspace table updated → `maas_key_id` points to new key
+4. Old key revoked via LiteLLM → `revoked_at=NOW()`
+
+This maintains **complete audit trail** of all keys ever used by a workspace.
 
 ### Alembic Migration
 
@@ -108,6 +171,7 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
+    # Create workspaces table
     op.create_table(
         'workspaces',
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
@@ -129,9 +193,112 @@ def upgrade():
     op.create_index('ix_workspace_user_id', 'workspaces', ['user_id'])
     op.create_index('ix_workspace_user_email', 'workspaces', ['user_email'])
     op.create_index('ix_workspace_maas_key_alias', 'workspaces', ['maas_key_alias'])
+    
+    # Create workspace_key_history table for audit trail
+    op.create_table(
+        'workspace_key_history',
+        sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column('workspace_id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('maas_key_id', sa.String(), nullable=False),
+        sa.Column('maas_key_alias', sa.String(), nullable=False),
+        sa.Column('provisioned_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column('expired_at', sa.DateTime(), nullable=True),
+        sa.Column('revoked_at', sa.DateTime(), nullable=True),
+        sa.Column('revocation_reason', sa.String(), nullable=True),
+        sa.Column('duration', sa.String(), nullable=False),
+        sa.Column('models', postgresql.JSONB(), nullable=False),
+        sa.Column('is_current', sa.Boolean(), nullable=False, server_default='true'),
+        sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], ondelete='CASCADE')
+    )
+    
+    op.create_index('ix_key_history_workspace_id', 'workspace_key_history', ['workspace_id'])
+    op.create_index('ix_key_history_maas_key_id', 'workspace_key_history', ['maas_key_id'])
+    op.create_index('ix_key_history_is_current', 'workspace_key_history', ['is_current'], 
+                    postgresql_where=sa.text('is_current = true'))
+    op.create_index('ix_key_history_expired_at', 'workspace_key_history', ['expired_at'],
+                    postgresql_where=sa.text('expired_at IS NOT NULL'))
 
 def downgrade():
+    op.drop_table('workspace_key_history')
     op.drop_table('workspaces')
+```
+
+### SQLAlchemy Models
+
+```python
+# app/models/workspace.py
+
+from sqlalchemy import Column, String, ForeignKey, DateTime, Boolean
+from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.orm import relationship
+import uuid
+from datetime import datetime
+from app.core.database import Base
+
+class Workspace(Base):
+    __tablename__ = "workspaces"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String, nullable=False, index=True)
+    user_email = Column(String, nullable=False, index=True)
+    workspace_id = Column(String, nullable=False)
+    workspace_namespace = Column(String, nullable=False)
+    workspace_name = Column(String, nullable=False)
+    workspace_url = Column(String, nullable=False)
+    maas_key_id = Column(String, nullable=False)  # Current active key
+    maas_key_alias = Column(String, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    key_history = relationship("WorkspaceKeyHistory", back_populates="workspace", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        UniqueConstraint("project_id", "user_id", name="uq_workspace_project_user"),
+    )
+
+
+class WorkspaceKeyHistory(Base):
+    __tablename__ = "workspace_key_history"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
+    maas_key_id = Column(String, nullable=False, index=True)
+    maas_key_alias = Column(String, nullable=False)
+    provisioned_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    expired_at = Column(DateTime, nullable=True)
+    revoked_at = Column(DateTime, nullable=True)
+    revocation_reason = Column(String, nullable=True)  # "expired", "workspace_deleted", "user_requested", "security_rotation"
+    duration = Column(String, nullable=False)  # "30d", "7d"
+    models = Column(JSONB, nullable=False)  # ["claude-sonnet-4-5"]
+    is_current = Column(Boolean, nullable=False, default=True, index=True)
+    
+    # Relationships
+    workspace = relationship("Workspace", back_populates="key_history")
+```
+
+**Usage example:**
+
+```python
+# Get current key for a workspace
+workspace = db.query(Workspace).filter_by(project_id=pid, user_id=uid).first()
+current_key = db.query(WorkspaceKeyHistory).filter_by(
+    workspace_id=workspace.id,
+    is_current=True
+).first()
+
+# Get full key rotation history
+all_keys = db.query(WorkspaceKeyHistory).filter_by(
+    workspace_id=workspace.id
+).order_by(WorkspaceKeyHistory.provisioned_at.desc()).all()
+
+# Audit query: Find all expired keys in last 30 days
+from datetime import timedelta
+expired_keys = db.query(WorkspaceKeyHistory).filter(
+    WorkspaceKeyHistory.expired_at >= datetime.utcnow() - timedelta(days=30),
+    WorkspaceKeyHistory.revocation_reason == "expired"
+).all()
 ```
 
 ---
@@ -480,6 +647,53 @@ class DevSpacesClient:
             body=patch
         )
     
+    async def update_env_vars(self, namespace: str, name: str, env_vars: dict):
+        """
+        Update environment variables in a DevWorkspace
+        
+        Used for key rotation - updates MAAS_API_KEY after reprovisioning
+        """
+        # Get current DevWorkspace
+        ws = self.custom_api.get_namespaced_custom_object(
+            group="workspace.devfile.io",
+            version="v1alpha2",
+            namespace=namespace,
+            plural="devworkspaces",
+            name=name
+        )
+        
+        # Update env vars in the dev container component
+        components = ws["spec"]["template"]["components"]
+        for component in components:
+            if component["name"] == "dev" and "container" in component:
+                env_list = component["container"].get("env", [])
+                
+                # Update or add each env var
+                for key, value in env_vars.items():
+                    # Find existing env var
+                    found = False
+                    for env_item in env_list:
+                        if env_item["name"] == key:
+                            env_item["value"] = value
+                            found = True
+                            break
+                    
+                    # Add new env var if not found
+                    if not found:
+                        env_list.append({"name": key, "value": value})
+                
+                component["container"]["env"] = env_list
+        
+        # Patch the DevWorkspace
+        self.custom_api.patch_namespaced_custom_object(
+            group="workspace.devfile.io",
+            version="v1alpha2",
+            namespace=namespace,
+            plural="devworkspaces",
+            name=name,
+            body=ws
+        )
+    
     async def delete_workspace(self, namespace: str, name: str):
         """
         Delete DevWorkspace CR and namespace
@@ -605,6 +819,19 @@ class WorkspaceManager:
         )
         
         self.db.add(workspace)
+        self.db.flush()  # Get workspace.id
+        
+        # 4. Record key in audit history
+        key_history = WorkspaceKeyHistory(
+            workspace_id=workspace.id,
+            maas_key_id=key_result["key_id"],
+            maas_key_alias=key_alias,
+            duration=settings.LITELLM_KEY_DURATION,
+            models=settings.LITELLM_MODELS,
+            is_current=True
+        )
+        
+        self.db.add(key_history)
         self.db.commit()
         self.db.refresh(workspace)
         
@@ -668,9 +895,22 @@ class WorkspaceManager:
         try:
             await self.litellm.validate_key(workspace.maas_key_id)
         except KeyExpired:
-            # Reprovision key
+            # Key expired - rotate to new key with full audit trail
+            
+            # 1. Mark old key as expired in history
+            old_key_record = self.db.query(WorkspaceKeyHistory).filter_by(
+                workspace_id=workspace.id,
+                is_current=True
+            ).first()
+            
+            if old_key_record:
+                old_key_record.is_current = False
+                old_key_record.expired_at = datetime.utcnow()
+                old_key_record.revocation_reason = "expired"
+            
+            # 2. Provision new key
             new_key = await self.litellm.provision_key(
-                alias=workspace.maas_key_alias,
+                alias=workspace.maas_key_alias,  # Keep same alias
                 user_id=user_id,
                 user_email=workspace.user_email,
                 duration=settings.LITELLM_KEY_DURATION,
@@ -678,9 +918,36 @@ class WorkspaceManager:
                 metadata={"project_id": project_id}
             )
             
-            # TODO: Update workspace env vars via K8s patch
-            # For now, user must delete + recreate workspace
+            # 3. Update workspace with new key
             workspace.maas_key_id = new_key["key_id"]
+            
+            # 4. Record new key in history
+            new_key_record = WorkspaceKeyHistory(
+                workspace_id=workspace.id,
+                maas_key_id=new_key["key_id"],
+                maas_key_alias=workspace.maas_key_alias,
+                duration=settings.LITELLM_KEY_DURATION,
+                models=settings.LITELLM_MODELS,
+                is_current=True
+            )
+            self.db.add(new_key_record)
+            
+            # 5. Revoke old key via LiteLLM
+            if old_key_record:
+                try:
+                    await self.litellm.revoke_key(old_key_record.maas_key_id)
+                    old_key_record.revoked_at = datetime.utcnow()
+                except Exception as e:
+                    # Log but don't fail - key already expired anyway
+                    pass
+            
+            # 6. Update workspace env vars via K8s patch
+            await self.devspaces.update_env_vars(
+                workspace.workspace_namespace,
+                workspace.workspace_name,
+                {"MAAS_API_KEY": new_key["key"]}
+            )
+            
             self.db.commit()
         
         # Start workspace
@@ -715,16 +982,27 @@ class WorkspaceManager:
         if not workspace:
             return  # Already deleted
         
-        # Delete workspace
+        # 1. Mark current key as revoked in history (before deletion)
+        current_key_record = self.db.query(WorkspaceKeyHistory).filter_by(
+            workspace_id=workspace.id,
+            is_current=True
+        ).first()
+        
+        if current_key_record:
+            current_key_record.is_current = False
+            current_key_record.revoked_at = datetime.utcnow()
+            current_key_record.revocation_reason = "workspace_deleted"
+        
+        # 2. Delete workspace from K8s
         await self.devspaces.delete_workspace(
             workspace.workspace_namespace,
             workspace.workspace_name
         )
         
-        # Revoke key
+        # 3. Revoke key from LiteLLM
         await self.litellm.revoke_key(workspace.maas_key_id)
         
-        # Remove DB record
+        # 4. Remove workspace record (cascades to key_history via FK)
         self.db.delete(workspace)
         self.db.commit()
 ```
@@ -834,6 +1112,65 @@ async def delete_workspace(
         project_id=project_id,
         user_id=current_user["user_id"]
     )
+
+@router.get("/key-history", response_model=list[KeyHistoryInfo])
+async def get_key_history(
+    project_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get MaaS key rotation history for audit trail
+    
+    Returns all keys (current + expired/revoked) with timestamps
+    """
+    workspace = db.query(Workspace).filter_by(
+        project_id=project_id,
+        user_id=current_user["user_id"]
+    ).first()
+    
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    
+    key_history = db.query(WorkspaceKeyHistory).filter_by(
+        workspace_id=workspace.id
+    ).order_by(WorkspaceKeyHistory.provisioned_at.desc()).all()
+    
+    return [
+        KeyHistoryInfo(
+            maas_key_id=key.maas_key_id,
+            maas_key_alias=key.maas_key_alias,
+            provisioned_at=key.provisioned_at,
+            expired_at=key.expired_at,
+            revoked_at=key.revoked_at,
+            revocation_reason=key.revocation_reason,
+            duration=key.duration,
+            models=key.models,
+            is_current=key.is_current
+        )
+        for key in key_history
+    ]
+```
+
+**Response models:**
+
+```python
+# app/schemas/workspace.py
+
+from pydantic import BaseModel
+from datetime import datetime
+from typing import Optional
+
+class KeyHistoryInfo(BaseModel):
+    maas_key_id: str
+    maas_key_alias: str
+    provisioned_at: datetime
+    expired_at: Optional[datetime]
+    revoked_at: Optional[datetime]
+    revocation_reason: Optional[str]
+    duration: str
+    models: list[str]
+    is_current: bool
 ```
 
 **Register routes in `app/main.py`:**
