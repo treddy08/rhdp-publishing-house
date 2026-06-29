@@ -1026,6 +1026,13 @@ class WorkspaceManager:
         )
         
         # 3. Revoke key from LiteLLM
+        #    This calls: POST /key/delete with {"keys": [key_id]}
+        #    Effect:
+        #      - Immediately disables the key (no more API calls accepted)
+        #      - LiteLLM marks key as deleted in their database
+        #      - Key removed from active keys list
+        #      - Any in-flight requests with this key will fail
+        #      - Key no longer counts against quota limits
         await self.litellm.revoke_key(workspace.maas_key_id)
         
         # 4. Commit key_history updates BEFORE deleting workspace
@@ -1246,6 +1253,112 @@ from app.api import workspaces
 
 app.include_router(workspaces.router)
 ```
+
+---
+
+## LiteLLM Key Lifecycle Management
+
+### Complete Key Lifecycle
+
+Publishing House maintains **dual-system tracking** for MaaS keys:
+
+1. **LiteLLM System** - Operational state (active/deleted)
+2. **PH Database** - Complete audit trail (provisioned, expired, revoked)
+
+### Key States Across Systems
+
+| Event | LiteLLM State | PH Database State |
+|-------|---------------|-------------------|
+| **Workspace created** | Key active, accepting API calls | `workspace_key_history`: `is_current=true`, all timestamps NULL |
+| **Key reaches TTL (30d)** | Key expired, rejects API calls | `expired_at=NOW()`, `revocation_reason='expired'` |
+| **Auto-rotation on resume** | Old key deleted, new key active | Old: `revoked_at=NOW()`, `is_current=false`<br>New: `is_current=true` |
+| **Workspace deleted** | Key deleted (POST /key/delete) | `revoked_at=NOW()`, `revocation_reason='workspace_deleted'` |
+
+### LiteLLM API Operations
+
+**Key Provisioning (Workspace Creation):**
+```python
+POST /key/generate
+{
+  "key_alias": "ph-treddy-abc123ef",
+  "duration": "30d",
+  "models": ["claude-sonnet-4-5"],
+  "metadata": {
+    "owner": "treddy@redhat.com",
+    "project_id": "uuid",
+    "created_by": "publishing-house"
+  },
+  "max_budget": null
+}
+
+Response:
+{
+  "key": "sk-...",           # Actual API key (injected to workspace)
+  "key_id": "key_123...",    # LiteLLM internal ID (stored in DB)
+  "expires": "2026-07-29"
+}
+```
+
+**Key Validation (Workspace Resume):**
+```python
+GET /key/info?key_id=key_123
+
+Response (valid):
+{
+  "key_id": "key_123",
+  "alias": "ph-treddy-abc123ef",
+  "status": "active",
+  "expires": "2026-07-29"
+}
+
+Response (expired):
+404 Not Found  # Triggers automatic rotation
+```
+
+**Key Revocation (Workspace Deletion):**
+```python
+POST /key/delete
+{
+  "keys": ["key_123"]
+}
+
+Effect on LiteLLM:
+- Key immediately disabled (rejects all API calls)
+- Key removed from active keys table
+- Key marked as deleted in LiteLLM database
+- Any in-flight requests fail with 401 Unauthorized
+- Key no longer counts against quota/rate limits
+- Deletion is permanent (cannot be undone)
+
+Effect on PH Database:
+- workspace_key_history.revoked_at = NOW()
+- workspace_key_history.is_current = false
+- workspace_key_history.revocation_reason = "workspace_deleted"
+- Record preserved for audit (if using ON DELETE SET NULL)
+```
+
+### Why Dual Tracking?
+
+**LiteLLM provides:**
+- Operational key management (active/expired/deleted)
+- API authentication and authorization
+- Usage tracking and rate limiting
+- Model access enforcement
+
+**PH Database provides:**
+- Complete audit trail (LiteLLM may not retain deleted key history)
+- Compliance reporting (who provisioned what, when, why revoked)
+- Security investigation (find all keys for a user/project)
+- Retention policy enforcement (keep history 90+ days)
+- Cross-workspace analytics (total keys provisioned, rotation frequency)
+
+**Critical difference:** LiteLLM's `/key/delete` permanently removes the key from their system. Our `workspace_key_history` table preserves:
+- When the key was provisioned
+- What models it had access to
+- When and why it was revoked
+- Who owned it
+
+This dual tracking ensures **compliance-ready audit trails** even after keys are deleted from LiteLLM.
 
 ---
 
