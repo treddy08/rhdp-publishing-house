@@ -1386,14 +1386,11 @@ FROM registry.redhat.io/devspaces/udi-base-rhel10:latest
 
 USER 0
 
-# Install Claude Code CLI (fallback version - updated at startup)
+# Install Claude Code CLI (updated at startup)
 RUN npm install -g @anthropic-ai/claude-code@latest
 
 # Install Ansible collections
 RUN ansible-galaxy collection install kubernetes.core community.general
-
-# Clone PH skills to well-known path (updated via git pull at startup)
-RUN git clone https://github.com/rhpds/rhdp-publishing-house-skills.git /home/user/rhdp-publishing-house-skills
 
 # Add workspace startup script
 COPY workspace-startup.sh /opt/ph/scripts/workspace-startup.sh
@@ -1410,15 +1407,14 @@ USER 1001
 LABEL \
     io.openshift.tags="devspaces,publishing-house,claude-code" \
     summary="Publishing House Universal Developer Image" \
-    description="Custom UDI with Claude Code, PH skills (multi-plugin), and tooling for RHDP content development"
+    description="Custom UDI with Claude Code and tooling for RHDP content development"
 ```
 
-**Key changes to align with consolidation architecture:**
-- ✅ **Skills at well-known path** - `/home/user/rhdp-publishing-house-skills` matches `~/rhdp-publishing-house-skills`
-- ✅ **Git-based updates** - Startup script runs `git pull` to get latest skills
-- ✅ **Multi-plugin support** - Cloned repo contains all 4 plugins (rhdp-publishing-house, showroom, agnosticv, ftl)
-- ✅ **Version gates work** - Orchestrator can read each plugin's version from `.claude-plugin/plugin.json`
-- ✅ **Image is base only** - No version capture, skills update independently via git
+**Key changes - image contains base tooling only:**
+- ✅ **No skills in image** - Skills cloned on first startup (cleaner separation)
+- ✅ **Smaller image** - No git repo bloat (~10-20MB savings)
+- ✅ **Git-based updates** - Startup script clones if missing, pulls if exists
+- ✅ **Clear separation** - Image = base tools, Runtime = skills
 
 ### Update Strategy
 
@@ -1473,15 +1469,18 @@ npm update -g @anthropic-ai/claude-code 2>/dev/null || {
     echo "[PH] WARNING: npm update failed, using pre-installed CC CLI"
 }
 
-# 2. Update PH skills (multi-plugin package)
-echo "[PH] Updating PH skills..."
+# 2. Clone or update PH skills (multi-plugin package)
 if [ -d ~/rhdp-publishing-house-skills ]; then
+    echo "[PH] Updating PH skills..."
     cd ~/rhdp-publishing-house-skills
     git pull --rebase --autostash || {
         echo "[PH] WARNING: Failed to update skills, using current version"
     }
 else
-    echo "[PH] WARNING: Skills not found at ~/rhdp-publishing-house-skills"
+    echo "[PH] Cloning PH skills (first startup)..."
+    git clone https://github.com/rhpds/rhdp-publishing-house-skills.git ~/rhdp-publishing-house-skills || {
+        echo "[PH] ERROR: Failed to clone skills. Workspace may not function correctly."
+    }
 fi
 
 # 3. Sync project repo (user's content)
