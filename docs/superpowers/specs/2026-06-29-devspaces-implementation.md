@@ -1871,13 +1871,11 @@ sequenceDiagram
     Portal->>Database: SELECT workspace
     Database-->>Portal: {workspace record}
     
-    alt Key is valid
-        Portal-->>Browser: {url, status}
-        Browser->>User: Redirect to workspace URL
-        Note over User: Workspace auto-starts<br/>Duration: ~10-20s
-    else Key is expired
-        Portal->>LiteLLM: GET /key/info
-        LiteLLM-->>Portal: 404 Not Found (expired)
+    Note over Portal,LiteLLM: Key Expiry Check (Always)
+    Portal->>LiteLLM: GET /key/info
+    
+    alt Key is expired (404)
+        LiteLLM-->>Portal: 404 Not Found
         
         rect rgb(255, 240, 240)
             Note over Portal,Database: Automatic Key Rotation
@@ -1890,17 +1888,20 @@ sequenceDiagram
             Portal->>Database: UPDATE old key: revoked_at=NOW()
             Portal->>K8s: PATCH DevWorkspace (MAAS_API_KEY)
         end
-        
-        Portal-->>Browser: {url, status}
-        Browser->>User: Redirect to workspace URL
-        Note over User: Workspace starts with new key<br/>Duration: ~15-25s
+    else Key is valid (200 OK)
+        LiteLLM-->>Portal: 200 OK {key info}
+        Note over Portal: Skip rotation
     end
+    
+    Portal-->>Browser: {url, status}
+    Browser->>User: Redirect to workspace URL
+    Note over User: Workspace auto-starts
 ```
 
 **Backend Logic:**
-- Portal always checks key validity on workspace access
-- If valid: redirect immediately
-- If expired: auto-rotate key, then redirect
+- Portal **always** validates key on every workspace access (`GET /key/info`)
+- **If expired (404):** Auto-rotate key transparently
+- **If valid (200):** Proceed directly to redirect
 
 **Key Rotation Steps (automatic if needed):**
 1. Validate key via LiteLLM (`GET /key/info`)
