@@ -29,7 +29,7 @@ Claude Code pre-configured and ready
 
 ### The 3 Core Components
 
-1. **Custom UDI Image** — VS Code + Claude Code CLI + PH skills (pre-baked container)
+1. **Custom UDI Image** — VS Code + Claude Code CLI + base tooling (skills cloned at runtime)
 2. **Portal Backend Services** — Orchestrates workspace creation and key provisioning
 3. **PostgreSQL Database** — Stores workspace → user → key mappings
 
