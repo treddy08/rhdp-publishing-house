@@ -135,19 +135,44 @@ CREATE INDEX ix_key_history_expired_at ON workspace_key_history(expired_at) WHER
 | Field | Purpose | Used For |
 |-------|---------|----------|
 | `provisioned_at` | When key was created | Audit trail, lifespan calculation |
-| `expired_at` | When key expired | Distinguish expired vs revoked |
-| `revoked_at` | When key was manually revoked | Manual rotation tracking |
-| `revocation_reason` | Why key was revoked | Security audits, compliance |
+| `expired_at` | **Natural expiration** (reached TTL) | Distinguish natural expiry from manual revocation |
+| `revoked_at` | **Manual revocation** (LiteLLM API call) | Track when key was actively revoked |
+| `revocation_reason` | Why key was revoked/expired | Security audits, compliance |
 | `is_current` | Only one current key per workspace | Fast lookup of active key |
 | `models` | Snapshot of model access | Audit what models were available |
 
-**Key rotation flow:**
-1. New key provisioned → New row in `workspace_key_history` with `is_current=true`
-2. Old key marked as rotated → Set `is_current=false`, `expired_at=NOW()`, `revocation_reason='expired'`
-3. Workspace table updated → `maas_key_id` points to new key
-4. Old key revoked via LiteLLM → `revoked_at=NOW()`
+**Timestamp semantics:**
 
-This maintains **complete audit trail** of all keys ever used by a workspace.
+- **`expired_at` only**: Key reached natural TTL (30d), not yet revoked from LiteLLM
+- **`revoked_at` only**: Key manually revoked before expiration (workspace deleted, security rotation)
+- **Both set**: Key expired naturally, then revoked from LiteLLM during rotation
+
+**Key lifecycle scenarios:**
+
+| Scenario | `expired_at` | `revoked_at` | `revocation_reason` |
+|----------|-------------|-------------|---------------------|
+| **Natural expiry + auto-rotation** | `NOW()` | `NOW()` (after revoke call) | `"expired"` |
+| **Workspace deleted before expiry** | `NULL` | `NOW()` | `"workspace_deleted"` |
+| **Security incident rotation** | `NULL` | `NOW()` | `"security_rotation"` |
+| **User-requested rotation** | `NULL` | `NOW()` | `"user_requested"` |
+| **Key still active** | `NULL` | `NULL` | `NULL` |
+
+**Key rotation flow (natural expiration):**
+1. User resumes workspace → Key validation fails (expired)
+2. Mark old key: `is_current=false`, `expired_at=NOW()`, `revocation_reason='expired'`
+3. Provision new key → New row in `workspace_key_history` with `is_current=true`
+4. Update workspace table → `maas_key_id` points to new key
+5. Revoke old key via LiteLLM → Set `revoked_at=NOW()` on old key record
+6. Update DevWorkspace env vars → Workspace gets new key without restart
+
+**Deletion flow (manual revocation):**
+1. User deletes workspace
+2. Mark current key: `is_current=false`, `revoked_at=NOW()`, `revocation_reason='workspace_deleted'`
+3. Revoke key via LiteLLM
+4. Delete workspace CR and namespace
+5. Delete workspace record (cascades to history if configured, or keep for audit)
+
+This maintains **complete audit trail** distinguishing natural expiration from manual revocation.
 
 ### Alembic Migration
 
@@ -990,8 +1015,9 @@ class WorkspaceManager:
         
         if current_key_record:
             current_key_record.is_current = False
-            current_key_record.revoked_at = datetime.utcnow()
+            current_key_record.revoked_at = datetime.utcnow()  # Manual revocation, NOT expired_at
             current_key_record.revocation_reason = "workspace_deleted"
+            # Note: expired_at remains NULL - this was manual revocation, not natural expiration
         
         # 2. Delete workspace from K8s
         await self.devspaces.delete_workspace(
@@ -1002,9 +1028,49 @@ class WorkspaceManager:
         # 3. Revoke key from LiteLLM
         await self.litellm.revoke_key(workspace.maas_key_id)
         
-        # 4. Remove workspace record (cascades to key_history via FK)
+        # 4. Commit key_history updates BEFORE deleting workspace
+        #    This preserves audit trail even if workspace record is deleted
+        self.db.commit()
+        
+        # 5. Remove workspace record (does NOT cascade to key_history - see note below)
         self.db.delete(workspace)
         self.db.commit()
+```
+
+**Audit trail preservation:**
+
+The `workspace_key_history` table uses `ON DELETE CASCADE` in the foreign key definition, which means deleting a workspace will cascade-delete its key history. For **compliance and audit purposes**, you may want to preserve key history even after workspace deletion.
+
+**Two approaches:**
+
+1. **Cascade delete (current spec)**: Key history deleted with workspace
+   - Pros: Clean database, no orphaned records
+   - Cons: Lose audit trail for compliance/security investigation
+
+2. **Preserve history (recommended for production)**:
+   - Change FK to `ON DELETE SET NULL` instead of `CASCADE`
+   - Add `workspace_project_id` and `workspace_user_email` columns to `workspace_key_history` for orphaned record identification
+   - Keep key history indefinitely for audit
+   - Periodic cleanup job deletes history older than retention period (e.g., 90 days)
+
+**Recommended for production:**
+
+```sql
+-- Modified FK constraint (no cascade)
+ALTER TABLE workspace_key_history
+  DROP CONSTRAINT workspace_key_history_workspace_id_fkey,
+  ADD CONSTRAINT workspace_key_history_workspace_id_fkey 
+    FOREIGN KEY (workspace_id) 
+    REFERENCES workspaces(id) 
+    ON DELETE SET NULL;
+
+-- Add denormalized fields for orphaned records
+ALTER TABLE workspace_key_history
+  ADD COLUMN workspace_project_id UUID,
+  ADD COLUMN workspace_user_email VARCHAR;
+```
+
+This allows querying key history even after workspace deletion: "Show all keys provisioned for user X in the last 90 days, including deleted workspaces."
 ```
 
 ---
