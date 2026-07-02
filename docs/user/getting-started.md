@@ -23,9 +23,8 @@ The MCP server gives Claude Code access to RCARS content advisory, project track
 The easiest way to add it is the `claude mcp add` command:
 
 ```bash
-claude mcp add publishing-house \
-  --transport http \
-  --url "https://ph-mcp.apps.<cluster-domain>/mcp/" \
+claude mcp add --transport http publishing-house \
+  "https://ph-mcp.apps.<cluster-domain>/mcp/" \
   --header "Authorization: Bearer <your-api-key>"
 ```
 
