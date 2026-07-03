@@ -1,0 +1,19 @@
+mode: self-published
+product: openshift
+name: ocp-cluster-troubleshooting
+
+initial_prompt: |
+  I need a workshop for my team on OpenShift cluster troubleshooting. It's internal — we'll deploy it ourselves using the Field Source CI. Not going through the RHDP catalog.
+
+follow_up_details: |
+  - 4 or 5 modules covering real break/fix scenarios
+  - Node not ready, etcd issues, certificate expiry, image pull failures
+  - Each module should have a pre-broken cluster state the learner diagnoses
+  - Audience: junior platform engineers on my team, ~10 people
+  - OCP 4.16, standard HA cluster
+  - GitOps deployment via ArgoCD
+
+expected_outcomes:
+  conversation:
+    min_turns: 15
+    # termination_reason not set — accept approval_gate or max_turns

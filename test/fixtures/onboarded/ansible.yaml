@@ -1,0 +1,37 @@
+mode: onboarded
+product: ansible
+name: "ansible-eda-workshop"
+
+initial_prompt: |
+  I submitted a CFP for an Ansible workshop at a customer event. Here's the abstract:
+  "Event-Driven Automation: From Alert to Resolution"
+  Traditional automation is powerful but reactive — someone has to trigger it. Event-Driven Ansible (EDA) closes the loop by automatically responding to events from monitoring systems, cloud providers, and IT service management platforms. In this hands-on workshop, participants will build an event-driven automation pipeline that detects infrastructure issues, triages them, and executes remediation — all without human intervention. We'll connect real monitoring alerts to Ansible rulebooks and watch automation respond in real time.
+  Can you build this as an RHDP Published lab?
+
+follow_up_details: |
+  - AAP 2.5 with EDA controller
+  - Alertmanager as the event source (already firing test alerts)
+  - Scenarios: disk full remediation, service restart, scaling
+  - Should cover rulebook writing from scratch, not just using pre-built ones
+  - Include a ServiceNow integration module if possible — auto-create incident tickets
+  - Audience: Ansible practitioners who know job templates but haven't used EDA
+  - 3 modules, about 90 minutes total
+
+expected_outcomes:
+  conversation:
+    min_turns: 15  # at least 15 turns of genuine intake conversation
+
+  files:
+    - publishing-house/spec/design.md
+    - publishing-house/manifest.yaml
+  manifest:
+    phases.intake.status: completed
+    phases.vetting.status: completed
+    phases.spec_refinement.status: completed
+    phases.approval.status: pending
+  design_spec_sections:
+    - Problem Statement
+    - Learning Objectives
+    - Target Audience
+    - Products
+    - Infrastructure Requirements

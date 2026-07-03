@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "ph-test"
+version = "0.1.0"
+description = "PH autonomous E2E test harness (RHDPCD-108)"
+requires-python = ">=3.11"
+dependencies = [
+    "openai>=2.0",
+    "pydantic>=2.0",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+ph-test = "ph_test.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

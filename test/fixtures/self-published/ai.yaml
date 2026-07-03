@@ -1,0 +1,19 @@
+mode: self-published
+product: ai
+name: rhoai-end-to-end-demo
+
+initial_prompt: |
+  Need a demo I can run for prospects showing Red Hat's AI story end to end. Self-published, I'll order a Field Source CI and point it at my repo.
+
+follow_up_details: |
+  - Short — 3 modules max, 45 minutes total
+  - Module 1: RHOAI overview, show the dashboard, create a data science project
+  - Module 2: Run a notebook that does inference against a pre-deployed model
+  - Module 3: Show Trustworthy AI — model bias detection or explainability
+  - Pre-deploy the model, learner shouldn't have to wait for training
+  - Needs GPU but only one node
+
+expected_outcomes:
+  conversation:
+    min_turns: 15
+    # termination_reason not set — accept approval_gate or max_turns

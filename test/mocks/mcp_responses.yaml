@@ -1,0 +1,39 @@
+# MCP mock responses for ph-test harness
+# These match the schema of real portal responses.
+# Keep in sync with actual portal when schema changes.
+
+ph_rcars_query:
+  status: complete
+  findings: []
+  recommendation: proceed
+  overlap_score: 0.12
+  similar_items: []
+
+ph_sync_manifest:
+  success: true
+  project_id: "test-project-001"
+
+ph_store_intake_results:
+  session_id: "test-session-001"
+  success: true
+
+ph_list_intake_sessions:
+  sessions: []
+
+ph_get_intake_results:
+  session_id: "test-session-001"
+  owner_email: "test@redhat.com"
+  mode: onboarded
+  intake_data: {}
+  status: active
+
+ph_list_projects:
+  projects: []
+
+ph_rcars_catalog_search:
+  items: []
+  total: 0
+
+ph_record_express_run:
+  success: true
+  run_id: "test-run-001"

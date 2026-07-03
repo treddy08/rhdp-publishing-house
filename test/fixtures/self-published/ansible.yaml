@@ -1,0 +1,19 @@
+mode: self-published
+product: ansible
+name: ansible-lightspeed-partner-enablement
+
+initial_prompt: |
+  Building a workshop on Ansible Lightspeed with watsonx Code Assistant for a partner enablement session. They've seen the demos, now they need hands-on. Self-published, deploying via Field Source.
+
+follow_up_details: |
+  - Audience: partner SAs who know Ansible but haven't used Lightspeed
+  - Cover: VS Code setup, generating tasks from natural language, generating entire roles
+  - Include a "refactor this legacy playbook" exercise — take a messy playbook and use Lightspeed to modernize it
+  - Content matching and attribution — explain how it works, show the UI
+  - AAP 2.5 with Lightspeed enabled
+  - Each learner needs a VS Code instance — Dev Spaces or just local?
+
+expected_outcomes:
+  conversation:
+    min_turns: 15
+    # termination_reason not set — accept approval_gate or max_turns

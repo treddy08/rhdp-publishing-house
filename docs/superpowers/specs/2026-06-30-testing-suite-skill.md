@@ -1,6 +1,7 @@
 # `/rhdp-publishing-house:testing-suite` — Skill Spec
 
 **Date:** 2026-06-30  
+**Last Updated:** 2026-07-03  
 **Ticket:** RHDPCD-108  
 **Author:** Prakhar Srivastava  
 **Status:** In Progress
@@ -13,23 +14,27 @@ A Claude Code skill that runs fixture-driven end-to-end tests of the Publishing 
 
 No Python, no API keys, no external services — runs entirely within Claude Code using the Task tool.
 
+The skill always operates on an **existing project directory**. No temporary directories are created.
+
 ---
 
 ## Workflow
 
 ```mermaid
 flowchart TD
-    A([/testing-suite onboarded/ansible]) --> B
+    A([/testing-suite onboarded/ansible --project-dir .]) --> B
 
     subgraph LOAD["1 · Load Fixture"]
         B[Read fixtures/onboarded/ansible.yaml\ninitial_prompt · follow_up_details · expected_outcomes]
     end
 
-    LOAD --> SEED
+    LOAD --> RESET{--reset?}
+    RESET -->|No| RUN
+    RESET -->|Yes| SEED
 
-    subgraph SEED["2 · Seed Project — Haiku sub-agent"]
-        C[Clone rhdp-publishing-house-template]
-        C --> D[Generate pre-approval state:\ndesign.md · modules · automation-manifest\nmanifest.yaml ← current_phase: approval\nworklog.yaml]
+    subgraph SEED["2 · Reset Project — Haiku sub-agent"]
+        C[Wipe post-approval state:\nreviews/ · decisions/\nReset manifest.yaml to approval\nReset worklog.yaml to minimal]
+        C --> D[Re-seed pre-approval content:\ndesign.md · modules · automation-manifest\nFrom fixture initial_prompt]
     end
 
     SEED --> RUN
@@ -48,7 +53,7 @@ flowchart TD
     M --> VAL
 
     subgraph VAL["4 · Validate — check orchestrator produced expected changes"]
-        N{worklog updated?\napproval gate set?\ndesign.md enriched?\nno MCP mock payloads in output?}
+        N{worklog updated?\napproval gate reached?\ndesign.md enriched?\nphase advanced?}
         N -->|FAIL| O([❌ Report failures])
         N -->|PASS| P([✅ PASS])
     end
@@ -63,30 +68,31 @@ flowchart TD
 ## Invocation
 
 ```
-# Fresh test — seed a new tmpdir, run, validate, clean up
+# Test with current working directory (must contain publishing-house/)
 /rhdp-publishing-house:testing-suite onboarded/ai
 
-# Point at an EXISTING project (no seeding — test its real state)
+# Test with explicit project directory
 /rhdp-publishing-house:testing-suite onboarded/ai \
   --project-dir ~/work/code/rhdp-publishing-house-example
 
-# Reset existing project back to seeded state, then re-run
+# Reset project to seeded state, then re-run
 /rhdp-publishing-house:testing-suite onboarded/ai \
   --project-dir ~/work/code/rhdp-publishing-house-example \
   --reset
 
 # With explicit fixtures path (for anyone without dev hub)
 /rhdp-publishing-house:testing-suite onboarded/ai \
+  --project-dir . \
   --fixtures-path /abs/path/to/rhdp-publishing-house/test/fixtures
 
 # All fixtures
-/rhdp-publishing-house:testing-suite --all
+/rhdp-publishing-house:testing-suite --all --project-dir .
+
+# All fixtures for one mode
+/rhdp-publishing-house:testing-suite --mode onboarded --project-dir .
 
 # Verbose — see tester/orchestrator conversation
-/rhdp-publishing-house:testing-suite onboarded/ai --verbose
-
-# Keep temp dir for debugging
-/rhdp-publishing-house:testing-suite onboarded/ai --keep
+/rhdp-publishing-house:testing-suite onboarded/ai --project-dir . --verbose
 ```
 
 ### Arguments
@@ -94,41 +100,36 @@ flowchart TD
 | Argument | Purpose | Default |
 |----------|---------|---------|
 | `<fixture-path>` | Fixture to run (e.g. `onboarded/ai`) | required unless `--all` or `--mode` |
-| `--project-dir <path>` | Use an existing project dir instead of seeding a new tmpdir | fresh tmpdir |
-| `--reset` | Re-seed `--project-dir` in-place (wipe `publishing-house/` and regenerate) | false |
+| `--project-dir <path>` | Project directory containing `publishing-house/` | current working directory (`.`) |
+| `--reset` | Wipe post-approval state and re-seed pre-approval content from fixture | false |
 | `--fixtures-path <path>` | Absolute path to fixtures directory | auto-discovered |
 | `--all` | Run all fixtures across all modes | false |
 | `--mode <mode>` | Run all fixtures for one mode: `onboarded` \| `self-published` | — |
 | `--verbose` | Print tester/orchestrator conversation turn-by-turn | false |
-| `--keep` | Keep temp project dir after run (only applies to fresh tmpdir runs) | false |
 
-### Project Directory Modes
+### Project Directory
 
-**Mode A — Fresh tmpdir (default):**  
-The skill creates a new `tempfile.mkdtemp()`, seeds it from the fixture, runs the session, validates, then cleans up. Use this for CI or when you need a guaranteed clean state.
+The skill always operates on an **existing project directory** that must contain a `publishing-house/` subdirectory.
 
-**Mode B — Existing project (`--project-dir`):**  
-Points the skill at a real project repo (e.g., `rhdp-publishing-house-example`). Reads the existing `manifest.yaml`, `worklog.yaml`, `design.md` — no seeding. The tester drives the real orchestrator against the project's actual current state. Use this for iterative testing without re-creating a project every run.
+**Default:** If `--project-dir` is not specified, the skill uses the current working directory (`.`).
 
-**Mode B with reset (`--project-dir --reset`):**  
-Resets the project's lifecycle state back to the approval gate — without touching the spec content (design.md, modules, automation-manifest). Use this to re-run tests on an existing project that has progressed past approval.
+**Validation:** The skill verifies that `{project_dir}/publishing-house/` exists before proceeding.
+
+### Reset Mode (`--reset`)
+
+Resets the project to the approval gate state without modifying surrounding project files:
 
 What `--reset` changes:
-- `manifest.yaml` → `current_phase: approval`, prior phases completed, approval pending
+- `manifest.yaml` → `current_phase: approval`, all prior phases completed, approval pending
 - `worklog.yaml` → cleared to a minimal "ready for approval gate" note
 - `reviews/` → cleared (post-approval artifacts)
 - `decisions/` → cleared (post-approval artifacts)
 
 What `--reset` preserves (pre-approval content):
-- `spec/design.md`
-- `spec/modules/`
-- `spec/automation-manifest.yaml`
-
-### Fixture Path Discovery
-
-1. `--fixtures-path` argument (highest priority)
-2. `test/fixtures/` relative to the skill file's parent repo (auto-discover from dev hub)
-3. Error with instructions
+- `spec/design.md` — regenerated from fixture
+- `spec/modules/` — regenerated from fixture
+- `spec/automation-manifest.yaml` — regenerated from fixture
+- Everything outside `publishing-house/` — untouched
 
 ---
 
@@ -182,15 +183,17 @@ expected_outcomes:
 
 ## Sub-agents
 
-### Seeder Agent (Haiku)
+### Seeder Agent (Haiku) — Runs Only on `--reset`
 
-Generates realistic pre-approval state so the test session starts at the approval gate:
+When `--reset` is used, this agent regenerates pre-approval state from the fixture:
 
 - `publishing-house/spec/design.md` — full design spec from fixture
 - `publishing-house/spec/modules/module-XX.md` — N module outlines
 - `publishing-house/spec/automation-manifest.yaml` — infrastructure requirements
 - `publishing-house/manifest.yaml` — `current_phase: approval`, all prior phases completed
-- `publishing-house/worklog.yaml` — initial session note
+- `publishing-house/worklog.yaml` — minimal "ready for approval gate" state
+
+This agent is **not** used if `--reset` is not provided. In that case, the test runs against the project's current state.
 
 ### Tester Agent (Haiku)
 
@@ -222,16 +225,18 @@ Checks that the orchestrator made the expected mutations during the conversation
 | `worklog_updated` | `publishing-house/worklog.yaml` has new entries from the session |
 | `approval_gate_reached` | Tester sent `APPROVAL_GATE_REACHED` during conversation |
 | `design_spec_enriched` | `design.md` was updated/refined by the orchestrator |
+| `phase_advanced` | `manifest.yaml` shows progress past approval phase |
 | `no_mock_payloads` | No unresolved `{{ mcp_mock }}` patterns in output files |
-| MCP payload shapes | `ph_store_intake_results` and write-path tools were called with valid payloads |
 
 ---
 
 ## Design Constraints
 
+**Project directory always provided:** The skill always operates on an existing directory. Default is current working directory if `--project-dir` is not specified. The skill verifies that `{project_dir}/publishing-house/` exists before proceeding.
+
 **Tester context isolation:** The tester sub-agent must NOT see the orchestrator's system prompt. The Task prompt is fully self-contained — only fixture data. Violation = test results meaningless.
 
-**Hermetic runs:** Each run uses a fresh `tempfile.mkdtemp()`. Never reuse directories between runs. Clean up on success; keep on failure (or `--keep`).
+**Idempotent resets:** When `--reset` is used, the seeder only modifies files within `publishing-house/`. Everything outside is preserved.
 
 **15-turn gate:** Hard limit at 15 turns. A well-functioning orchestrator reaches the approval gate before 15 turns. Longer sessions indicate redundant questions or a stuck orchestrator — that is a regression, not a success.
 
@@ -241,10 +246,14 @@ Checks that the orchestrator made the expected mutations during the conversation
 
 ## Acceptance Criteria
 
-- [ ] `/rhdp-publishing-house:testing-suite onboarded/ansible` reaches approval gate and passes all checks
+- [ ] `/rhdp-publishing-house:testing-suite onboarded/ansible` (uses cwd) reaches approval gate and passes all checks
+- [ ] `--project-dir .` works correctly
+- [ ] `--reset` properly wipes and re-seeds the project
 - [ ] `--fixtures-path` correctly overrides auto-discovery
 - [ ] All 10 fixtures produce a passing result
 - [ ] A deliberately broken fixture (bad manifest) fails with a clear error
 - [ ] `--all` runs all 10 fixtures and prints a summary table
+- [ ] `--mode onboarded` runs all 5 onboarded fixtures
 - [ ] Tester sub-agent has isolated context (manual verification)
 - [ ] No Python, no API key, no MAAS required
+- [ ] Mode A (fresh tmpdir) is completely removed — skill errors if project dir doesn't exist

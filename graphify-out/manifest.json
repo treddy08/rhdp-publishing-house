@@ -1,0 +1,647 @@
+{
+  "/Users/psrivast/work/code/rhdp-publishing-house/.claude-plugin/plugin.json": {
+    "mtime": 1779087556.2862315,
+    "ast_hash": "38c20bdb8cb92a24fd54e448c4f68fb6",
+    "semantic_hash": "38c20bdb8cb92a24fd54e448c4f68fb6"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/conftest.py": {
+    "mtime": 1782782050.1091275,
+    "ast_hash": "dfeab7b65c49034707ced10c627c8c04",
+    "semantic_hash": "dfeab7b65c49034707ced10c627c8c04"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/pyproject.toml": {
+    "mtime": 1782795644.1189127,
+    "ast_hash": "5f83044f62f689f7b98be039537f01f6",
+    "semantic_hash": "5f83044f62f689f7b98be039537f01f6"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/scripts/ph-seed.py": {
+    "mtime": 1782813487.6901042,
+    "ast_hash": "408c118476a49e6fbb2573486c5031b9",
+    "semantic_hash": "408c118476a49e6fbb2573486c5031b9"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/scripts/ph-test.py": {
+    "mtime": 1782791879.7271464,
+    "ast_hash": "f5c4278c4dd6145374327424a815a42f",
+    "semantic_hash": "f5c4278c4dd6145374327424a815a42f"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills-plugin/.claude-plugin/plugin.json": {
+    "mtime": 1779087562.7670696,
+    "ast_hash": "38c20bdb8cb92a24fd54e448c4f68fb6",
+    "semantic_hash": "38c20bdb8cb92a24fd54e448c4f68fb6"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/src/__init__.py": {
+    "mtime": 1782781168.2796278,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/src/ph_test/__init__.py": {
+    "mtime": 1782781037.4857357,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/src/ph_test/cli.py": {
+    "mtime": 1782795654.6597257,
+    "ast_hash": "472e1cb5393c08ac9772f55a0482ac7a",
+    "semantic_hash": "472e1cb5393c08ac9772f55a0482ac7a"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/src/ph_test/fixtures.py": {
+    "mtime": 1782790920.3164008,
+    "ast_hash": "513d1aa412bf2a293ca4a132cbb3f49c",
+    "semantic_hash": "513d1aa412bf2a293ca4a132cbb3f49c"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/src/ph_test/mcp_mock.py": {
+    "mtime": 1782781185.493024,
+    "ast_hash": "0e16c7e7942ece8c13bb53d31811c0ad",
+    "semantic_hash": "0e16c7e7942ece8c13bb53d31811c0ad"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/src/ph_test/runner.py": {
+    "mtime": 1782789839.5075884,
+    "ast_hash": "3adc1d5f2b8d9e94b3c11f5a3da6d905",
+    "semantic_hash": "3adc1d5f2b8d9e94b3c11f5a3da6d905"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/src/ph_test/validator.py": {
+    "mtime": 1782790944.5278325,
+    "ast_hash": "29063e424dde5ac2523ba24e5e23d607",
+    "semantic_hash": "29063e424dde5ac2523ba24e5e23d607"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/test_fixtures.py": {
+    "mtime": 1782781336.3945267,
+    "ast_hash": "b0ff2d625c90f8a76bf48e8f4fe5e953",
+    "semantic_hash": "b0ff2d625c90f8a76bf48e8f4fe5e953"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/test_mcp_mock.py": {
+    "mtime": 1782781278.2973375,
+    "ast_hash": "4d459b6738a02eb1da8449393c4be590",
+    "semantic_hash": "4d459b6738a02eb1da8449393c4be590"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/test_runner.py": {
+    "mtime": 1782782373.266736,
+    "ast_hash": "2209ae5c5ca0a9efd90a62ad971b74c3",
+    "semantic_hash": "2209ae5c5ca0a9efd90a62ad971b74c3"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/test_validator.py": {
+    "mtime": 1782781607.5842056,
+    "ast_hash": "f81ec467b7b4dc88c73c07ba83e3ce0f",
+    "semantic_hash": "f81ec467b7b4dc88c73c07ba83e3ce0f"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/.github/workflows/docs.yml": {
+    "mtime": 1779087556.2865138,
+    "ast_hash": "75b00c17ecc57b213d50a6a580290d1a",
+    "semantic_hash": "75b00c17ecc57b213d50a6a580290d1a"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/BACKLOG.md": {
+    "mtime": 1779087556.2869275,
+    "ast_hash": "4c0729c3dfdb95c3d62c3ffb7f5d84f1",
+    "semantic_hash": "4c0729c3dfdb95c3d62c3ffb7f5d84f1"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/CLAUDE.md": {
+    "mtime": 1779087556.2871516,
+    "ast_hash": "5623b34846b46565f0a6a39ee4fa9bd0",
+    "semantic_hash": "5623b34846b46565f0a6a39ee4fa9bd0"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/README.md": {
+    "mtime": 1779087556.2873676,
+    "ast_hash": "8a197d295469dfa925f911c319562499",
+    "semantic_hash": "8a197d295469dfa925f911c319562499"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/WORKLOG.md": {
+    "mtime": 1779087556.2876077,
+    "ast_hash": "4b34eacb3a171fb82bc08aa6ffe3ecb8",
+    "semantic_hash": "4b34eacb3a171fb82bc08aa6ffe3ecb8"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/admin/PH-COMMON-RULES.md": {
+    "mtime": 1779087556.2879353,
+    "ast_hash": "7d04645317b561c63e46cff8bccc663d",
+    "semantic_hash": "7d04645317b561c63e46cff8bccc663d"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/admin/mcp-auth.md": {
+    "mtime": 1779087556.2881365,
+    "ast_hash": "d182b3e5e9a0aa1491ef4824349fb211",
+    "semantic_hash": "d182b3e5e9a0aa1491ef4824349fb211"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/admin/portal-deployment.md": {
+    "mtime": 1779087556.2883315,
+    "ast_hash": "cd5909fea41b63ce2f888363c4e08e99",
+    "semantic_hash": "cd5909fea41b63ce2f888363c4e08e99"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/admin/rcars-service-auth.md": {
+    "mtime": 1779087556.2885413,
+    "ast_hash": "79eb4e51615358e42903e43dd9c30b1f",
+    "semantic_hash": "79eb4e51615358e42903e43dd9c30b1f"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/api/mcp-tools.md": {
+    "mtime": 1779087556.288764,
+    "ast_hash": "2f79811439a14d29282227facba55b6f",
+    "semantic_hash": "2f79811439a14d29282227facba55b6f"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/architecture/express-mode-overview.md": {
+    "mtime": 1779087556.2890563,
+    "ast_hash": "a34a0fe90ce748f7b452fa2f9d981ab2",
+    "semantic_hash": "a34a0fe90ce748f7b452fa2f9d981ab2"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/architecture/hosted-workspace-overview.md": {
+    "mtime": 1779087556.2892554,
+    "ast_hash": "4a6420bc4b526b835c874d17f306272b",
+    "semantic_hash": "4a6420bc4b526b835c874d17f306272b"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/architecture/jira-integration-overview.md": {
+    "mtime": 1779087556.2894647,
+    "ast_hash": "2e99fa65aeeed9ba2240c6aec039ef29",
+    "semantic_hash": "2e99fa65aeeed9ba2240c6aec039ef29"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/architecture/portal.md": {
+    "mtime": 1779087556.2896752,
+    "ast_hash": "340c0ef1a3313a3c2a904847e1e279bd",
+    "semantic_hash": "340c0ef1a3313a3c2a904847e1e279bd"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/architecture/rcars-integration.md": {
+    "mtime": 1779087556.2898338,
+    "ast_hash": "968c53fb6cd731a0c7f7fa2c1c5f7338",
+    "semantic_hash": "968c53fb6cd731a0c7f7fa2c1c5f7338"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/executive-summary.md": {
+    "mtime": 1779087556.2900481,
+    "ast_hash": "fa9b0e04b5c1cc2102eeb413ada26cba",
+    "semantic_hash": "fa9b0e04b5c1cc2102eeb413ada26cba"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/getting-started.md": {
+    "mtime": 1779087556.290255,
+    "ast_hash": "194505c47bd2cc6ce4c349dddd8c403b",
+    "semantic_hash": "194505c47bd2cc6ce4c349dddd8c403b"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/how-it-works.md": {
+    "mtime": 1779087556.2906225,
+    "ast_hash": "07dee3101ad701b8795dac780b0f0ebf",
+    "semantic_hash": "07dee3101ad701b8795dac780b0f0ebf"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/index.md": {
+    "mtime": 1779087556.290739,
+    "ast_hash": "603d50302601f93e39157bbc4b50951a",
+    "semantic_hash": "603d50302601f93e39157bbc4b50951a"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/plans/2026-04-09-phase-1-plugin-orchestrator-intake.md": {
+    "mtime": 1779087556.2912521,
+    "ast_hash": "1884af20b3acef9d29c92579eebc5781",
+    "semantic_hash": "1884af20b3acef9d29c92579eebc5781"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/plans/2026-04-09-phase-2-writer-editor-agents.md": {
+    "mtime": 1779087556.2917361,
+    "ast_hash": "fd88939e194a07a42519bd4b373f7a45",
+    "semantic_hash": "fd88939e194a07a42519bd4b373f7a45"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/plans/2026-04-09-phase-3-automation-agent.md": {
+    "mtime": 1779087556.2921865,
+    "ast_hash": "2f4c3b4c3eac5efac9ccd714f488f4c4",
+    "semantic_hash": "2f4c3b4c3eac5efac9ccd714f488f4c4"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/plans/2026-04-12-dashboard-poc.md": {
+    "mtime": 1779087556.2925003,
+    "ast_hash": "c465480d64fdeea341036bf95287202b",
+    "semantic_hash": "c465480d64fdeea341036bf95287202b"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/plans/2026-04-19-portal-redesign.md": {
+    "mtime": 1779087556.293033,
+    "ast_hash": "3dcfc1a9689f8b187498dc667906a01f",
+    "semantic_hash": "3dcfc1a9689f8b187498dc667906a01f"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/plans/2026-04-20-skills-redesign.md": {
+    "mtime": 1779087556.2932515,
+    "ast_hash": "23d63bed154427a66a58dc1244d3e1f9",
+    "semantic_hash": "23d63bed154427a66a58dc1244d3e1f9"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/plans/2026-04-24-orchestrator-discovery-and-repo-gates.md": {
+    "mtime": 1779087556.2940028,
+    "ast_hash": "2db82c890edcb2fcb4135e6ef82f59a1",
+    "semantic_hash": "2db82c890edcb2fcb4135e6ef82f59a1"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/specs/2026-04-09-rhdp-publishing-house-design.md": {
+    "mtime": 1779087556.2943048,
+    "ast_hash": "0a464944429ccc2d1034ae46e32db76f",
+    "semantic_hash": "0a464944429ccc2d1034ae46e32db76f"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/specs/2026-04-12-publishing-house-dashboard-design.md": {
+    "mtime": 1779087556.294891,
+    "ast_hash": "68b90a410a9c9bc5be998db6154e1fb8",
+    "semantic_hash": "68b90a410a9c9bc5be998db6154e1fb8"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/specs/2026-04-19-portal-redesign.md": {
+    "mtime": 1779087556.2950366,
+    "ast_hash": "60c9c96399b6627f1b2fbcd20ac012f7",
+    "semantic_hash": "60c9c96399b6627f1b2fbcd20ac012f7"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/specs/2026-04-20-skills-redesign.md": {
+    "mtime": 1779087556.2952735,
+    "ast_hash": "b137d9547b7aad3274d04bca72813b94",
+    "semantic_hash": "b137d9547b7aad3274d04bca72813b94"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/specs/2026-04-24-orchestrator-discovery-and-repo-gates.md": {
+    "mtime": 1779087556.2954757,
+    "ast_hash": "274f9402768f8d74ec25db5b0041c0b8",
+    "semantic_hash": "274f9402768f8d74ec25db5b0041c0b8"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/specs/2026-04-27-rcars-integration-design.md": {
+    "mtime": 1779087556.2956238,
+    "ast_hash": "0c4fb453ec21ae9e315669dda11a3e7f",
+    "semantic_hash": "0c4fb453ec21ae9e315669dda11a3e7f"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/specs/2026-04-28-express-mode-design.md": {
+    "mtime": 1779087556.2959692,
+    "ast_hash": "691bb53c838575c9c4cb5b5144cffcb9",
+    "semantic_hash": "691bb53c838575c9c4cb5b5144cffcb9"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/specs/2026-05-05-jira-integration-design.md": {
+    "mtime": 1779087556.2961254,
+    "ast_hash": "800c21de87684bcebb10906a5eb8ecba",
+    "semantic_hash": "800c21de87684bcebb10906a5eb8ecba"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/specs/2026-05-15-hosted-workspace-design.md": {
+    "mtime": 1779087556.2963,
+    "ast_hash": "b4493bea60a8bfb9b02cc1f2ca9aa977",
+    "semantic_hash": "b4493bea60a8bfb9b02cc1f2ca9aa977"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/specs/2026-06-29-ph-skills-consolidation-architecture.md": {
+    "mtime": 1782707032.4950392,
+    "ast_hash": "54cde0d3e6f119b7b27d0a2666893333",
+    "semantic_hash": "54cde0d3e6f119b7b27d0a2666893333"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/specs/2026-06-29-ph-skills-distribution-and-updates.md": {
+    "mtime": 1782707123.9460309,
+    "ast_hash": "3f0033586a3df6faf0bef08b8deed281",
+    "semantic_hash": "3f0033586a3df6faf0bef08b8deed281"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/specs/2026-06-29-ph-skills-migration-plan.md": {
+    "mtime": 1782707092.0943842,
+    "ast_hash": "65e9fd9a977b712eeceaadfefe622630",
+    "semantic_hash": "65e9fd9a977b712eeceaadfefe622630"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/superpowers/specs/2026-06-30-testing-suite-skill.md": {
+    "mtime": 1782815233.324467,
+    "ast_hash": "ff0e5884672d0b613b16cd3f28c9482b",
+    "semantic_hash": "ff0e5884672d0b613b16cd3f28c9482b"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/docs/user/claude-code-setup.md": {
+    "mtime": 1779087556.2965994,
+    "ast_hash": "068f8e25116c7203af912d12bfed45a4",
+    "semantic_hash": "068f8e25116c7203af912d12bfed45a4"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/mkdocs.yml": {
+    "mtime": 1779087556.2967083,
+    "ast_hash": "b5ed84268d2f9d625f815bcba325ed61",
+    "semantic_hash": "b5ed84268d2f9d625f815bcba325ed61"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/requirements-docs.txt": {
+    "mtime": 1779087556.2967956,
+    "ast_hash": "e4580fd99e2d1200c115b54429bc76af",
+    "semantic_hash": "e4580fd99e2d1200c115b54429bc76af"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/requirements-test.txt": {
+    "mtime": 1782781071.6334372,
+    "ast_hash": "67021fd3188f41b05a9727383694773c",
+    "semantic_hash": "67021fd3188f41b05a9727383694773c"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills-plugin/README.md": {
+    "mtime": 1779087562.7672255,
+    "ast_hash": "5a95878e8a5602a84208a392a9be47c8",
+    "semantic_hash": "5a95878e8a5602a84208a392a9be47c8"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills-plugin/skills/automation/SKILL.md": {
+    "mtime": 1782868363.7820652,
+    "ast_hash": "e1e810c47d08b234c0aad404467bac5a",
+    "semantic_hash": "e1e810c47d08b234c0aad404467bac5a"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills-plugin/skills/automation/references/ansible-automation-guide.md": {
+    "mtime": 1779087562.767718,
+    "ast_hash": "267bc052ea2d0e9f9404dfecfd96debe",
+    "semantic_hash": "267bc052ea2d0e9f9404dfecfd96debe"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills-plugin/skills/automation/references/automation-manifest-format.md": {
+    "mtime": 1779087562.767867,
+    "ast_hash": "ddc0c722ee266aed9c859e0e66c1bfd8",
+    "semantic_hash": "ddc0c722ee266aed9c859e0e66c1bfd8"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills-plugin/skills/automation/references/automation-patterns.md": {
+    "mtime": 1782868363.7823625,
+    "ast_hash": "3f89bdc4e7603ac2f40e59c0ceddee23",
+    "semantic_hash": "3f89bdc4e7603ac2f40e59c0ceddee23"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills-plugin/skills/automation/references/gitops-automation-guide.md": {
+    "mtime": 1779087562.7681985,
+    "ast_hash": "4cbb0bf3742311362bee3b12c26c3c69",
+    "semantic_hash": "4cbb0bf3742311362bee3b12c26c3c69"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills-plugin/skills/editor/SKILL.md": {
+    "mtime": 1782868363.782787,
+    "ast_hash": "73c5af6960271e9040a3955910fe7a9d",
+    "semantic_hash": "73c5af6960271e9040a3955910fe7a9d"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills-plugin/skills/editor/references/editing-checklist.md": {
+    "mtime": 1782868363.782947,
+    "ast_hash": "6cd0db5d74261cd6d33ff6b041688c4e",
+    "semantic_hash": "6cd0db5d74261cd6d33ff6b041688c4e"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills-plugin/skills/intake/SKILL.md": {
+    "mtime": 1782868363.783276,
+    "ast_hash": "715c3e2d8fbc65546abb884b42e0b5bd",
+    "semantic_hash": "715c3e2d8fbc65546abb884b42e0b5bd"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills-plugin/skills/intake/references/design-template.md": {
+    "mtime": 1782868363.7833633,
+    "ast_hash": "e40b12d55b668d1b6a3fa79d216a3511",
+    "semantic_hash": "e40b12d55b668d1b6a3fa79d216a3511"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills-plugin/skills/intake/references/module-outline-template.md": {
+    "mtime": 1779087562.7689734,
+    "ast_hash": "f1adf6a83d898397dd9f7f40819315a4",
+    "semantic_hash": "f1adf6a83d898397dd9f7f40819315a4"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills-plugin/skills/intake/references/spec-guidelines.md": {
+    "mtime": 1782868363.7834835,
+    "ast_hash": "6a06152fa8b664509b997436d29a3642",
+    "semantic_hash": "6a06152fa8b664509b997436d29a3642"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills-plugin/skills/orchestrator/SKILL.md": {
+    "mtime": 1782868363.7837663,
+    "ast_hash": "5eb594390ff392c68e3d5de7464245e7",
+    "semantic_hash": "5eb594390ff392c68e3d5de7464245e7"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills-plugin/skills/testing-suite/SKILL.md": {
+    "mtime": 1782868326.576193,
+    "ast_hash": "53edc1b06e682fc6ca4222cf70f10e42",
+    "semantic_hash": "53edc1b06e682fc6ca4222cf70f10e42"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills-plugin/skills/worklog/SKILL.md": {
+    "mtime": 1779087562.7696762,
+    "ast_hash": "f4d75484628ce15f120ffaa9a7ba3854",
+    "semantic_hash": "f4d75484628ce15f120ffaa9a7ba3854"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills-plugin/skills/writer/SKILL.md": {
+    "mtime": 1782868363.7839792,
+    "ast_hash": "192b0f087ddb30b67cda27ec63d952b2",
+    "semantic_hash": "192b0f087ddb30b67cda27ec63d952b2"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills-plugin/skills/writer/references/writing-standards.md": {
+    "mtime": 1782868363.7841115,
+    "ast_hash": "4d904434b7a0953f5acd3eb784596111",
+    "semantic_hash": "4d904434b7a0953f5acd3eb784596111"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills/automation/SKILL.md": {
+    "mtime": 1782868363.7820652,
+    "ast_hash": "e1e810c47d08b234c0aad404467bac5a",
+    "semantic_hash": "e1e810c47d08b234c0aad404467bac5a"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills/automation/references/ansible-automation-guide.md": {
+    "mtime": 1779087562.767718,
+    "ast_hash": "267bc052ea2d0e9f9404dfecfd96debe",
+    "semantic_hash": "267bc052ea2d0e9f9404dfecfd96debe"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills/automation/references/automation-manifest-format.md": {
+    "mtime": 1779087562.767867,
+    "ast_hash": "ddc0c722ee266aed9c859e0e66c1bfd8",
+    "semantic_hash": "ddc0c722ee266aed9c859e0e66c1bfd8"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills/automation/references/automation-patterns.md": {
+    "mtime": 1782868363.7823625,
+    "ast_hash": "3f89bdc4e7603ac2f40e59c0ceddee23",
+    "semantic_hash": "3f89bdc4e7603ac2f40e59c0ceddee23"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills/automation/references/gitops-automation-guide.md": {
+    "mtime": 1779087562.7681985,
+    "ast_hash": "4cbb0bf3742311362bee3b12c26c3c69",
+    "semantic_hash": "4cbb0bf3742311362bee3b12c26c3c69"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills/editor/SKILL.md": {
+    "mtime": 1782868363.782787,
+    "ast_hash": "73c5af6960271e9040a3955910fe7a9d",
+    "semantic_hash": "73c5af6960271e9040a3955910fe7a9d"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills/editor/references/editing-checklist.md": {
+    "mtime": 1782868363.782947,
+    "ast_hash": "6cd0db5d74261cd6d33ff6b041688c4e",
+    "semantic_hash": "6cd0db5d74261cd6d33ff6b041688c4e"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills/intake/SKILL.md": {
+    "mtime": 1782868363.783276,
+    "ast_hash": "715c3e2d8fbc65546abb884b42e0b5bd",
+    "semantic_hash": "715c3e2d8fbc65546abb884b42e0b5bd"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills/intake/references/design-template.md": {
+    "mtime": 1782868363.7833633,
+    "ast_hash": "e40b12d55b668d1b6a3fa79d216a3511",
+    "semantic_hash": "e40b12d55b668d1b6a3fa79d216a3511"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills/intake/references/module-outline-template.md": {
+    "mtime": 1779087562.7689734,
+    "ast_hash": "f1adf6a83d898397dd9f7f40819315a4",
+    "semantic_hash": "f1adf6a83d898397dd9f7f40819315a4"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills/intake/references/spec-guidelines.md": {
+    "mtime": 1782868363.7834835,
+    "ast_hash": "6a06152fa8b664509b997436d29a3642",
+    "semantic_hash": "6a06152fa8b664509b997436d29a3642"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills/orchestrator/SKILL.md": {
+    "mtime": 1782868363.7837663,
+    "ast_hash": "5eb594390ff392c68e3d5de7464245e7",
+    "semantic_hash": "5eb594390ff392c68e3d5de7464245e7"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills/testing-suite/SKILL.md": {
+    "mtime": 1782868326.576193,
+    "ast_hash": "53edc1b06e682fc6ca4222cf70f10e42",
+    "semantic_hash": "53edc1b06e682fc6ca4222cf70f10e42"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills/worklog/SKILL.md": {
+    "mtime": 1779087562.7696762,
+    "ast_hash": "f4d75484628ce15f120ffaa9a7ba3854",
+    "semantic_hash": "f4d75484628ce15f120ffaa9a7ba3854"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills/writer/SKILL.md": {
+    "mtime": 1782868363.7839792,
+    "ast_hash": "192b0f087ddb30b67cda27ec63d952b2",
+    "semantic_hash": "192b0f087ddb30b67cda27ec63d952b2"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/skills/writer/references/writing-standards.md": {
+    "mtime": 1782868363.7841115,
+    "ast_hash": "4d904434b7a0953f5acd3eb784596111",
+    "semantic_hash": "4d904434b7a0953f5acd3eb784596111"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/template/CLAUDE.md": {
+    "mtime": 1779087562.8148143,
+    "ast_hash": "683672205854f5f8a0f307c7b9874ccd",
+    "semantic_hash": "683672205854f5f8a0f307c7b9874ccd"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/template/README.md": {
+    "mtime": 1779087562.8148928,
+    "ast_hash": "22d959d4e5439f36ba3118b8112db32e",
+    "semantic_hash": "22d959d4e5439f36ba3118b8112db32e"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/template/content/antora.yml": {
+    "mtime": 1779087562.8151062,
+    "ast_hash": "f4f44450916480160673c8b6ef3f4871",
+    "semantic_hash": "f4f44450916480160673c8b6ef3f4871"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/template/publishing-house/manifest.yaml": {
+    "mtime": 1779087562.8156042,
+    "ast_hash": "a5e5b8fd62f77ad2232bfb668f51b9a9",
+    "semantic_hash": "a5e5b8fd62f77ad2232bfb668f51b9a9"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/template/publishing-house/spec/SPEC-TEMPLATE.md": {
+    "mtime": 1779087562.8158057,
+    "ast_hash": "cd9e699e204643d48bfe351e44fed4aa",
+    "semantic_hash": "cd9e699e204643d48bfe351e44fed4aa"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/template/publishing-house/spec/automation-manifest.yaml": {
+    "mtime": 1779087562.8158765,
+    "ast_hash": "76b4a51bdb933dcd9803df173e9c38dd",
+    "semantic_hash": "76b4a51bdb933dcd9803df173e9c38dd"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/template/publishing-house/spec/design.md": {
+    "mtime": 1779087562.8159516,
+    "ast_hash": "a516c5d6b699cce5abc612b0bbeed0bd",
+    "semantic_hash": "a516c5d6b699cce5abc612b0bbeed0bd"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/template/publishing-house/worklog.yaml": {
+    "mtime": 1779087562.8161166,
+    "ast_hash": "d1db0539670337c8ef6ae7638d9b2d0c",
+    "semantic_hash": "d1db0539670337c8ef6ae7638d9b2d0c"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/template/site.yml": {
+    "mtime": 1779087562.8161879,
+    "ast_hash": "7ce4238ecc46953c15687b4da5e41baf",
+    "semantic_hash": "7ce4238ecc46953c15687b4da5e41baf"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/template/ui-config.yml": {
+    "mtime": 1779087562.8162568,
+    "ast_hash": "258ee4d553c00e322e2fdf909cd707db",
+    "semantic_hash": "258ee4d553c00e322e2fdf909cd707db"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/express/ai.md": {
+    "mtime": 1779087556.2971582,
+    "ast_hash": "6f6b65ab66cf42852cbf33a7324d515a",
+    "semantic_hash": "6f6b65ab66cf42852cbf33a7324d515a"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/express/ansible.md": {
+    "mtime": 1779087556.2972457,
+    "ast_hash": "36a77dfd9d8e1d9dbcc20a43191ea080",
+    "semantic_hash": "36a77dfd9d8e1d9dbcc20a43191ea080"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/express/openshift-app-platform.md": {
+    "mtime": 1779087556.2973285,
+    "ast_hash": "42aab6facbf02b3a77e00812ff344069",
+    "semantic_hash": "42aab6facbf02b3a77e00812ff344069"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/express/openshift-platform.md": {
+    "mtime": 1779087556.297409,
+    "ast_hash": "b5ef6869959a5eb4a82582432eec01d1",
+    "semantic_hash": "b5ef6869959a5eb4a82582432eec01d1"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/express/rhel.md": {
+    "mtime": 1779087556.2974918,
+    "ast_hash": "26e4369726949245cbca72cf95a161fe",
+    "semantic_hash": "26e4369726949245cbca72cf95a161fe"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/fixtures/onboarded/ai.yaml": {
+    "mtime": 1782796198.336037,
+    "ast_hash": "c043649e0f71e6d6a32d250cab2b932a",
+    "semantic_hash": "c043649e0f71e6d6a32d250cab2b932a"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/fixtures/onboarded/ansible.yaml": {
+    "mtime": 1782814478.7331765,
+    "ast_hash": "90538d895471375ea058e42f705cdad8",
+    "semantic_hash": "90538d895471375ea058e42f705cdad8"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/fixtures/onboarded/openshift-app-platform.yaml": {
+    "mtime": 1782796204.977841,
+    "ast_hash": "d65596d38cefbb14a48b08e51afbd5d6",
+    "semantic_hash": "d65596d38cefbb14a48b08e51afbd5d6"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/fixtures/onboarded/openshift-platform.yaml": {
+    "mtime": 1782796211.1435933,
+    "ast_hash": "19b2d22c721578cd7dae6a2f1e4019de",
+    "semantic_hash": "19b2d22c721578cd7dae6a2f1e4019de"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/fixtures/onboarded/rhel.yaml": {
+    "mtime": 1782796218.827415,
+    "ast_hash": "925a268178c663b923b49270740b56ae",
+    "semantic_hash": "925a268178c663b923b49270740b56ae"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/fixtures/self-published/ai.yaml": {
+    "mtime": 1782796198.8535826,
+    "ast_hash": "1ee4c050a744d32039259e75edcd6dde",
+    "semantic_hash": "1ee4c050a744d32039259e75edcd6dde"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/fixtures/self-published/ansible.yaml": {
+    "mtime": 1782796204.4479547,
+    "ast_hash": "4e9e3a2563db112695599fe05ccd036c",
+    "semantic_hash": "4e9e3a2563db112695599fe05ccd036c"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/fixtures/self-published/openshift-app-platform.yaml": {
+    "mtime": 1782796212.5324833,
+    "ast_hash": "8c75d30d299a00bbdfd513193b0f2930",
+    "semantic_hash": "8c75d30d299a00bbdfd513193b0f2930"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/fixtures/self-published/openshift-platform.yaml": {
+    "mtime": 1782796216.9999468,
+    "ast_hash": "53153e782eb84ddc26c7ef6a0e36f544",
+    "semantic_hash": "53153e782eb84ddc26c7ef6a0e36f544"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/fixtures/self-published/rhel.yaml": {
+    "mtime": 1782796222.7578776,
+    "ast_hash": "2643c1dc143899b0fa9ce5af1ca456cd",
+    "semantic_hash": "2643c1dc143899b0fa9ce5af1ca456cd"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/mocks/mcp_responses.yaml": {
+    "mtime": 1782781062.411072,
+    "ast_hash": "626585843411b0db61140c56bb055646",
+    "semantic_hash": "626585843411b0db61140c56bb055646"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/onboarded/ai.md": {
+    "mtime": 1779087556.2976325,
+    "ast_hash": "c677110d0cc90e932317dd8752a914aa",
+    "semantic_hash": "c677110d0cc90e932317dd8752a914aa"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/onboarded/ansible.md": {
+    "mtime": 1779087556.2977204,
+    "ast_hash": "995bf8eb1f9db6776b559d43136c13c1",
+    "semantic_hash": "995bf8eb1f9db6776b559d43136c13c1"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/onboarded/openshift-app-platform.md": {
+    "mtime": 1779087556.2978046,
+    "ast_hash": "06242e6902ba62707c9deec451010f5b",
+    "semantic_hash": "06242e6902ba62707c9deec451010f5b"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/onboarded/openshift-platform.md": {
+    "mtime": 1779087556.2978883,
+    "ast_hash": "feba386d4f178234d6c0fb9158a338e4",
+    "semantic_hash": "feba386d4f178234d6c0fb9158a338e4"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/onboarded/rhel.md": {
+    "mtime": 1779087556.2979712,
+    "ast_hash": "c41b878d91f56b24cb2d76ef37fa59b8",
+    "semantic_hash": "c41b878d91f56b24cb2d76ef37fa59b8"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/self-published/ai.md": {
+    "mtime": 1779087556.2981007,
+    "ast_hash": "2722eaf0d578b8221de39db79ba9ca0b",
+    "semantic_hash": "2722eaf0d578b8221de39db79ba9ca0b"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/self-published/ansible.md": {
+    "mtime": 1779087556.2981875,
+    "ast_hash": "3e083a289134644f686f7d0fd0fe5e1b",
+    "semantic_hash": "3e083a289134644f686f7d0fd0fe5e1b"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/self-published/openshift-app-platform.md": {
+    "mtime": 1779087556.2982855,
+    "ast_hash": "030411b12bdd91fbafae02990063f5a8",
+    "semantic_hash": "030411b12bdd91fbafae02990063f5a8"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/self-published/openshift-platform.md": {
+    "mtime": 1779087556.2983751,
+    "ast_hash": "2068108b6157fe20ec2f02b35115b0e7",
+    "semantic_hash": "2068108b6157fe20ec2f02b35115b0e7"
+  },
+  "/Users/psrivast/work/code/rhdp-publishing-house/test/self-published/rhel.md": {
+    "mtime": 1779087556.2984574,
+    "ast_hash": "c91625a55ae0e2a70f5457fd69f05e8c",
+    "semantic_hash": "c91625a55ae0e2a70f5457fd69f05e8c"
+  }
+}
