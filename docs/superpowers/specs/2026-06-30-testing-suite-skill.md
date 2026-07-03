@@ -63,44 +63,72 @@ flowchart TD
 ## Invocation
 
 ```
-# Single fixture (fixtures auto-discovered from dev hub)
-/rhdp-publishing-house:testing-suite onboarded/ansible
+# Fresh test — seed a new tmpdir, run, validate, clean up
+/rhdp-publishing-house:testing-suite onboarded/ai
 
-# Single fixture with explicit fixtures path (for anyone without the dev hub)
-/rhdp-publishing-house:testing-suite onboarded/ansible \
+# Point at an EXISTING project (no seeding — test its real state)
+/rhdp-publishing-house:testing-suite onboarded/ai \
+  --project-dir ~/work/code/rhdp-publishing-house-example
+
+# Reset existing project back to seeded state, then re-run
+/rhdp-publishing-house:testing-suite onboarded/ai \
+  --project-dir ~/work/code/rhdp-publishing-house-example \
+  --reset
+
+# With explicit fixtures path (for anyone without dev hub)
+/rhdp-publishing-house:testing-suite onboarded/ai \
   --fixtures-path /abs/path/to/rhdp-publishing-house/test/fixtures
 
 # All fixtures
-/rhdp-publishing-house:testing-suite --all --fixtures-path /abs/path/to/fixtures
-
-# One mode
-/rhdp-publishing-house:testing-suite --mode onboarded --fixtures-path /abs/path/to/fixtures
+/rhdp-publishing-house:testing-suite --all
 
 # Verbose — see tester/orchestrator conversation
-/rhdp-publishing-house:testing-suite onboarded/ansible --verbose
+/rhdp-publishing-house:testing-suite onboarded/ai --verbose
 
 # Keep temp dir for debugging
-/rhdp-publishing-house:testing-suite onboarded/ansible --keep
+/rhdp-publishing-house:testing-suite onboarded/ai --keep
 ```
 
 ### Arguments
 
 | Argument | Purpose | Default |
 |----------|---------|---------|
-| `<fixture-path>` | Single fixture to run (e.g. `onboarded/ansible`) | required unless `--all` or `--mode` |
-| `--fixtures-path <path>` | Absolute path to fixtures directory | auto-discovered from skill location |
+| `<fixture-path>` | Fixture to run (e.g. `onboarded/ai`) | required unless `--all` or `--mode` |
+| `--project-dir <path>` | Use an existing project dir instead of seeding a new tmpdir | fresh tmpdir |
+| `--reset` | Re-seed `--project-dir` in-place (wipe `publishing-house/` and regenerate) | false |
+| `--fixtures-path <path>` | Absolute path to fixtures directory | auto-discovered |
 | `--all` | Run all fixtures across all modes | false |
 | `--mode <mode>` | Run all fixtures for one mode: `onboarded` \| `self-published` | — |
 | `--verbose` | Print tester/orchestrator conversation turn-by-turn | false |
-| `--keep` | Keep temp project dir after run (for debugging) | false |
+| `--keep` | Keep temp project dir after run (only applies to fresh tmpdir runs) | false |
+
+### Project Directory Modes
+
+**Mode A — Fresh tmpdir (default):**  
+The skill creates a new `tempfile.mkdtemp()`, seeds it from the fixture, runs the session, validates, then cleans up. Use this for CI or when you need a guaranteed clean state.
+
+**Mode B — Existing project (`--project-dir`):**  
+Points the skill at a real project repo (e.g., `rhdp-publishing-house-example`). Reads the existing `manifest.yaml`, `worklog.yaml`, `design.md` — no seeding. The tester drives the real orchestrator against the project's actual current state. Use this for iterative testing without re-creating a project every run.
+
+**Mode B with reset (`--project-dir --reset`):**  
+Resets the project's lifecycle state back to the approval gate — without touching the spec content (design.md, modules, automation-manifest). Use this to re-run tests on an existing project that has progressed past approval.
+
+What `--reset` changes:
+- `manifest.yaml` → `current_phase: approval`, prior phases completed, approval pending
+- `worklog.yaml` → cleared to a minimal "ready for approval gate" note
+- `reviews/` → cleared (post-approval artifacts)
+- `decisions/` → cleared (post-approval artifacts)
+
+What `--reset` preserves (pre-approval content):
+- `spec/design.md`
+- `spec/modules/`
+- `spec/automation-manifest.yaml`
 
 ### Fixture Path Discovery
 
-The skill resolves the fixtures directory in this order:
-
-1. `--fixtures-path` argument (explicit, highest priority)
-2. `test/fixtures/` relative to the skill file's parent repo (auto-discover when using dev hub)
-3. Error with instructions to pass `--fixtures-path`
+1. `--fixtures-path` argument (highest priority)
+2. `test/fixtures/` relative to the skill file's parent repo (auto-discover from dev hub)
+3. Error with instructions
 
 ---
 
