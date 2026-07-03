@@ -81,11 +81,39 @@ A Claude Code skill that acts as a simulated user, drives the full PH pipeline, 
 ### Invocation
 
 ```
+# Auto-discover fixtures (dev hub cloned locally)
 /rhdp-publishing-house:testing-suite onboarded/ansible
-/rhdp-publishing-house:testing-suite onboarded/ai
-/rhdp-publishing-house:testing-suite --all
-/rhdp-publishing-house:testing-suite --mode onboarded
+
+# Explicit fixtures path (for anyone without dev hub — e.g. Nate)
+/rhdp-publishing-house:testing-suite onboarded/ansible \
+  --fixtures-path /abs/path/to/rhdp-publishing-house/test/fixtures
+
+# Other modes
+/rhdp-publishing-house:testing-suite --all --fixtures-path /abs/path/to/fixtures
+/rhdp-publishing-house:testing-suite --mode onboarded --fixtures-path /abs/path/to/fixtures
+/rhdp-publishing-house:testing-suite onboarded/ansible --verbose --keep
 ```
+
+### Fixture Discovery
+
+Fixtures live in the `rhdp-publishing-house` dev hub (not in the published skills plugin). The skill resolves the fixtures directory in this order:
+
+1. **`--fixtures-path <path>`** — use this absolute path (highest priority)
+2. **Auto-discover** — look for `test/fixtures/` relative to the skill file's parent repo (works when running from the dev hub)
+3. **Error** — if not found, stops with instructions
+
+**For Nate or anyone without the dev hub:**
+```bash
+# One-time: clone dev hub to get fixtures
+git clone git@github.com:rhpds/rhdp-publishing-house.git ~/rhdp-publishing-house
+
+# Then always pass the path
+/rhdp-publishing-house:testing-suite onboarded/ansible \
+  --fixtures-path ~/rhdp-publishing-house/test/fixtures
+```
+
+**Why fixtures stay in the dev hub (not bundled with the skill):**  
+Test data should not pollute the published plugin. Fixtures are a dev-time concern — they're authored alongside specs and docs, not shipped as user-facing assets.
 
 ### Zero Dependencies
 
