@@ -12,8 +12,6 @@
 
 A Claude Code skill that runs fixture-driven end-to-end tests of the Publishing House pipeline. It simulates a content developer going through intake-to-approval, validates that the orchestrator behaves correctly, and reports pass/fail results.
 
-No Python, no API keys, no external services — runs entirely within Claude Code using the Task tool.
-
 The skill always operates on an **existing project directory**. No temporary directories are created.
 
 ---
@@ -113,7 +111,7 @@ The skill always operates on an **existing project directory** that must contain
 
 **Default:** If `--project-dir` is not specified, the skill uses the current working directory (`.`).
 
-**Validation:** The skill verifies that `{project_dir}/publishing-house/` exists before proceeding.
+**Validation:** The skill verifies that `{project_dir}/publishing-house/` exists before proceeding. If the directory does not exist, the skill errors with a clear message.
 
 ### Reset Mode (`--reset`)
 
@@ -255,5 +253,3 @@ Checks that the orchestrator made the expected mutations during the conversation
 - [ ] `--all` runs all 10 fixtures and prints a summary table
 - [ ] `--mode onboarded` runs all 5 onboarded fixtures
 - [ ] Tester sub-agent has isolated context (manual verification)
-- [ ] No Python, no API key, no MAAS required
-- [ ] Mode A (fresh tmpdir) is completely removed — skill errors if project dir doesn't exist
