@@ -77,15 +77,19 @@ CREATE INDEX ix_workspace_maas_key_alias ON workspaces(maas_key_alias);
 
 ### New Table: `workspace_key_history`
 
-**Purpose:** Maintain audit trail of all MaaS keys provisioned for a workspace, including expired/rotated keys.
+**Purpose:** Maintain audit trail of all MaaS keys provisioned for a workspace, including expired/rotated keys. Key history is **preserved after workspace deletion** for compliance and security investigations.
 
 ```sql
 CREATE TABLE workspace_key_history (
     -- Primary key
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     
-    -- Workspace reference
-    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    -- Workspace reference (nullable to preserve audit trail after workspace deletion)
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE SET NULL,
+    
+    -- Denormalized fields for orphaned record identification after workspace deletion
+    workspace_project_id UUID,             -- Original project ID
+    workspace_user_email VARCHAR,          -- Original user email
     
     -- Key details
     maas_key_id VARCHAR NOT NULL,          -- LiteLLM key ID
@@ -104,17 +108,19 @@ CREATE TABLE workspace_key_history (
     -- Audit info
     is_current BOOLEAN NOT NULL DEFAULT TRUE,  -- Only one current key per workspace
     
-    -- Constraints
+    -- Constraints (allow orphaned records where workspace_id is NULL)
     CONSTRAINT uq_one_current_key_per_workspace 
         EXCLUDE USING gist (workspace_id WITH =) 
-        WHERE (is_current = TRUE)
+        WHERE (is_current = TRUE AND workspace_id IS NOT NULL)
 );
 
 -- Indexes for audit queries
-CREATE INDEX ix_key_history_workspace_id ON workspace_key_history(workspace_id);
+CREATE INDEX ix_key_history_workspace_id ON workspace_key_history(workspace_id) WHERE workspace_id IS NOT NULL;
 CREATE INDEX ix_key_history_maas_key_id ON workspace_key_history(maas_key_id);
 CREATE INDEX ix_key_history_is_current ON workspace_key_history(is_current) WHERE is_current = TRUE;
 CREATE INDEX ix_key_history_expired_at ON workspace_key_history(expired_at) WHERE expired_at IS NOT NULL;
+CREATE INDEX ix_key_history_project_id ON workspace_key_history(workspace_project_id);
+CREATE INDEX ix_key_history_user_email ON workspace_key_history(workspace_user_email);
 ```
 
 ### Why Each Field
@@ -134,6 +140,9 @@ CREATE INDEX ix_key_history_expired_at ON workspace_key_history(expired_at) WHER
 
 | Field | Purpose | Used For |
 |-------|---------|----------|
+| `workspace_id` | Reference to workspace (nullable) | Links to workspace if still exists, NULL if workspace deleted |
+| `workspace_project_id` | Denormalized project ID | Identify orphaned records after workspace deletion |
+| `workspace_user_email` | Denormalized user email | Identify orphaned records after workspace deletion |
 | `provisioned_at` | When key was created | Audit trail, lifespan calculation |
 | `expired_at` | **Natural expiration** (reached TTL) | Distinguish natural expiry from manual revocation |
 | `revoked_at` | **Manual revocation** (LiteLLM API call) | Track when key was actively revoked |
@@ -220,10 +229,13 @@ def upgrade():
     op.create_index('ix_workspace_maas_key_alias', 'workspaces', ['maas_key_alias'])
     
     # Create workspace_key_history table for audit trail
+    # Uses ON DELETE SET NULL to preserve audit history after workspace deletion
     op.create_table(
         'workspace_key_history',
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column('workspace_id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('workspace_id', postgresql.UUID(as_uuid=True), nullable=True),  # Nullable for orphaned records
+        sa.Column('workspace_project_id', postgresql.UUID(as_uuid=True), nullable=True),  # Denormalized for audit
+        sa.Column('workspace_user_email', sa.String(), nullable=True),  # Denormalized for audit
         sa.Column('maas_key_id', sa.String(), nullable=False),
         sa.Column('maas_key_alias', sa.String(), nullable=False),
         sa.Column('provisioned_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
@@ -233,15 +245,18 @@ def upgrade():
         sa.Column('duration', sa.String(), nullable=False),
         sa.Column('models', postgresql.JSONB(), nullable=False),
         sa.Column('is_current', sa.Boolean(), nullable=False, server_default='true'),
-        sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], ondelete='CASCADE')
+        sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], ondelete='SET NULL')
     )
     
-    op.create_index('ix_key_history_workspace_id', 'workspace_key_history', ['workspace_id'])
+    op.create_index('ix_key_history_workspace_id', 'workspace_key_history', ['workspace_id'],
+                    postgresql_where=sa.text('workspace_id IS NOT NULL'))
     op.create_index('ix_key_history_maas_key_id', 'workspace_key_history', ['maas_key_id'])
     op.create_index('ix_key_history_is_current', 'workspace_key_history', ['is_current'], 
                     postgresql_where=sa.text('is_current = true'))
     op.create_index('ix_key_history_expired_at', 'workspace_key_history', ['expired_at'],
                     postgresql_where=sa.text('expired_at IS NOT NULL'))
+    op.create_index('ix_key_history_project_id', 'workspace_key_history', ['workspace_project_id'])
+    op.create_index('ix_key_history_user_email', 'workspace_key_history', ['workspace_user_email'])
 
 def downgrade():
     op.drop_table('workspace_key_history')
@@ -288,7 +303,9 @@ class WorkspaceKeyHistory(Base):
     __tablename__ = "workspace_key_history"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="SET NULL"), nullable=True)
+    workspace_project_id = Column(UUID(as_uuid=True), nullable=True, index=True)  # Denormalized for audit
+    workspace_user_email = Column(String, nullable=True, index=True)  # Denormalized for audit
     maas_key_id = Column(String, nullable=False, index=True)
     maas_key_alias = Column(String, nullable=False)
     provisioned_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -500,6 +517,10 @@ spec:
 - Secret not logged or exposed in pod specs
 - Rotation: Update Secret, restart pods (no code changes required)
 
+**Security Review Required:**
+
+This implementation requires approval from Prakhar (security reviewer) before proceeding. See [Security Review](#security-review) section for pre-implementation approval requirements and post-implementation audit scope.
+
 ### 2. DevSpacesClient
 
 **Purpose:** Manage DevWorkspace CRs via Kubernetes API
@@ -540,11 +561,16 @@ class DevSpacesClient:
             }
         """
         
-        # 1. Create namespace if not exists
+        # 1. Create namespace if not exists (with PH label for cleanup tracking)
         try:
             self.core_api.create_namespace(
                 body=client.V1Namespace(
-                    metadata=client.V1ObjectMeta(name=namespace)
+                    metadata=client.V1ObjectMeta(
+                        name=namespace,
+                        labels={
+                            "app.kubernetes.io/managed-by": "publishing-house"
+                        }
+                    )
                 )
             )
         except ApiException as e:
@@ -846,9 +872,11 @@ class WorkspaceManager:
         self.db.add(workspace)
         self.db.flush()  # Get workspace.id
         
-        # 4. Record key in audit history
+        # 4. Record key in audit history with denormalized fields
         key_history = WorkspaceKeyHistory(
             workspace_id=workspace.id,
+            workspace_project_id=project_id,  # Denormalized for audit trail preservation
+            workspace_user_email=user_email,  # Denormalized for audit trail preservation
             maas_key_id=key_result["key_id"],
             maas_key_alias=key_alias,
             duration=settings.LITELLM_KEY_DURATION,
@@ -946,9 +974,11 @@ class WorkspaceManager:
             # 3. Update workspace with new key
             workspace.maas_key_id = new_key["key_id"]
             
-            # 4. Record new key in history
+            # 4. Record new key in history with denormalized fields
             new_key_record = WorkspaceKeyHistory(
                 workspace_id=workspace.id,
+                workspace_project_id=project_id,  # Denormalized for audit trail preservation
+                workspace_user_email=workspace.user_email,  # Denormalized for audit trail preservation
                 maas_key_id=new_key["key_id"],
                 maas_key_alias=workspace.maas_key_alias,
                 duration=settings.LITELLM_KEY_DURATION,
@@ -1036,48 +1066,600 @@ class WorkspaceManager:
         await self.litellm.revoke_key(workspace.maas_key_id)
         
         # 4. Commit key_history updates BEFORE deleting workspace
-        #    This preserves audit trail even if workspace record is deleted
+        #    This preserves audit trail - workspace_id will be set to NULL on deletion
         self.db.commit()
         
-        # 5. Remove workspace record (does NOT cascade to key_history - see note below)
+        # 5. Delete workspace record
+        #    Foreign key ON DELETE SET NULL preserves key_history with workspace_id=NULL
+        #    Denormalized fields (workspace_project_id, workspace_user_email) remain for audit queries
         self.db.delete(workspace)
         self.db.commit()
 ```
 
 **Audit trail preservation:**
 
-The `workspace_key_history` table uses `ON DELETE CASCADE` in the foreign key definition, which means deleting a workspace will cascade-delete its key history. For **compliance and audit purposes**, you may want to preserve key history even after workspace deletion.
+The `workspace_key_history` table uses `ON DELETE SET NULL` to **preserve audit history** after workspace deletion. This is critical for compliance, security investigations, and forensic analysis.
 
-**Two approaches:**
+**How it works:**
 
-1. **Cascade delete (current spec)**: Key history deleted with workspace
-   - Pros: Clean database, no orphaned records
-   - Cons: Lose audit trail for compliance/security investigation
+1. When a workspace is deleted, `workspace_id` is set to NULL in all key history records
+2. Denormalized fields (`workspace_project_id`, `workspace_user_email`) preserve context
+3. Key history remains queryable for compliance reporting and security audits
+4. Periodic cleanup job removes history older than retention period (e.g., 90 days)
 
-2. **Preserve history (recommended for production)**:
-   - Change FK to `ON DELETE SET NULL` instead of `CASCADE`
-   - Add `workspace_project_id` and `workspace_user_email` columns to `workspace_key_history` for orphaned record identification
-   - Keep key history indefinitely for audit
-   - Periodic cleanup job deletes history older than retention period (e.g., 90 days)
-
-**Recommended for production:**
+**Example audit queries:**
 
 ```sql
--- Modified FK constraint (no cascade)
-ALTER TABLE workspace_key_history
-  DROP CONSTRAINT workspace_key_history_workspace_id_fkey,
-  ADD CONSTRAINT workspace_key_history_workspace_id_fkey 
-    FOREIGN KEY (workspace_id) 
-    REFERENCES workspaces(id) 
-    ON DELETE SET NULL;
+-- Show all keys provisioned for a user in the last 90 days (including deleted workspaces)
+SELECT maas_key_id, maas_key_alias, provisioned_at, expired_at, revoked_at, revocation_reason
+FROM workspace_key_history
+WHERE workspace_user_email = 'treddy@redhat.com'
+  AND provisioned_at >= NOW() - INTERVAL '90 days'
+ORDER BY provisioned_at DESC;
 
--- Add denormalized fields for orphaned records
-ALTER TABLE workspace_key_history
-  ADD COLUMN workspace_project_id UUID,
-  ADD COLUMN workspace_user_email VARCHAR;
+-- Find all orphaned key history records (workspace deleted but history preserved)
+SELECT workspace_project_id, workspace_user_email, COUNT(*) as key_count
+FROM workspace_key_history
+WHERE workspace_id IS NULL
+GROUP BY workspace_project_id, workspace_user_email;
+
+-- Audit: Show all keys for a project (even if workspace deleted)
+SELECT workspace_user_email, maas_key_alias, provisioned_at, revoked_at
+FROM workspace_key_history
+WHERE workspace_project_id = 'abc-123-def'
+ORDER BY provisioned_at DESC;
 ```
 
-This allows querying key history even after workspace deletion: "Show all keys provisioned for user X in the last 90 days, including deleted workspaces."
+**Retention policy:**
+
+A periodic cleanup job (APScheduler task) removes key history records older than 90 days to prevent unbounded growth while maintaining compliance-required retention.
+
+---
+
+## Workspace Cleanup Service
+
+**Purpose:** Prevent workspace/namespace sprawl by automatically cleaning up idle, stale, and orphaned workspaces. This is a **core feature** implemented from day one to ensure cluster resources remain available.
+
+### Cleanup Policies
+
+| Policy | Trigger | Action | Configurable |
+|--------|---------|--------|--------------|
+| **Idle timeout** | No activity for 7 days | Stop workspace (preserve data) | `WORKSPACE_IDLE_DAYS` |
+| **Max lifetime** | Workspace older than 90 days | Delete workspace + namespace | `WORKSPACE_MAX_LIFETIME_DAYS` |
+| **Orphaned workspaces** | Workspace in K8s but not in DB | Delete namespace | N/A |
+| **Orphaned DB records** | Workspace in DB but not in K8s | Delete DB record | N/A |
+| **Stale keys** | Key in DB but not in LiteLLM | Revoke from DB | N/A |
+
+**Activity tracking:**
+- Activity = any workspace start/resume operation
+- Tracked via `workspaces.updated_at` timestamp
+- Updated on every `resume_workspace()` call
+
+### Service Architecture
+
+```python
+# app/services/workspace_cleanup.py
+
+from datetime import datetime, timedelta
+from typing import List, Dict
+from sqlalchemy.orm import Session
+from kubernetes.client.rest import ApiException
+
+from app.core.config import settings
+from app.models.workspace import Workspace, WorkspaceKeyHistory
+from app.services.devspaces_client import DevSpacesClient
+from app.services.litellm_client import LiteLLMClient
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class WorkspaceCleanupService:
+    """
+    Automated workspace cleanup to prevent resource sprawl.
+    
+    Runs daily via APScheduler to clean:
+    - Idle workspaces (stopped after inactivity)
+    - Old workspaces (deleted after max lifetime)
+    - Orphaned resources (K8s without DB or vice versa)
+    - Stale keys (DB records without LiteLLM keys)
+    """
+    
+    def __init__(
+        self,
+        db: Session,
+        devspaces: DevSpacesClient,
+        litellm: LiteLLMClient
+    ):
+        self.db = db
+        self.devspaces = devspaces
+        self.litellm = litellm
+        
+        # Load config
+        self.idle_days = getattr(settings, 'WORKSPACE_IDLE_DAYS', 7)
+        self.max_lifetime_days = getattr(settings, 'WORKSPACE_MAX_LIFETIME_DAYS', 90)
+        self.key_history_retention_days = getattr(settings, 'KEY_HISTORY_RETENTION_DAYS', 90)
+        self.dry_run = getattr(settings, 'WORKSPACE_CLEANUP_DRY_RUN', False)
+    
+    async def cleanup_all(self) -> Dict[str, int]:
+        """
+        Run all cleanup operations and return metrics.
+        
+        Returns:
+            {
+                "idle_stopped": count,
+                "old_deleted": count,
+                "orphaned_k8s_deleted": count,
+                "orphaned_db_deleted": count,
+                "stale_keys_revoked": count,
+                "old_key_history_deleted": count
+            }
+        """
+        metrics = {
+            "idle_stopped": 0,
+            "old_deleted": 0,
+            "orphaned_k8s_deleted": 0,
+            "orphaned_db_deleted": 0,
+            "stale_keys_revoked": 0,
+            "old_key_history_deleted": 0
+        }
+        
+        logger.info("Starting workspace cleanup (dry_run=%s)", self.dry_run)
+        
+        # 1. Stop idle workspaces
+        metrics["idle_stopped"] = await self.cleanup_idle_workspaces()
+        
+        # 2. Delete old workspaces
+        metrics["old_deleted"] = await self.cleanup_old_workspaces()
+        
+        # 3. Clean up orphaned K8s resources
+        metrics["orphaned_k8s_deleted"] = await self.cleanup_orphaned_k8s_workspaces()
+        
+        # 4. Clean up orphaned DB records
+        metrics["orphaned_db_deleted"] = await self.cleanup_orphaned_db_workspaces()
+        
+        # 5. Revoke stale keys
+        metrics["stale_keys_revoked"] = await self.cleanup_stale_keys()
+        
+        # 6. Clean up old key history
+        metrics["old_key_history_deleted"] = self.cleanup_old_key_history()
+        
+        logger.info("Workspace cleanup complete: %s", metrics)
+        return metrics
+    
+    async def cleanup_idle_workspaces(self) -> int:
+        """
+        Stop workspaces that haven't been accessed in WORKSPACE_IDLE_DAYS.
+        
+        Preserves data but stops the pod to free cluster resources.
+        """
+        cutoff = datetime.utcnow() - timedelta(days=self.idle_days)
+        
+        idle_workspaces = self.db.query(Workspace).filter(
+            Workspace.updated_at < cutoff
+        ).all()
+        
+        count = 0
+        for workspace in idle_workspaces:
+            # Check K8s status
+            status = await self.devspaces.get_workspace_status(
+                workspace.workspace_namespace,
+                workspace.workspace_name
+            )
+            
+            # Only stop if currently running
+            if status == "Running":
+                logger.info(
+                    "Stopping idle workspace: %s (last activity: %s)",
+                    workspace.workspace_name,
+                    workspace.updated_at
+                )
+                
+                if not self.dry_run:
+                    # Stop workspace (set started: false in DevWorkspace CR)
+                    await self.devspaces.stop_workspace(
+                        workspace.workspace_namespace,
+                        workspace.workspace_name
+                    )
+                
+                count += 1
+        
+        return count
+    
+    async def cleanup_old_workspaces(self) -> int:
+        """
+        Delete workspaces older than WORKSPACE_MAX_LIFETIME_DAYS.
+        
+        Full deletion: namespace, workspace CR, DB record, revoke MaaS key.
+        """
+        cutoff = datetime.utcnow() - timedelta(days=self.max_lifetime_days)
+        
+        old_workspaces = self.db.query(Workspace).filter(
+            Workspace.created_at < cutoff
+        ).all()
+        
+        count = 0
+        for workspace in old_workspaces:
+            logger.info(
+                "Deleting old workspace: %s (created: %s, age: %d days)",
+                workspace.workspace_name,
+                workspace.created_at,
+                (datetime.utcnow() - workspace.created_at).days
+            )
+            
+            if not self.dry_run:
+                # Full deletion workflow
+                await self._delete_workspace_fully(workspace)
+            
+            count += 1
+        
+        return count
+    
+    async def cleanup_orphaned_k8s_workspaces(self) -> int:
+        """
+        Delete DevWorkspace namespaces that exist in K8s but not in DB.
+        
+        These are orphaned resources from failed deletions or manual interventions.
+        """
+        # List all PH-managed namespaces in K8s
+        all_namespaces = await self.devspaces.list_ph_namespaces()
+        
+        # Get all known namespaces from DB
+        db_namespaces = {w.workspace_namespace for w in self.db.query(Workspace).all()}
+        
+        # Find orphans
+        orphaned = [ns for ns in all_namespaces if ns not in db_namespaces]
+        
+        count = 0
+        for namespace in orphaned:
+            logger.warning(
+                "Found orphaned namespace in K8s (not in DB): %s",
+                namespace
+            )
+            
+            if not self.dry_run:
+                # Delete namespace (cascades to all resources)
+                await self.devspaces.delete_namespace(namespace)
+            
+            count += 1
+        
+        return count
+    
+    async def cleanup_orphaned_db_workspaces(self) -> int:
+        """
+        Delete DB workspace records where K8s namespace doesn't exist.
+        
+        These are stale DB records from failed deletions.
+        """
+        all_workspaces = self.db.query(Workspace).all()
+        
+        count = 0
+        for workspace in all_workspaces:
+            # Check if namespace exists in K8s
+            status = await self.devspaces.get_workspace_status(
+                workspace.workspace_namespace,
+                workspace.workspace_name
+            )
+            
+            if status is None:
+                logger.warning(
+                    "Found orphaned DB record (K8s namespace gone): %s",
+                    workspace.workspace_name
+                )
+                
+                if not self.dry_run:
+                    # Revoke key and delete DB record
+                    await self._cleanup_orphaned_db_record(workspace)
+                
+                count += 1
+        
+        return count
+    
+    async def cleanup_stale_keys(self) -> int:
+        """
+        Revoke keys from DB that no longer exist in LiteLLM.
+        
+        These are stale references from failed revocations.
+        """
+        current_keys = self.db.query(WorkspaceKeyHistory).filter(
+            WorkspaceKeyHistory.is_current == True
+        ).all()
+        
+        count = 0
+        for key_record in current_keys:
+            # Check if key still exists in LiteLLM
+            try:
+                await self.litellm.validate_key(key_record.maas_key_id)
+            except Exception:
+                # Key doesn't exist in LiteLLM
+                logger.warning(
+                    "Found stale key in DB (not in LiteLLM): %s",
+                    key_record.maas_key_alias
+                )
+                
+                if not self.dry_run:
+                    # Mark as revoked in DB
+                    key_record.is_current = False
+                    key_record.revoked_at = datetime.utcnow()
+                    key_record.revocation_reason = "stale_key_cleanup"
+                    self.db.commit()
+                
+                count += 1
+        
+        return count
+    
+    def cleanup_old_key_history(self) -> int:
+        """
+        Delete key history records older than KEY_HISTORY_RETENTION_DAYS.
+        
+        (Already implemented in Key History Cleanup Job section)
+        """
+        cutoff = datetime.utcnow() - timedelta(days=self.key_history_retention_days)
+        
+        old_records = self.db.query(WorkspaceKeyHistory).filter(
+            WorkspaceKeyHistory.provisioned_at < cutoff
+        ).all()
+        
+        count = len(old_records)
+        
+        if count > 0 and not self.dry_run:
+            for record in old_records:
+                self.db.delete(record)
+            self.db.commit()
+        
+        return count
+    
+    async def _delete_workspace_fully(self, workspace: Workspace):
+        """Full workspace deletion: K8s + LiteLLM + DB."""
+        # Mark key as revoked
+        current_key = self.db.query(WorkspaceKeyHistory).filter_by(
+            workspace_id=workspace.id,
+            is_current=True
+        ).first()
+        
+        if current_key:
+            current_key.is_current = False
+            current_key.revoked_at = datetime.utcnow()
+            current_key.revocation_reason = "max_lifetime_cleanup"
+        
+        # Delete from K8s
+        await self.devspaces.delete_workspace(
+            workspace.workspace_namespace,
+            workspace.workspace_name
+        )
+        
+        # Revoke key from LiteLLM
+        await self.litellm.revoke_key(workspace.maas_key_id)
+        
+        # Delete DB record (key_history preserved via ON DELETE SET NULL)
+        self.db.delete(workspace)
+        self.db.commit()
+    
+    async def _cleanup_orphaned_db_record(self, workspace: Workspace):
+        """Clean up orphaned DB record (K8s already gone)."""
+        # Mark key as revoked
+        current_key = self.db.query(WorkspaceKeyHistory).filter_by(
+            workspace_id=workspace.id,
+            is_current=True
+        ).first()
+        
+        if current_key:
+            current_key.is_current = False
+            current_key.revoked_at = datetime.utcnow()
+            current_key.revocation_reason = "orphaned_cleanup"
+        
+        # Revoke key from LiteLLM
+        try:
+            await self.litellm.revoke_key(workspace.maas_key_id)
+        except Exception:
+            logger.warning("Key already gone from LiteLLM: %s", workspace.maas_key_alias)
+        
+        # Delete DB record
+        self.db.delete(workspace)
+        self.db.commit()
+```
+
+### DevSpacesClient Extensions
+
+Add these methods to support cleanup:
+
+```python
+# app/services/devspaces_client.py
+
+async def stop_workspace(self, namespace: str, name: str):
+    """
+    Stop a workspace by setting started: false.
+    
+    Preserves data but stops the pod to free cluster resources.
+    """
+    patch = {"spec": {"started": False}}
+    
+    self.custom_api.patch_namespaced_custom_object(
+        group="workspace.devfile.io",
+        version="v1alpha2",
+        namespace=namespace,
+        plural="devworkspaces",
+        name=name,
+        body=patch
+    )
+
+async def list_ph_namespaces(self) -> List[str]:
+    """
+    List all namespaces managed by Publishing House.
+    
+    Returns namespaces with label app.kubernetes.io/managed-by=publishing-house
+    """
+    namespaces = self.core_api.list_namespace(
+        label_selector="app.kubernetes.io/managed-by=publishing-house"
+    )
+    
+    return [ns.metadata.name for ns in namespaces.items]
+
+async def delete_namespace(self, namespace: str):
+    """
+    Delete a namespace (cascades to all resources).
+    """
+    try:
+        self.core_api.delete_namespace(name=namespace)
+    except ApiException as e:
+        if e.status != 404:
+            raise
+```
+
+### APScheduler Integration
+
+Add to `app/main.py`:
+
+```python
+from app.services.workspace_cleanup import WorkspaceCleanupService
+from app.services.litellm_client import LiteLLMClient
+from app.services.devspaces_client import DevSpacesClient
+
+async def _scheduled_workspace_cleanup():
+    """Run workspace cleanup job."""
+    db = SessionLocal()
+    try:
+        cleanup_service = WorkspaceCleanupService(
+            db=db,
+            devspaces=DevSpacesClient(),
+            litellm=LiteLLMClient()
+        )
+        metrics = await cleanup_service.cleanup_all()
+        logger.info("Workspace cleanup metrics: %s", metrics)
+    except Exception:
+        logger.error("Workspace cleanup failed", exc_info=True)
+    finally:
+        db.close()
+
+# Add to lifespan
+scheduler.add_job(
+    _scheduled_workspace_cleanup,
+    "cron",
+    hour=3,  # 3 AM UTC daily (after key history cleanup)
+    id="workspace_cleanup",
+)
+```
+
+### Configuration
+
+Add to `app/core/config.py`:
+
+```python
+class Settings(BaseSettings):
+    # ... existing settings ...
+    
+    # Workspace cleanup settings
+    WORKSPACE_IDLE_DAYS: int = 7
+    WORKSPACE_MAX_LIFETIME_DAYS: int = 90
+    WORKSPACE_CLEANUP_DRY_RUN: bool = False  # Set to True for testing
+    KEY_HISTORY_RETENTION_DAYS: int = 90
+```
+
+### Admin API Endpoint
+
+Manual cleanup trigger for administrators:
+
+```python
+# app/api/workspaces.py
+
+@router.post("/admin/cleanup", dependencies=[Depends(require_admin)])
+async def trigger_cleanup(
+    dry_run: bool = True,
+    db: Session = Depends(get_db)
+):
+    """
+    Manually trigger workspace cleanup (admin only).
+    
+    Use dry_run=true to preview what would be cleaned.
+    """
+    cleanup_service = WorkspaceCleanupService(
+        db=db,
+        devspaces=DevSpacesClient(),
+        litellm=LiteLLMClient()
+    )
+    
+    # Override dry_run setting
+    cleanup_service.dry_run = dry_run
+    
+    metrics = await cleanup_service.cleanup_all()
+    
+    return {
+        "dry_run": dry_run,
+        "metrics": metrics,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+```
+
+### Metrics Dashboard
+
+Add to Frontend dashboard (future enhancement):
+
+```typescript
+// components/WorkspaceMetrics.tsx
+
+interface CleanupMetrics {
+  idle_stopped: number;
+  old_deleted: number;
+  orphaned_k8s_deleted: number;
+  orphaned_db_deleted: number;
+  stale_keys_revoked: number;
+  old_key_history_deleted: number;
+  last_run: string;
+}
+
+function WorkspaceMetricsPanel() {
+  // Display:
+  // - Total active workspaces
+  // - Idle workspaces (approaching cleanup)
+  // - Cleanup metrics from last run
+  // - Manual cleanup trigger button (admin only)
+}
+```
+
+### Testing
+
+```python
+# tests/services/test_workspace_cleanup.py
+
+@pytest.mark.asyncio
+async def test_cleanup_idle_workspaces(mock_db, mock_devspaces, mock_litellm):
+    """Test idle workspace detection and stopping."""
+    # Create old workspace
+    workspace = Workspace(
+        updated_at=datetime.utcnow() - timedelta(days=8)
+    )
+    mock_db.add(workspace)
+    
+    cleanup = WorkspaceCleanupService(mock_db, mock_devspaces, mock_litellm)
+    cleanup.idle_days = 7
+    cleanup.dry_run = False
+    
+    count = await cleanup.cleanup_idle_workspaces()
+    
+    assert count == 1
+    assert mock_devspaces.stop_workspace.called
+
+@pytest.mark.asyncio
+async def test_cleanup_orphaned_k8s(mock_db, mock_devspaces, mock_litellm):
+    """Test orphaned K8s namespace cleanup."""
+    # Mock K8s namespaces
+    mock_devspaces.list_ph_namespaces.return_value = [
+        "devworkspace-user1",
+        "devworkspace-orphan"
+    ]
+    
+    # DB only knows about user1
+    mock_db.query(Workspace).all.return_value = [
+        Workspace(workspace_namespace="devworkspace-user1")
+    ]
+    
+    cleanup = WorkspaceCleanupService(mock_db, mock_devspaces, mock_litellm)
+    cleanup.dry_run = False
+    
+    count = await cleanup.cleanup_orphaned_k8s_workspaces()
+    
+    assert count == 1
+    mock_devspaces.delete_namespace.assert_called_with("devworkspace-orphan")
 ```
 
 ---
@@ -1334,7 +1916,79 @@ Effect on PH Database:
 - workspace_key_history.revoked_at = NOW()
 - workspace_key_history.is_current = false
 - workspace_key_history.revocation_reason = "workspace_deleted"
-- Record preserved for audit (if using ON DELETE SET NULL)
+- workspace_key_history.workspace_id = NULL (after workspace deletion)
+- workspace_key_history.workspace_project_id and workspace_user_email preserved for audit
+```
+
+### Key History Cleanup Job
+
+To prevent unbounded growth of orphaned key history records, a periodic cleanup job runs daily via APScheduler.
+
+**Cleanup policy:**
+- Retention period: 90 days (configurable via `KEY_HISTORY_RETENTION_DAYS`)
+- Runs daily at 2 AM UTC
+- Deletes records where `provisioned_at < NOW() - retention_period`
+- Logs cleanup metrics (records deleted, oldest record retained)
+
+**Implementation:**
+
+```python
+# app/services/workspace_cleanup.py
+
+from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
+from app.core.config import settings
+from app.models.workspace import WorkspaceKeyHistory
+import logging
+
+logger = logging.getLogger(__name__)
+
+def cleanup_old_key_history(db: Session):
+    """
+    Delete key history records older than retention period.
+    
+    Runs daily to prevent unbounded growth while maintaining compliance.
+    """
+    retention_days = getattr(settings, 'KEY_HISTORY_RETENTION_DAYS', 90)
+    cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
+    
+    # Find old records
+    old_records = db.query(WorkspaceKeyHistory).filter(
+        WorkspaceKeyHistory.provisioned_at < cutoff_date
+    ).all()
+    
+    count = len(old_records)
+    
+    if count > 0:
+        for record in old_records:
+            db.delete(record)
+        db.commit()
+        logger.info(f"Cleaned up {count} key history records older than {retention_days} days")
+    else:
+        logger.info("No old key history records to clean up")
+    
+    return count
+```
+
+**APScheduler integration (in app/main.py):**
+
+```python
+from app.services.workspace_cleanup import cleanup_old_key_history
+
+def _scheduled_cleanup():
+    db = SessionLocal()
+    try:
+        cleanup_old_key_history(db)
+    finally:
+        db.close()
+
+# Add to lifespan
+scheduler.add_job(
+    _scheduled_cleanup,
+    "cron",
+    hour=2,  # 2 AM UTC daily
+    id="key_history_cleanup",
+)
 ```
 
 ### Why Dual Tracking?
@@ -1356,9 +2010,10 @@ Effect on PH Database:
 - When the key was provisioned
 - What models it had access to
 - When and why it was revoked
-- Who owned it
+- Who owned it (via denormalized `workspace_project_id` and `workspace_user_email`)
+- Full history even after workspace deletion (via `ON DELETE SET NULL`)
 
-This dual tracking ensures **compliance-ready audit trails** even after keys are deleted from LiteLLM.
+This dual tracking ensures **compliance-ready audit trails** even after keys are deleted from LiteLLM and workspaces are deleted from the database. Periodic cleanup (90-day retention) prevents unbounded growth while maintaining required audit history.
 
 ---
 
@@ -1520,6 +2175,7 @@ cat > ~/.vscode-server/data/Machine/settings.json <<EOF
 {
   "claude-code.apiKey": "${MAAS_API_KEY}",
   "claude-code.baseUrl": "${LITELLM_URL}/v1",
+  "claudeCode.useTerminal": false,
   "pluginDirectories": ["~/rhdp-publishing-house-skills"],
   "claude-code.mcpServers": {
     "publishing-house": {
@@ -1547,6 +2203,8 @@ echo "[PH] =========================================="
 ### VS Code Extension Installation
 
 **Claude Code VS Code extension** - Auto-installed by Dev Spaces from the marketplace.
+
+**UI Mode Default** - The startup script configures `claudeCode.useTerminal: false` to default users to the VS Code UI chat panel instead of terminal mode. This provides a better UX for most users, especially those less familiar with CLI workflows. Users can still override this in their personal settings if they prefer terminal mode.
 
 **Plugin discovery** - Claude Code extension automatically discovers all 4 plugins in `~/rhdp-publishing-house-skills`:
 1. `rhdp-publishing-house` (root `.claude-plugin/plugin.json`)
@@ -1638,6 +2296,95 @@ podman build -t quay.io/rhpds/ph-udi:latest -f Containerfile .
 # Push to registry
 podman push quay.io/rhpds/ph-udi:latest
 ```
+
+---
+
+## Security Review
+
+### Pre-Implementation Approval
+
+**Approval Required:** Prakhar (or designated security reviewer) must approve the MaaS key provisioning and management approach before implementation begins.
+
+**Scope of Review:**
+- LiteLLM master key storage and access controls
+- MaaS API key provisioning workflow
+- Key rotation mechanism and lifecycle management
+- Secret storage approach (K8s Secret with RBAC)
+- API key transmission security (HTTPS-only enforcement)
+- Audit trail completeness and retention
+- Key revocation coverage across all deletion paths
+
+**Status:** Pending Prakhar's approval
+
+### Post-Implementation Security Audit
+
+**Required Before Production Deployment:** A comprehensive security audit must be conducted once the implementation is complete and integrated.
+
+**Audit Scope:**
+
+1. **Authentication & Authorization**
+   - MaaS key provisioning flow (end-to-end)
+   - API key auth middleware validation (SHA-256 hashing, timing-safe comparison)
+   - K8s RBAC for Secret access
+   - LiteLLM master key isolation (namespace-scoped Secret)
+
+2. **Secret Management**
+   - K8s Secret storage and encryption at rest
+   - Secret rotation mechanism
+   - Secret access logging
+   - Environment variable exposure checks
+   - No secrets in logs, metrics, or error messages
+
+3. **Key Lifecycle**
+   - Key creation (uniqueness, entropy)
+   - Key validation (expiration checking)
+   - Key rotation (expired key handling)
+   - Key revocation (all paths covered: workspace deletion, cleanup jobs, manual revocation)
+   - Orphaned key detection and cleanup
+
+4. **Audit Trail**
+   - Complete key history preservation after workspace deletion
+   - Immutable audit records (no UPDATE after initial INSERT)
+   - Retention policy enforcement (90-day cleanup)
+   - Query access controls (who can view key history)
+
+5. **Network Security**
+   - HTTPS enforcement for all API calls
+   - TLS certificate validation
+   - No key transmission over unencrypted channels
+   - MCP endpoint authentication
+
+6. **Data Privacy**
+   - PII in workspace records (user_email handling)
+   - Key metadata exposure (what's safe to log)
+   - Database query parameter sanitization
+   - SQL injection prevention (parameterized queries)
+
+7. **Error Handling**
+   - No sensitive data in error messages
+   - Safe error logging (redaction of keys/tokens)
+   - Graceful degradation on security failures
+
+8. **Vulnerability Assessment**
+   - Dependency scanning (pip, npm)
+   - Container image scanning (UDI base image)
+   - K8s security best practices (non-root containers, read-only filesystems where possible)
+   - OWASP Top 10 coverage
+
+### Security Audit Deliverables
+
+- **Findings Report:** Documented vulnerabilities with severity ratings (Critical/High/Medium/Low)
+- **Remediation Plan:** Required fixes before production deployment
+- **Sign-off:** Written approval from security team
+- **Compliance Check:** Alignment with Red Hat security policies
+
+### Blockers
+
+**Production deployment is BLOCKED until:**
+1. ✅ Prakhar approves MaaS key approach (pre-implementation)
+2. ⏳ Security audit passes with no Critical/High findings (post-implementation)
+3. ⏳ All required remediations are implemented and verified
+4. ⏳ Security team sign-off is obtained
 
 ---
 
@@ -1870,6 +2617,990 @@ function WorkspaceButton({ projectId }: WorkspaceButtonProps) {
 
 ---
 
+### My Workspaces Page
+
+**Purpose:** Show users all their workspaces across all projects with quick launch access.
+
+**Location:** New top-level navigation item "My Workspaces" in dashboard
+
+**Features:**
+- Table view of all workspaces for current user
+- Shows workspace status, project name, last activity
+- Launch button for each workspace (opens existing workspace)
+- Create Workspace button for projects without workspaces (registered via local skill)
+- Delete workspace option
+- Filter/search by project name
+
+**Two scenarios handled:**
+
+1. **Projects WITH workspaces** (created via Dashboard)
+   - Show "Open" or "Start" button
+   - Click to launch immediately
+
+2. **Projects WITHOUT workspaces** (registered via local skill)
+   - Show "Create Workspace" button
+   - User can optionally create workspace for browser access later
+
+```typescript
+// components/MyWorkspaces.tsx
+
+interface WorkspaceListItem {
+  id: string;
+  projectId: string;
+  projectName: string;
+  workspaceUrl: string;
+  status: 'running' | 'stopped' | 'starting';
+  lastActivity: string;
+  createdAt: string;
+}
+
+function MyWorkspacesPage() {
+  const [workspaces, setWorkspaces] = useState<WorkspaceListItem[]>([]);
+  const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  useEffect(() => {
+    // Fetch all workspaces for current user
+    fetch('/api/v1/workspaces/me')
+      .then(res => res.json())
+      .then(setWorkspaces);
+    
+    // Fetch projects without workspaces
+    fetch('/api/v1/workspaces/available-projects')
+      .then(res => res.json())
+      .then(setAvailableProjects);
+  }, []);
+  
+  const handleLaunch = async (workspace: WorkspaceListItem) => {
+    if (workspace.status === 'stopped') {
+      // Resume workspace
+      await fetch(`/api/v1/projects/${workspace.projectId}/workspace/start`, {
+        method: 'POST'
+      });
+    }
+    
+    // Open workspace
+    window.location.href = workspace.workspaceUrl;
+  };
+  
+  const handleDelete = async (workspaceId: string, projectId: string) => {
+    if (!confirm('Delete this workspace? This cannot be undone.')) {
+      return;
+    }
+    
+    await fetch(`/api/v1/projects/${projectId}/workspace`, {
+      method: 'DELETE'
+    });
+    
+    // Refresh list
+    setWorkspaces(ws => ws.filter(w => w.id !== workspaceId));
+  };
+  
+  const handleCreateWorkspace = async (projectId: string) => {
+    setLoading(true);
+    
+    try {
+      const res = await fetch(`/api/v1/projects/${projectId}/workspace`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      
+      // Close modal
+      setShowCreateModal(false);
+      
+      // Redirect to new workspace
+      window.location.href = data.url;
+    } catch (err) {
+      console.error('Failed to create workspace:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return (
+    <PageSection>
+      <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }}>
+        <Title headingLevel="h1">My Workspaces</Title>
+        {availableProjects.length > 0 && (
+          <Button
+            variant="primary"
+            onClick={() => setShowCreateModal(true)}
+            icon={<PlusIcon />}
+          >
+            Create Workspace
+          </Button>
+        )}
+      </Flex>
+      
+      {/* Create Workspace Modal */}
+      <Modal
+        title="Create Workspace"
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+      >
+        <p>Select a project to create a workspace for:</p>
+        <List>
+          {availableProjects.map(project => (
+            <ListItem key={project.id}>
+              <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }}>
+                <span>{project.name}</span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleCreateWorkspace(project.id)}
+                  isLoading={loading}
+                >
+                  Create
+                </Button>
+              </Flex>
+            </ListItem>
+          ))}
+        </List>
+        {availableProjects.length === 0 && (
+          <EmptyState variant="xs">
+            <EmptyStateBody>
+              All your projects already have workspaces.
+            </EmptyStateBody>
+          </EmptyState>
+        )}
+      </Modal>
+      
+      {workspaces.length === 0 ? (
+        <EmptyState>
+          <EmptyStateIcon icon={CubesIcon} />
+          <Title headingLevel="h2" size="lg">No workspaces yet</Title>
+          <EmptyStateBody>
+            {availableProjects.length > 0 
+              ? "Click 'Create Workspace' above to get started."
+              : "Register a project first, then create a workspace for it."
+            }
+          </EmptyStateBody>
+        </EmptyState>
+      ) : (
+        <Table variant="compact">
+          <Thead>
+            <Tr>
+              <Th>Project</Th>
+              <Th>Status</Th>
+              <Th>Last Activity</Th>
+              <Th>Created</Th>
+              <Th>Actions</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {workspaces.map(workspace => (
+              <Tr key={workspace.id}>
+                <Td>
+                  <a href={`/projects/${workspace.projectId}`}>
+                    {workspace.projectName}
+                  </a>
+                </Td>
+                <Td>
+                  <Label color={getStatusColor(workspace.status)}>
+                    {workspace.status}
+                  </Label>
+                </Td>
+                <Td>{formatRelativeTime(workspace.lastActivity)}</Td>
+                <Td>{formatDate(workspace.createdAt)}</Td>
+                <Td>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleLaunch(workspace)}
+                    icon={<RocketIcon />}
+                  >
+                    {workspace.status === 'running' ? 'Open' : 'Start'}
+                  </Button>
+                  {' '}
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => handleDelete(workspace.id, workspace.projectId)}
+                    icon={<TrashIcon />}
+                  >
+                    Delete
+                  </Button>
+                </Td>
+              </Tr>
+            ))}
+            
+            {/* Show projects WITHOUT workspaces (registered via local skill) */}
+            {availableProjects.map(project => (
+              <Tr key={project.id}>
+                <Td>
+                  <a href={`/projects/${project.id}`}>{project.name}</a>
+                </Td>
+                <Td>
+                  <Label color="grey">No workspace</Label>
+                </Td>
+                <Td colSpan={2}>
+                  <Text component="small">Registered via local skill</Text>
+                </Td>
+                <Td>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleCreateWorkspace(project.id)}
+                    icon={<PlusIcon />}
+                  >
+                    Create Workspace
+                  </Button>
+                </Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      )}
+    </PageSection>
+  );
+}
+
+function getStatusColor(status: string): string {
+  switch (status) {
+    case 'running': return 'green';
+    case 'stopped': return 'grey';
+    case 'starting': return 'blue';
+    default: return 'grey';
+  }
+}
+
+function formatRelativeTime(timestamp: string): string {
+  // Returns "2 hours ago", "3 days ago", etc.
+  const now = new Date();
+  const then = new Date(timestamp);
+  const diffMs = now.getTime() - then.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  
+  if (diffMins < 60) return `${diffMins} minutes ago`;
+  if (diffMins < 1440) return `${Math.floor(diffMins / 60)} hours ago`;
+  return `${Math.floor(diffMins / 1440)} days ago`;
+}
+
+function formatDate(timestamp: string): string {
+  return new Date(timestamp).toLocaleDateString();
+}
+```
+
+**API Endpoints:**
+
+Add two new endpoints:
+
+```python
+# app/api/workspaces.py
+
+@router.get("/me", response_model=list[WorkspaceInfo])
+async def list_my_workspaces(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    List all workspaces for the current user across all projects.
+    
+    Returns workspace info with project names and status.
+    """
+    workspaces = db.query(Workspace).filter_by(
+        user_id=current_user["user_id"]
+    ).all()
+    
+    results = []
+    for workspace in workspaces:
+        # Get project name
+        project = db.query(Project).get(workspace.project_id)
+        
+        # Get K8s status
+        devspaces = DevSpacesClient()
+        status = await devspaces.get_workspace_status(
+            workspace.workspace_namespace,
+            workspace.workspace_name
+        )
+        
+        results.append(WorkspaceInfo(
+            id=workspace.id,
+            project_id=workspace.project_id,
+            project_name=project.name if project else "Unknown",
+            workspace_url=workspace.url,
+            status=status or "unknown",
+            last_activity=workspace.updated_at,
+            created_at=workspace.created_at
+        ))
+    
+    return results
+
+@router.get("/available-projects", response_model=list[ProjectInfo])
+async def list_available_projects(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    List projects that don't have workspaces yet for the current user.
+    
+    Returns projects available for workspace creation.
+    """
+    # Get all projects for this user (or all projects if admin)
+    all_projects = db.query(Project).all()
+    
+    # Get projects that already have workspaces
+    existing_workspaces = db.query(Workspace).filter_by(
+        user_id=current_user["user_id"]
+    ).all()
+    existing_project_ids = {w.project_id for w in existing_workspaces}
+    
+    # Filter to projects without workspaces
+    available = [
+        ProjectInfo(id=p.id, name=p.name, repo_url=p.repo_url)
+        for p in all_projects
+        if p.id not in existing_project_ids
+    ]
+    
+    return available
+```
+
+**Response Schemas:**
+
+```python
+# app/schemas/workspace.py
+
+class WorkspaceInfo(BaseModel):
+    id: UUID
+    project_id: UUID
+    project_name: str
+    workspace_url: str
+    status: str  # "running", "stopped", "starting", "unknown"
+    last_activity: datetime
+    created_at: datetime
+
+class ProjectInfo(BaseModel):
+    id: UUID
+    name: str
+    repo_url: str
+```
+
+**Navigation Integration:**
+
+Add to dashboard navigation menu:
+
+```typescript
+// components/Navigation.tsx
+
+<Nav>
+  <NavList>
+    <NavItem to="/dashboard">Dashboard</NavItem>
+    <NavItem to="/projects">Projects</NavItem>
+    <NavItem to="/workspaces">My Workspaces</NavItem>  {/* NEW */}
+    <NavItem to="/pipeline">Pipeline</NavItem>
+  </NavList>
+</Nav>
+```
+
+**User Flow:**
+
+1. User clicks "My Workspaces" in nav
+2. Sees table of all their workspaces across projects
+3. Clicks "Create Workspace" → Modal shows projects without workspaces
+4. Picks project → Workspace created and opens
+5. Clicks "Open" on running workspace → Opens immediately
+6. Clicks "Start" on stopped workspace → Starts then opens
+7. Clicks "Delete" → Confirms → Workspace deleted
+8. Empty state if no workspaces exist yet
+
+---
+
+### Project Registration & Repository Creation
+
+**Purpose:** Support two entry points with different workspace creation behavior.
+
+---
+
+**Entry Point 1: Local Claude Code + PH Skill**
+
+User runs `/rhdp-publishing-house` on their local machine:
+
+**What happens:**
+1. Skill calls `ph_register` MCP tool with repo URL
+2. PH Central registers project (tracking only)
+3. **NO workspace created** - user already has local dev environment
+4. User continues working locally with Claude Code CLI
+5. (Optional) User can create workspace later via PH Central if they want browser access
+
+**Use case:** 
+- User prefers local development
+- Already has Claude Code configured
+- Just wants PH to track their project lifecycle
+
+---
+
+**Entry Point 2: PH Central Dashboard**
+
+User creates project via PH Central web UI:
+
+**Workflow A: Use Existing Repository**
+
+1. Click "New Project" in PH Central
+2. Choose "Use existing repository"
+3. Enter GitHub repo URL and branch
+4. PH registers project
+5. **Workspace automatically created**
+6. User redirected to workspace (opens in 60 seconds)
+
+**Workflow B: Create New Repository**
+
+1. Click "New Project" in PH Central
+2. Choose "Create new repository"
+3. Enter:
+   - Project name
+   - GitHub organization/user (where to create repo)
+   - Visibility (public/private)
+4. PH creates GitHub repo from `rhdp-publishing-house-template`:
+   - Includes `publishing-house/manifest.yaml`
+   - Includes content directory structure
+   - **Pre-adds launch badge to README**
+5. Auto-registers project in PH Central
+6. **Workspace automatically created**
+7. User redirected to workspace (opens in 60 seconds)
+
+**Use case:**
+- User wants browser-based development
+- No local setup
+- Immediate access to workspace
+
+---
+
+**Key Difference:**
+
+| Entry Point | Project Registered | Workspace Created |
+|-------------|-------------------|-------------------|
+| **Local skill** | ✅ Yes | ❌ No (optional later) |
+| **PH Dashboard** | ✅ Yes | ✅ Yes (automatic) |
+
+**API Endpoint for Dashboard Project Creation:**
+
+```python
+# app/api/projects.py
+
+@router.post("/create-with-repo", response_model=ProjectWithWorkspaceInfo)
+async def create_project_with_repo(
+    data: CreateProjectWithRepoRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    workspace_manager: WorkspaceManager = Depends(get_workspace_manager)
+):
+    """
+    Create project via PH Dashboard.
+    
+    Steps:
+    1. Create GitHub repo (if mode='create') OR validate existing repo
+    2. Register project in PH Central
+    3. AUTO-CREATE workspace
+    4. Add badge to README (for new repos)
+    5. Return project + workspace info
+    """
+    github_client = GitHubClient(token=settings.GITHUB_TOKEN)
+    
+    # 1. Handle repo creation or validation
+    if data.mode == 'create':
+        # Create repo from template
+        repo = await github_client.create_from_template(
+            template_owner="rhpds",
+            template_repo="rhdp-publishing-house-template",
+            owner=data.github_org,
+            name=data.project_name,
+            private=data.is_private
+        )
+        repo_url = repo.html_url
+    else:
+        # Validate existing repo
+        repo_url = data.repo_url
+        await github_client.validate_repo_access(repo_url)
+    
+    # 2. Register project in PH Central
+    project = Project(
+        name=data.project_name,
+        repo_url=repo_url,
+        repo_branch=data.branch or "main",
+        owner_email=current_user["email"]
+    )
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+    
+    # 3. AUTO-CREATE workspace (Dashboard entry point always creates workspace)
+    workspace = await workspace_manager.create_workspace(
+        project_id=project.id,
+        user_id=current_user["user_id"],
+        user_email=current_user["email"],
+        repo_url=repo_url,
+        repo_branch=project.repo_branch
+    )
+    
+    # 4. Add badge to README (for new repos only)
+    if data.mode == 'create':
+        badge_markdown = generate_badge_markdown(project.id)
+        await github_client.update_readme(
+            repo_url=repo_url,
+            badge_markdown=badge_markdown
+        )
+    
+    return ProjectWithWorkspaceInfo(
+        project_id=project.id,
+        project_name=project.name,
+        workspace_url=workspace.url
+    )
+
+
+class CreateProjectWithRepoRequest(BaseModel):
+    mode: str  # "create" or "existing"
+    project_name: str
+    github_org: Optional[str] = None  # Required if mode='create'
+    is_private: bool = False
+    repo_url: Optional[str] = None  # Required if mode='existing'
+    branch: Optional[str] = "main"
+
+class ProjectWithWorkspaceInfo(BaseModel):
+    project_id: UUID
+    project_name: str
+    workspace_url: str  # Redirect here immediately
+```
+
+**Frontend UI:**
+
+```typescript
+// components/NewProjectModal.tsx
+
+function NewProjectModal({ isOpen, onClose }: Props) {
+  const [mode, setMode] = useState<'existing' | 'create'>('existing');
+  
+  return (
+    <Modal title="Add Project" isOpen={isOpen} onClose={onClose}>
+      <Form>
+        {/* Mode selection */}
+        <FormGroup label="How do you want to add this project?">
+          <Radio
+            id="existing"
+            name="mode"
+            label="Use existing GitHub repository"
+            isChecked={mode === 'existing'}
+            onChange={() => setMode('existing')}
+          />
+          <Radio
+            id="create"
+            name="mode"
+            label="Create new repository from template"
+            isChecked={mode === 'create'}
+            onChange={() => setMode('create')}
+          />
+        </FormGroup>
+        
+        {mode === 'existing' ? (
+          <>
+            <FormGroup label="Repository URL" isRequired>
+              <TextInput
+                placeholder="https://github.com/user/my-workshop"
+              />
+            </FormGroup>
+            <FormGroup label="Branch">
+              <TextInput placeholder="main" />
+            </FormGroup>
+          </>
+        ) : (
+          <>
+            <FormGroup label="Project Name" isRequired>
+              <TextInput placeholder="my-openshift-workshop" />
+            </FormGroup>
+            <FormGroup label="GitHub Organization/User" isRequired>
+              <TextInput placeholder="your-username" />
+            </FormGroup>
+            <FormGroup label="Visibility">
+              <Radio
+                id="public"
+                name="visibility"
+                label="Public"
+                isChecked={true}
+              />
+              <Radio
+                id="private"
+                name="visibility"
+                label="Private"
+              />
+            </FormGroup>
+          </>
+        )}
+        
+        <ActionGroup>
+          <Button variant="primary">
+            {mode === 'existing' ? 'Register Project' : 'Create & Register'}
+          </Button>
+          <Button variant="link" onClick={onClose}>Cancel</Button>
+        </ActionGroup>
+      </Form>
+    </Modal>
+  );
+}
+```
+
+---
+
+### GitHub Repository Badge
+
+**Purpose:** Allow users to launch workspaces directly from their project README on GitHub.
+
+**When badge is added:**
+- **New repos** (created by PH): Badge automatically added to README during creation
+- **Existing repos**: User copies markdown snippet from PH Central and adds manually
+
+**Badge Types:**
+
+**Dynamic Status Badge** (recommended):
+- Shows real-time workspace status
+- Generated by Central API as SVG
+- Updates based on workspace state
+
+**Static Launch Badge** (simpler):
+- Always shows "Launch Workspace"
+- No status checking
+
+**Badge SVG Endpoint:**
+
+```python
+# app/api/workspaces.py
+
+@router.get("/projects/{project_id}/badge.svg")
+async def get_workspace_badge(
+    project_id: str,
+    user_id: Optional[str] = None,  # From query param or session
+    db: Session = Depends(get_db)
+):
+    """
+    Generate SVG badge showing workspace status.
+    
+    Returns:
+        - Green "Open Workspace" if running
+        - Blue "Start Workspace" if stopped
+        - Grey "Create Workspace" if doesn't exist
+    """
+    # Find workspace
+    workspace = None
+    if user_id:
+        workspace = db.query(Workspace).filter_by(
+            project_id=project_id,
+            user_id=user_id
+        ).first()
+    
+    # Determine badge state
+    if not workspace:
+        label = "Publishing House"
+        message = "Create Workspace"
+        color = "grey"
+    else:
+        # Check K8s status
+        devspaces = DevSpacesClient()
+        status = await devspaces.get_workspace_status(
+            workspace.workspace_namespace,
+            workspace.workspace_name
+        )
+        
+        label = "Publishing House"
+        if status == "Running":
+            message = "Open Workspace"
+            color = "green"
+        elif status == "Stopped":
+            message = "Start Workspace"
+            color = "blue"
+        else:
+            message = "Workspace Starting"
+            color = "yellow"
+    
+    # Generate SVG badge (shields.io style)
+    svg = generate_badge_svg(label, message, color)
+    
+    return Response(content=svg, media_type="image/svg+xml")
+
+
+def generate_badge_svg(label: str, message: str, color: str) -> str:
+    """Generate shields.io-style SVG badge."""
+    colors = {
+        "green": "#4c1",
+        "blue": "#007ec6",
+        "yellow": "#dfb317",
+        "grey": "#9f9f9f"
+    }
+    
+    color_hex = colors.get(color, "#9f9f9f")
+    
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="200" height="20">
+        <linearGradient id="b" x2="0" y2="100%">
+            <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+            <stop offset="1" stop-opacity=".1"/>
+        </linearGradient>
+        <mask id="a">
+            <rect width="200" height="20" rx="3" fill="#fff"/>
+        </mask>
+        <g mask="url(#a)">
+            <path fill="#555" d="M0 0h100v20H0z"/>
+            <path fill="{color_hex}" d="M100 0h100v20H100z"/>
+            <path fill="url(#b)" d="M0 0h200v20H0z"/>
+        </g>
+        <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
+            <text x="50" y="15" fill="#010101" fill-opacity=".3">{label}</text>
+            <text x="50" y="14">{label}</text>
+            <text x="150" y="15" fill="#010101" fill-opacity=".3">{message}</text>
+            <text x="150" y="14">{message}</text>
+        </g>
+    </svg>'''
+```
+
+**Launch Endpoint:**
+
+Direct launch URL for badge clicks:
+
+```python
+@router.get("/projects/{project_id}/launch")
+async def launch_workspace_from_badge(
+    project_id: str,
+    current_user: dict = Depends(get_current_user),
+    manager: WorkspaceManager = Depends(get_workspace_manager)
+):
+    """
+    Launch workspace from GitHub badge click.
+    
+    Creates workspace if doesn't exist, otherwise opens existing.
+    Redirects to workspace URL.
+    """
+    # Check if workspace exists
+    workspace = await manager.get_workspace(project_id, current_user["user_id"])
+    
+    if not workspace:
+        # Create new workspace
+        project = manager.db.query(Project).get(project_id)
+        workspace = await manager.create_workspace(
+            project_id=project_id,
+            user_id=current_user["user_id"],
+            user_email=current_user["email"],
+            repo_url=project.repo_url,
+            repo_branch=project.repo_branch or "main"
+        )
+    else:
+        # Resume if stopped
+        if workspace.status == "stopped":
+            workspace = await manager.resume_workspace(project_id, current_user["user_id"])
+    
+    # Redirect to workspace
+    return RedirectResponse(url=workspace.url)
+```
+
+**README Markdown Template:**
+
+Users add this to their project README:
+
+```markdown
+# My OpenShift Workshop
+
+[![Launch Workspace](https://publishing-house-central.apps.cluster.example.com/api/v1/workspaces/projects/{PROJECT_ID}/badge.svg)](https://publishing-house-central.apps.cluster.example.com/api/v1/workspaces/projects/{PROJECT_ID}/launch)
+
+## Getting Started
+
+Click the badge above to launch your Publishing House workspace with Claude Code pre-configured!
+```
+
+**Auto-generate for users:**
+
+Add to project detail page:
+
+```typescript
+function BadgeSnippet({ projectId }: { projectId: string }) {
+  const badgeUrl = `${API_BASE}/api/v1/workspaces/projects/${projectId}/badge.svg`;
+  const launchUrl = `${API_BASE}/api/v1/workspaces/projects/${projectId}/launch`;
+  
+  const markdown = `[![Launch Workspace](${badgeUrl})](${launchUrl})`;
+  
+  return (
+    <CodeBlock>
+      <CodeBlockCode>{markdown}</CodeBlockCode>
+      <CodeBlockAction>
+        <Button onClick={() => navigator.clipboard.writeText(markdown)}>
+          Copy to Clipboard
+        </Button>
+      </CodeBlockAction>
+    </CodeBlock>
+  );
+}
+```
+
+---
+
+### Pipeline Board Quick Launch
+
+**Purpose:** Quick access to workspaces from the kanban pipeline view without drilling into project details.
+
+**Implementation:**
+
+Add rocket icon to project cards on pipeline board:
+
+```typescript
+// components/PipelineCard.tsx
+
+function ProjectCard({ project }: { project: Project }) {
+  const [hasWorkspace, setHasWorkspace] = useState(false);
+  
+  useEffect(() => {
+    // Check if workspace exists for this project
+    fetch(`/api/v1/projects/${project.id}/workspace`)
+      .then(res => setHasWorkspace(res.ok));
+  }, [project.id]);
+  
+  const handleQuickLaunch = async (e: React.MouseEvent) => {
+    e.stopPropagation();  // Don't navigate to project detail
+    
+    if (hasWorkspace) {
+      // Open existing workspace
+      const res = await fetch(`/api/v1/projects/${project.id}/workspace`);
+      const data = await res.json();
+      window.open(data.url, '_blank');
+    } else {
+      // Navigate to project detail to create workspace
+      window.location.href = `/projects/${project.id}`;
+    }
+  };
+  
+  return (
+    <Card>
+      <CardHeader>
+        <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }}>
+          <Title headingLevel="h3">{project.name}</Title>
+          <Tooltip content={hasWorkspace ? "Open Workspace" : "Create Workspace"}>
+            <Button
+              variant="plain"
+              onClick={handleQuickLaunch}
+              icon={<RocketIcon />}
+              aria-label="Launch workspace"
+            />
+          </Tooltip>
+        </Flex>
+      </CardHeader>
+      <CardBody>
+        {/* Project details */}
+      </CardBody>
+    </Card>
+  );
+}
+```
+
+**Visual Design:**
+- Small rocket icon in top-right of each card
+- Green if workspace exists (ready to open)
+- Grey if no workspace (creates one)
+- Tooltip on hover: "Open Workspace" or "Create Workspace"
+
+---
+
+### User Experience: Before vs After
+
+**Before Dev Spaces (Current Manual Setup):**
+
+**Time: 15-30 minutes**
+
+1. **Find project on GitHub** (1 min)
+   - Browse to repository URL
+   - Read the README
+
+2. **Clone repository locally** (2 min)
+   ```bash
+   git clone git@github.com:user/ocp-workshop.git
+   cd ocp-workshop
+   ```
+
+3. **Install Claude Code CLI** (3-5 min)
+   ```bash
+   npm install -g @anthropic-ai/claude-code
+   ```
+
+4. **Install Publishing House skills** (2 min)
+   ```bash
+   git clone git@github.com:rhpds/rhdp-publishing-house-skills.git \
+     ~/.claude/plugins/rhdp-publishing-house-skills
+   ```
+
+5. **Configure MCP endpoint** (3-5 min)
+   - Edit `~/.claude/config.json`
+   - Add MCP server configuration
+   - Get API key from PH Central
+   - Test connection
+
+6. **Set up API keys** (2-3 min)
+   - Get MaaS API key
+   - Configure Claude Code
+   - Test authentication
+
+7. **Start working** (1 min)
+   ```bash
+   claude-code
+   ```
+
+**Friction points:**
+- Requires local development environment
+- Manual dependency installation
+- Configuration file editing
+- API key management
+- Troubleshooting connection issues
+- Context switching between browser and terminal
+
+---
+
+**After Dev Spaces (One-Click Launch):**
+
+**Time: 60 seconds**
+
+1. **Click "Launch Workspace"** (1 click)
+   - From GitHub README badge, OR
+   - From PH Central dashboard, OR
+   - From Pipeline board card
+
+2. **Wait for provisioning** (45-60 seconds)
+   - Progress indicator shown
+   - "Provisioning workspace... 45 seconds remaining"
+
+3. **VS Code opens in browser** (automatic)
+   - Claude Code extension loaded
+   - MCP configured
+   - API keys injected
+   - Project repo cloned
+   - Skills available
+
+4. **Start working immediately**
+   - Open chat panel
+   - Type message
+   - Begin content development
+
+**Benefits:**
+- ✅ No local setup required
+- ✅ Works from any computer with a browser
+- ✅ Zero configuration
+- ✅ Automatic key management
+- ✅ Consistent environment for all users
+- ✅ No dependency version conflicts
+- ✅ One-click access from multiple entry points
+
+---
+
+### Launch Button Summary
+
+Users can launch workspaces from **3 locations**:
+
+| Location | Use Case | Button Type |
+|----------|----------|-------------|
+| **GitHub README** | Browsing project repo | Dynamic SVG badge |
+| **PH Central - My Workspaces** | Managing all workspaces | "Open/Start" buttons in table |
+| **PH Central - Pipeline Board** | Quick access while reviewing projects | Rocket icon on cards |
+| **PH Central - Project Detail** | Focused project work | "Launch Workspace" button |
+
+**Entry point selection:**
+- Developers browsing GitHub → README badge
+- Content managers reviewing pipeline → Board quick launch
+- Users managing multiple projects → My Workspaces page
+- Deep focus on one project → Project detail page
+
+---
+
 ## Testing Plan
 
 ### Unit Tests
@@ -1953,9 +3684,7 @@ From Jira ticket description:
 
 ### Implementation TODOs
 
-- [ ] Workspace env var update mechanism (for key reprov isioning)
-- [ ] Workspace idle timeout configuration
-- [ ] Admin workspace cleanup job (delete stale workspaces)
+- [ ] Workspace env var update mechanism (for key reprovisioning)
 - [ ] Metrics collection (workspace creation rate, MaaS usage)
 - [ ] Error handling for K8s API failures
 - [ ] Retry logic for LiteLLM API calls
