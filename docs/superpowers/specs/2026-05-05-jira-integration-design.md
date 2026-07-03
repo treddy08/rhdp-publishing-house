@@ -65,16 +65,35 @@ OJA-ITS-003 also includes Story, Bug, Vulnerability, Weakness, and Sub-task. PH 
 
 ### Workflow
 
-OJA-ITS-003 provides a four-state workflow. All transitions are global (any state can reach any other state).
+**Workflow scheme: OJA-WF-AG** (six states). Scheme change from the original four-state OJA-WF-J requested 2026-06-27; pending IT approval. All transitions are global (any state can reach any other state).
 
-| Status | ID | Transition ID | Category | PH Maps To |
-|--------|----|---------------|----------|------------|
-| New | 10142 | 51 | To Do | `pending` |
-| Refinement | 10143 | 61 | To Do | *(not used by PH)* |
-| In Progress | 3 | 31 | In Progress | `in_progress` |
-| Closed | 6 | 41 | Done | `completed` / `skipped` |
+| Status | ID | Category | PH Maps To |
+|--------|----|----------|------------|
+| New | 10142 | To Do | `pending` — initial task creation |
+| Refinement | 10143 | To Do | `pending` — task being scoped or discussed |
+| Backlog | 10013 | To Do | `pending` — ready to start, not yet pulled in |
+| In Progress | 3 | In Progress | `in_progress` — active work on content/automation deliverables |
+| Review | 10145 | In Progress | `in_progress` — used for review-type deliverables only |
+| Closed | 6 | Done | `completed` / `skipped` |
 
-PH uses 3 of 4 states (skips Refinement). The Closed transition requires a resolution field (e.g., "Done").
+PH uses all 6 states. The Closed transition requires a resolution field (e.g., "Done").
+
+**JiraSyncService transition logic (manifest status → Jira status):**
+
+| Manifest status | Deliverable type | Jira status |
+|----------------|-----------------|-------------|
+| `pending` | any | New |
+| `in_progress` | `design_doc`, `module_outline`, `module_content`, `module_automation`, `module_verified` | In Progress |
+| `in_progress` | `code_review`, `security_review`, `e2e_test`, `final_review` | Review |
+| `completed` or `skipped` | any | Closed |
+
+**⚠ Transition ID update required after scheme switch:** The JiraSyncService hardcodes transition IDs from the old four-state scheme (e.g., `TRANSITION_CLOSED = 41`, `TRANSITION_IN_PROGRESS = 31`). After OJA-WF-AG is applied, these IDs will change. Before any implementation work against the new scheme, re-query:
+
+```
+GET /rest/api/3/issue/{any-RHDPCD-issue}/transitions
+```
+
+Update the transition ID constants in `app/services/jira_sync.py` accordingly. Also add `TRANSITION_REVIEW` and `TRANSITION_BACKLOG` constants for the two new states.
 
 ### Key Fields
 
@@ -821,7 +840,8 @@ The sync service handles manifests with and without the new fields:
 | Prerequisite | Status | Blocker? |
 |---|---|---|
 | RHDPCD Jira project created | **Complete** (2026-06-18) | No |
-| Switch to OJA-ITS-003 (Standard) | **Complete** (2026-06-22, verified via API) | No |
+| Issue type scheme: OJA-ITS-003 (Standard) | **Complete** (2026-06-22, verified via API) — provides Initiative, Epic, Task hierarchy | No |
+| Workflow scheme: OJA-WF-AG (six states) | **Requested 2026-06-27** (pending IT approval). Replaces four-state OJA-WF-J. Adds Backlog and Review states. JiraSyncService constants need re-query after scheme is applied — see Workflow section. | No — current scheme functional; WF-AG unlocks Review + Backlog |
 | Jira service account provisioned | Not started (personal account used for dev) | Yes — gating dependency for **production** deployment |
 | Phase 1 (MCP Gateway) | Complete | No |
 | Publishing House Central architecture | **Complete** (2026-06-19 spec, implemented) | No |
