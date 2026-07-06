@@ -82,7 +82,7 @@ spec:
               name: http
           env:
             - name: LITELLM_URL
-              value: "https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions"
+              value: "https://maas-rhdp.apps.maas.redhatworkshops.io"
             - name: LITELLM_MASTER_KEY
               valueFrom:
                 secretKeyRef:

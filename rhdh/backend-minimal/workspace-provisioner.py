@@ -51,33 +51,11 @@ async def provision_workspace(req: ProvisionRequest):
     NO DATABASE - stateless operation
     """
 
-    # 1. Provision MaaS key
+    # 1. Use hardcoded MaaS key (TODO: implement dynamic provisioning)
     key_alias = f"ph-{req.user_id}-{req.project_name[:20].lower().replace(' ', '-')}"
 
-    async with httpx.AsyncClient(timeout=30.0) as http:
-        try:
-            litellm_response = await http.post(
-                f"{LITELLM_URL}/key/generate",
-                headers={"Authorization": f"Bearer {LITELLM_MASTER_KEY}"},
-                json={
-                    "key_alias": key_alias,
-                    "duration": "30d",
-                    "models": ["claude-sonnet-4-5"],
-                    "metadata": {
-                        "owner": req.user_email,
-                        "project": req.project_name,
-                        "created_by": "rhdh-template"
-                    }
-                }
-            )
-            litellm_response.raise_for_status()
-            key_data = litellm_response.json()
-            maas_key = key_data["key"]
-        except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"LiteLLM key provisioning failed: {str(e)}"
-            )
+    # Hardcoded for now - will implement dynamic provisioning later
+    maas_key = os.getenv("MAAS_API_KEY", "sk-1234-hardcoded-key")
 
     # 2. Create K8s resources
     workspace_name = f"ph-{req.project_name[:30].lower().replace(' ', '-')}"
