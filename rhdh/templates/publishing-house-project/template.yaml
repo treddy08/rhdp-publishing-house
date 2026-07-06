@@ -70,12 +70,12 @@ spec:
                 repo_type:
                   enum:
                     - new
-                repo_name:
-                  title: Repository Name
+                repo_destination:
+                  title: Repository Destination
                   type: string
-                  description: Will be created at github.com/rhpds/${{ parameters.project_name }}
-                  default: ${{ parameters.project_name }}
-                  ui:readonly: true
+                  description: Your repository will be created at
+                  ui:field: DescriptionField
+                  ui:help: "github.com/rhpds/<project-name>"
             - properties:
                 repo_type:
                   enum:
