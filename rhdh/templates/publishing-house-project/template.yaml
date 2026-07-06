@@ -53,51 +53,50 @@ spec:
           default: false
           ui:help: Choose "Yes" if you cloned the template yourself, "No" to create a new repo
 
-    - title: New Repository Settings
-      description: Create a new repository from the Publishing House template
-      required:
-        - github_org
+    - title: Repository Settings
       dependencies:
         has_existing_repo:
           oneOf:
             - properties:
                 has_existing_repo:
                   const: false
+              required:
+                - github_org
+            - properties:
+                has_existing_repo:
+                  const: true
+              required:
+                - repo_url
       properties:
         github_org:
           title: GitHub Organization/User
           type: string
           default: treddy08
           ui:help: Where to create the repository
+          ui:field: HiddenField
+          ui:widget: hidden
+          formHideCondition: has_existing_repo
 
         repo_visibility:
           title: Repository Visibility
           type: string
           enum: [public, private]
           default: public
+          formHideCondition: has_existing_repo
 
-    - title: Existing Repository Settings
-      description: Provide the URL of your existing repository
-      required:
-        - repo_url
-      dependencies:
-        has_existing_repo:
-          oneOf:
-            - properties:
-                has_existing_repo:
-                  const: true
-      properties:
         repo_url:
           title: Repository URL
           type: string
           ui:placeholder: "https://github.com/treddy08/my-workshop"
           ui:help: Full URL to your existing repository
+          formHideCondition: "!has_existing_repo"
 
         repo_branch:
           title: Branch
           type: string
           default: main
           ui:help: Branch to use for the workspace
+          formHideCondition: "!has_existing_repo"
 
   steps:
     # Step 1 (NEW REPO ONLY): Fetch PH template
