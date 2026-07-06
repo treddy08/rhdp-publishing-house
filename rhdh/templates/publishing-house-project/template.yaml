@@ -18,7 +18,6 @@ spec:
       required:
         - project_name
         - deployment_mode
-        - has_existing_repo
       properties:
         project_name:
           title: Project Name
@@ -47,6 +46,45 @@ spec:
           default: self_published
           ui:help: Choose review rigor level
 
+    - title: Repository Settings
+      required:
+        - repo_type
+      dependencies:
+        repo_type:
+          oneOf:
+            - properties:
+                repo_type:
+                  enum:
+                    - new
+                github_org:
+                  title: GitHub Organization/User
+                  type: string
+                  default: treddy08
+                  ui:help: Where to create the repository
+                repo_visibility:
+                  title: Repository Visibility
+                  type: string
+                  enum: [public, private]
+                  default: public
+              required:
+                - github_org
+            - properties:
+                repo_type:
+                  enum:
+                    - existing
+                repo_url:
+                  title: Repository URL
+                  type: string
+                  ui:placeholder: "https://github.com/treddy08/my-workshop"
+                  ui:help: Full URL to your existing repository
+                repo_branch:
+                  title: Branch
+                  type: string
+                  default: main
+                  ui:help: Branch to use for the workspace
+              required:
+                - repo_url
+      properties:
         repo_type:
           title: Repository
           type: string
@@ -58,46 +96,6 @@ spec:
             - Use existing repository
           default: new
           ui:help: Choose whether to create a new repo or use one you already have
-
-    - title: New Repository Settings
-      dependencies:
-        repo_type:
-          oneOf:
-            - properties:
-                repo_type:
-                  const: new
-      properties:
-        github_org:
-          title: GitHub Organization/User
-          type: string
-          default: treddy08
-          ui:help: Where to create the repository
-
-        repo_visibility:
-          title: Repository Visibility
-          type: string
-          enum: [public, private]
-          default: public
-
-    - title: Existing Repository Settings
-      dependencies:
-        repo_type:
-          oneOf:
-            - properties:
-                repo_type:
-                  const: existing
-      properties:
-        repo_url:
-          title: Repository URL
-          type: string
-          ui:placeholder: "https://github.com/treddy08/my-workshop"
-          ui:help: Full URL to your existing repository
-
-        repo_branch:
-          title: Branch
-          type: string
-          default: main
-          ui:help: Branch to use for the workspace
 
   steps:
     # Step 1 (NEW REPO ONLY): Fetch PH template
