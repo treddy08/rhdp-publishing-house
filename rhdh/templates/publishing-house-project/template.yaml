@@ -22,9 +22,11 @@ spec:
         project_name:
           title: Project Name
           type: string
-          description: Name for your workshop/lab/demo
+          description: Name for your workshop/lab/demo (letters and hyphens only)
           ui:autofocus: true
-          ui:placeholder: "OpenShift AI Workshop"
+          ui:placeholder: "openshift-ai-workshop"
+          pattern: '^[a-z0-9-]+$'
+          ui:help: Use lowercase letters, numbers, and hyphens only
 
         project_type:
           title: Project Type
@@ -68,18 +70,13 @@ spec:
                 repo_type:
                   enum:
                     - new
-                destination_repo:
-                  title: Destination Repository
+                repo_name_display:
+                  title: Repository Name
                   type: string
-                  description: Repository will be created at this location
-                  ui:field: RepoUrlPicker
-                  ui:options:
-                    allowedHosts:
-                      - github.com
-                    allowedOwners:
-                      - rhpds
-              required:
-                - destination_repo
+                  description: Repository will be created at github.com/rhpds/${{ parameters.project_name }}
+                  ui:field: EntityNamePicker
+                  ui:disabled: true
+                  default: ${{ parameters.project_name }}
             - properties:
                 repo_type:
                   enum:
@@ -118,7 +115,7 @@ spec:
       if: ${{ parameters.repo_type === 'new' }}
       action: publish:github
       input:
-        repoUrl: ${{ parameters.destination_repo }}
+        repoUrl: github.com?owner=rhpds&repo=${{ parameters.project_name }}
         description: Publishing House ${{ parameters.project_type }} - ${{ parameters.project_name }}
         defaultBranch: main
 
@@ -160,7 +157,7 @@ spec:
       if: ${{ parameters.repo_type === 'new' }}
       action: publish:github:pull-request
       input:
-        repoUrl: ${{ parameters.destination_repo }}
+        repoUrl: github.com?owner=rhpds&repo=${{ parameters.project_name }}
         branchName: add-catalog-info
         title: Add Backstage catalog metadata
         description: Add catalog-info.yaml with workspace URL
