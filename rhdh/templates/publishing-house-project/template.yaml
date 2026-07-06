@@ -49,6 +49,18 @@ spec:
     - title: Repository Settings
       required:
         - repo_type
+      properties:
+        repo_type:
+          title: Repository
+          type: string
+          enum:
+            - new
+            - existing
+          enumNames:
+            - Create new repository from template
+            - Use existing repository
+          default: new
+          ui:help: Choose whether to create a new repo or use one you already have
       dependencies:
         repo_type:
           oneOf:
@@ -84,18 +96,6 @@ spec:
                   ui:help: Branch to use for the workspace
               required:
                 - repo_url
-      properties:
-        repo_type:
-          title: Repository
-          type: string
-          enum:
-            - new
-            - existing
-          enumNames:
-            - Create new repository from template
-            - Use existing repository
-          default: new
-          ui:help: Choose whether to create a new repo or use one you already have
 
   steps:
     # Step 1 (NEW REPO ONLY): Fetch PH template
