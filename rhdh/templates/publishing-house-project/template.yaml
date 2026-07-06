@@ -70,13 +70,12 @@ spec:
                 repo_type:
                   enum:
                     - new
-                repo_name_display:
+                repo_name:
                   title: Repository Name
                   type: string
-                  description: Repository will be created at github.com/rhpds/${{ parameters.project_name }}
-                  ui:field: EntityNamePicker
-                  ui:disabled: true
+                  description: Will be created at github.com/rhpds/${{ parameters.project_name }}
                   default: ${{ parameters.project_name }}
+                  ui:readonly: true
             - properties:
                 repo_type:
                   enum:
