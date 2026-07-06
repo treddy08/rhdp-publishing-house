@@ -71,7 +71,7 @@ spec:
                 github_org:
                   title: GitHub Organization/User
                   type: string
-                  default: treddy08
+                  default: rhpds
                   ui:help: Where to create the repository
                 repo_visibility:
                   title: Repository Visibility
