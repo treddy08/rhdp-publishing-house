@@ -127,8 +127,7 @@ spec:
       action: http:backstage:request
       input:
         method: POST
-        path: /provision
-        baseUrl: https://workspace-provisioner-ph-provisioner.apps.cluster-5hfx8.dynamic2.redhatworkshops.io
+        url: https://workspace-provisioner-ph-provisioner.apps.cluster-5hfx8.dynamic2.redhatworkshops.io/provision
         headers:
           content-type: application/json
         body:
