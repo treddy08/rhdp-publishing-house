@@ -127,9 +127,10 @@ spec:
       action: http:backstage:request
       input:
         method: POST
-        url: https://workspace-provisioner-ph-provisioner.apps.cluster-5hfx8.dynamic2.redhatworkshops.io/provision
+        path: /provision
+        baseUrl: https://workspace-provisioner-ph-provisioner.apps.cluster-5hfx8.dynamic2.redhatworkshops.io
         headers:
-          Content-Type: application/json
+          content-type: application/json
         body:
           project_name: ${{ parameters.project_name }}
           user_id: ${{ user.entity.metadata.name }}
