@@ -68,18 +68,18 @@ spec:
                 repo_type:
                   enum:
                     - new
-                github_org:
-                  title: GitHub Organization/User
+                destination_repo:
+                  title: Destination Repository
                   type: string
-                  default: rhpds
-                  ui:help: Where to create the repository
-                repo_visibility:
-                  title: Repository Visibility
-                  type: string
-                  enum: [public, private]
-                  default: public
+                  description: Repository will be created at this location
+                  ui:field: RepoUrlPicker
+                  ui:options:
+                    allowedHosts:
+                      - github.com
+                    allowedOwners:
+                      - rhpds
               required:
-                - github_org
+                - destination_repo
             - properties:
                 repo_type:
                   enum:
@@ -109,7 +109,7 @@ spec:
           project_name: ${{ parameters.project_name }}
           project_type: ${{ parameters.project_type }}
           deployment_mode: ${{ parameters.deployment_mode }}
-          github_org: ${{ parameters.github_org }}
+          github_org: rhpds
           user: ${{ user.entity.metadata.name }}
 
     # Step 2 (NEW REPO ONLY): Publish to GitHub
@@ -118,9 +118,8 @@ spec:
       if: ${{ parameters.repo_type === 'new' }}
       action: publish:github
       input:
-        repoUrl: github.com?owner=${{ parameters.github_org }}&repo=${{ parameters.project_name | lower | replace(' ', '-') }}
+        repoUrl: ${{ parameters.destination_repo }}
         description: Publishing House ${{ parameters.project_type }} - ${{ parameters.project_name }}
-        repoVisibility: ${{ parameters.repo_visibility }}
         defaultBranch: main
 
     # Step 3: Provision workspace (ALL scenarios)
@@ -149,7 +148,7 @@ spec:
           project_name: ${{ parameters.project_name }}
           project_type: ${{ parameters.project_type }}
           deployment_mode: ${{ parameters.deployment_mode }}
-          github_org: ${{ parameters.repo_type === 'existing' and parameters.repo_url.split('/')[3] or parameters.github_org }}
+          github_org: ${{ parameters.repo_type === 'existing' and parameters.repo_url.split('/')[3] or 'rhpds' }}
           user: ${{ user.entity.metadata.name }}
           workspace_url: ${{ steps['provision-workspace'].output.body.workspace_url }}
           workspace_name: ${{ steps['provision-workspace'].output.body.workspace_name }}
@@ -161,7 +160,7 @@ spec:
       if: ${{ parameters.repo_type === 'new' }}
       action: publish:github:pull-request
       input:
-        repoUrl: github.com?owner=${{ parameters.github_org }}&repo=${{ parameters.project_name | lower | replace(' ', '-') }}
+        repoUrl: ${{ parameters.destination_repo }}
         branchName: add-catalog-info
         title: Add Backstage catalog metadata
         description: Add catalog-info.yaml with workspace URL
