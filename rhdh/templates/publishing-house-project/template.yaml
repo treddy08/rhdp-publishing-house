@@ -70,6 +70,15 @@ spec:
                 repo_type:
                   enum:
                     - new
+                repo_info:
+                  title: Repository Destination
+                  type: string
+                  description: "Your repository will be created at: github.com/rhpds/{your-project-name}"
+                  ui:widget: textarea
+                  ui:options:
+                    rows: 2
+                  ui:disabled: true
+                  default: "github.com/rhpds/{project-name-from-page-1}"
             - properties:
                 repo_type:
                   enum:
