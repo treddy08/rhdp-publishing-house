@@ -1,0 +1,168 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: publishing-house-project
+  title: Publishing House Content Project
+  description: Create a new PH content project with DevSpaces workspace
+  tags:
+    - publishing-house
+    - workshop
+    - devspaces
+
+spec:
+  owner: rhdp-team
+  type: service
+
+  parameters:
+    - title: Project Information
+      required:
+        - project_name
+        - deployment_mode
+      properties:
+        project_name:
+          title: Project Name
+          type: string
+          description: Name for your workshop/lab/demo
+          ui:autofocus: true
+          ui:placeholder: "OpenShift AI Workshop"
+
+        project_type:
+          title: Project Type
+          type: string
+          enum: [workshop, lab, demo]
+          default: workshop
+
+        deployment_mode:
+          title: Deployment Mode
+          type: string
+          enum:
+            - rhdp_published
+            - self_published
+            - express
+          enumNames:
+            - Onboarded (full gates + Jira)
+            - Self-Published (soft gates)
+            - Express (minimal, one-off)
+          default: self_published
+          ui:help: Choose review rigor level
+
+    - title: GitHub Repository
+      required:
+        - github_org
+      properties:
+        github_org:
+          title: GitHub Organization/User
+          type: string
+          default: rhpds
+          ui:help: Where to create the repository
+
+        repo_visibility:
+          title: Repository Visibility
+          type: string
+          enum: [public, private]
+          default: public
+
+  steps:
+    # Step 1: Fetch PH template (WITHOUT catalog-info.yaml yet)
+    - id: fetch-template
+      name: Fetch Publishing House Template
+      action: fetch:template
+      input:
+        url: https://github.com/rhpds/rhdp-publishing-house-template/tree/main
+        values:
+          project_name: ${{ parameters.project_name }}
+          project_type: ${{ parameters.project_type }}
+          deployment_mode: ${{ parameters.deployment_mode }}
+          github_org: ${{ parameters.github_org }}
+          user: ${{ user.entity.metadata.name }}
+
+    # Step 2: Publish to GitHub (initial commit without catalog-info)
+    - id: publish
+      name: Create GitHub Repository
+      action: publish:github
+      input:
+        repoUrl: github.com?owner=${{ parameters.github_org }}&repo=${{ parameters.project_name | lower | replace(' ', '-') }}
+        description: Publishing House ${{ parameters.project_type }} - ${{ parameters.project_name }}
+        repoVisibility: ${{ parameters.repo_visibility }}
+        defaultBranch: main
+
+    # Step 3: Call provisioner backend to create workspace
+    - id: provision-workspace
+      name: Provision DevSpaces Workspace
+      action: http:backstage:request
+      input:
+        method: POST
+        url: https://workspace-provisioner-ph-provisioner.apps.cluster-5hfx8.dynamic2.redhatworkshops.io/provision
+        headers:
+          Content-Type: application/json
+        body:
+          project_name: ${{ parameters.project_name }}
+          user_id: ${{ user.entity.metadata.name }}
+          user_email: ${{ user.entity.spec.profile.email }}
+          repo_url: ${{ steps.publish.output.remoteUrl }}
+          repo_branch: main
+
+    # Step 4: Create catalog-info.yaml with ACTUAL workspace URL
+    - id: create-catalog-info
+      name: Create Catalog Info
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          project_name: ${{ parameters.project_name }}
+          project_type: ${{ parameters.project_type }}
+          deployment_mode: ${{ parameters.deployment_mode }}
+          github_org: ${{ parameters.github_org }}
+          user: ${{ user.entity.metadata.name }}
+          workspace_url: ${{ steps['provision-workspace'].output.body.workspace_url }}
+          workspace_name: ${{ steps['provision-workspace'].output.body.workspace_name }}
+          workspace_namespace: ${{ steps['provision-workspace'].output.body.workspace_namespace }}
+
+    # Step 5: Commit catalog-info.yaml to GitHub
+    - id: publish-catalog-info
+      name: Add Catalog Info to Repo
+      action: publish:github:pull-request
+      input:
+        repoUrl: github.com?owner=${{ parameters.github_org }}&repo=${{ parameters.project_name | lower | replace(' ', '-') }}
+        branchName: add-catalog-info
+        title: Add Backstage catalog metadata
+        description: Add catalog-info.yaml with workspace URL
+        update: true
+
+    # Step 6: Register in catalog
+    - id: register
+      name: Register in Backstage Catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+        optional: true
+
+  output:
+    links:
+      - title: 🚀 Open DevSpaces Workspace
+        icon: launch
+        url: ${{ steps['provision-workspace'].output.body.workspace_url }}
+
+      - title: View in GitHub
+        icon: github
+        url: ${{ steps.publish.output.remoteUrl }}
+
+      - title: View in Catalog
+        icon: catalog
+        url: /catalog/default/component/${{ parameters.project_name | lower | replace(' ', '-') }}
+
+    text:
+      - title: Workspace Details
+        content: |
+          Your workspace is provisioning! It will be ready in ~60 seconds.
+
+          **Workspace URL:** ${{ steps['provision-workspace'].output.body.workspace_url }}
+
+          **What's included:**
+          - Claude Code CLI pre-configured
+          - MaaS API key provisioned
+          - Publishing House skills installed
+          - Your project repo cloned
+
+          Click "Open DevSpaces Workspace" above to launch!

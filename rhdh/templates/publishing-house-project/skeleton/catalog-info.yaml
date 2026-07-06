@@ -1,0 +1,39 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{values.project_name | lower | replace(' ', '-')}}
+  title: ${{values.project_name}}
+  description: Publishing House ${{values.project_type}}
+
+  annotations:
+    # Project metadata
+    publishing-house/project-type: ${{values.project_type}}
+    publishing-house/deployment-mode: ${{values.deployment_mode}}
+
+    # DevSpaces workspace (populated by template after provisioning)
+    devspaces/workspace-url: ${{values.workspace_url}}
+    devspaces/workspace-name: ${{values.workspace_name}}
+    devspaces/workspace-namespace: ${{values.workspace_namespace}}
+
+    # GitHub
+    github.com/project-slug: ${{values.github_org}}/${{values.project_name | lower | replace(' ', '-')}}
+
+  links:
+    - url: https://github.com/${{values.github_org}}/${{values.project_name | lower | replace(' ', '-')}}
+      title: GitHub Repository
+      icon: github
+
+    - url: ${{values.workspace_url}}
+      title: Launch DevSpaces Workspace
+      icon: launch
+
+  tags:
+    - publishing-house
+    - ${{values.project_type}}
+    - ${{values.deployment_mode}}
+
+spec:
+  type: publishing-house-project
+  lifecycle: development
+  owner: user:default/${{values.user}}
+  system: rhdp-content

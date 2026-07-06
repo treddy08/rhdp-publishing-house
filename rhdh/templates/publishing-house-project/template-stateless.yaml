@@ -1,0 +1,192 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: publishing-house-project-stateless
+  title: Publishing House Project (Stateless)
+  description: Create PH project with DevSpaces workspace (no backend database)
+  tags:
+    - publishing-house
+    - devspaces
+    - stateless
+
+spec:
+  owner: rhdp-team
+  type: service
+
+  parameters:
+    - title: Project Setup
+      required:
+        - project_name
+        - deployment_mode
+      properties:
+        project_name:
+          title: Project Name
+          type: string
+          description: Name for your workshop/lab/demo
+          ui:autofocus: true
+
+        project_type:
+          title: Project Type
+          type: string
+          enum: [workshop, lab, demo]
+          default: workshop
+
+        deployment_mode:
+          title: Deployment Mode
+          type: string
+          enum:
+            - rhdp_published
+            - self_published
+            - express
+          enumNames:
+            - Onboarded (full gates)
+            - Self-Published (soft gates)
+            - Express (minimal)
+          default: self_published
+
+    - title: Repository
+      required:
+        - github_org
+      properties:
+        github_org:
+          title: GitHub Organization
+          type: string
+          default: rhpds
+
+        repo_visibility:
+          title: Visibility
+          type: string
+          enum: [public, private]
+          default: public
+
+  steps:
+    # Step 1: Fetch template
+    - id: fetch-template
+      name: Fetch PH Template
+      action: fetch:template
+      input:
+        url: https://github.com/rhpds/rhdp-publishing-house-template/tree/main
+        values:
+          project_name: ${{ parameters.project_name }}
+          project_type: ${{ parameters.project_type }}
+          deployment_mode: ${{ parameters.deployment_mode }}
+
+    # Step 2: Create GitHub repo
+    - id: publish
+      name: Publish to GitHub
+      action: publish:github
+      input:
+        repoUrl: github.com?owner=${{ parameters.github_org }}&repo=${{ parameters.project_name | lower | replace(' ', '-') }}
+        description: Publishing House ${{ parameters.project_type }}
+        repoVisibility: ${{ parameters.repo_visibility }}
+        defaultBranch: main
+
+    # Step 3: Provision MaaS API key (LiteLLM direct call)
+    - id: provision-key
+      name: Provision MaaS API Key
+      action: http:backstage:request
+      input:
+        method: POST
+        url: ${LITELLM_URL}/key/generate
+        headers:
+          Authorization: Bearer ${LITELLM_MASTER_KEY}
+          Content-Type: application/json
+        body:
+          key_alias: ph-${{ user.entity.metadata.name }}-${{ parameters.project_name | lower | replace(' ', '-') }}
+          duration: 30d
+          models:
+            - claude-sonnet-4-5
+          metadata:
+            owner: ${{ user.entity.spec.profile.email }}
+            project: ${{ parameters.project_name }}
+            created_by: rhdh-template
+
+    # Step 4: Create DevWorkspace CR (direct K8s action)
+    - id: create-workspace
+      name: Create DevSpaces Workspace
+      action: kubernetes:create
+      input:
+        clusterUrl: https://api.cluster-5hfx8.dynamic2.redhatworkshops.io:6443
+        skipTLSVerify: true  # Use service account token from pod
+        manifestString: |
+          apiVersion: workspace.devfile.io/v1alpha2
+          kind: DevWorkspace
+          metadata:
+            name: ph-${{ parameters.project_name | lower | replace(' ', '-') }}
+            namespace: devworkspace-${{ user.entity.metadata.name }}
+            labels:
+              app.kubernetes.io/managed-by: publishing-house
+              app.kubernetes.io/created-by: rhdh
+          spec:
+            routingClass: che
+            started: true
+            contributions:
+              - name: ide
+                uri: http://devspaces-dashboard.openshift-devspaces.svc.cluster.local:8080/dashboard/api/editors/devfile?che-editor=che-incubator/che-code/latest
+            template:
+              projects:
+                - name: project
+                  git:
+                    remotes:
+                      origin: ${{ steps.publish.output.remoteUrl }}
+                    checkoutFrom:
+                      revision: main
+              components:
+                - name: dev
+                  container:
+                    image: quay.io/rhpds/publishing-house-udi:latest
+                    memoryLimit: 4Gi
+                    cpuLimit: 2
+                    env:
+                      - name: MAAS_API_KEY
+                        value: ${{ steps['provision-key'].output.body.key }}
+                      - name: PROJECT_NAME
+                        value: ${{ parameters.project_name }}
+                      - name: DEPLOYMENT_MODE
+                        value: ${{ parameters.deployment_mode }}
+              commands:
+                - id: post-start
+                  exec:
+                    component: dev
+                    commandLine: /opt/ph/scripts/workspace-startup.sh
+                    workingDir: /projects
+              events:
+                postStart:
+                  - post-start
+
+    # Step 5: Create namespace first (if needed)
+    - id: create-namespace
+      name: Create DevSpaces Namespace
+      action: kubernetes:create
+      input:
+        clusterUrl: https://api.cluster-5hfx8.dynamic2.redhatworkshops.io:6443
+        skipTLSVerify: true
+        manifestString: |
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: devworkspace-${{ user.entity.metadata.name }}
+            labels:
+              app.kubernetes.io/managed-by: publishing-house
+
+    # Step 6: Register in catalog with all metadata
+    - id: register
+      name: Register in Catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+
+  output:
+    links:
+      - title: Open DevSpaces Workspace
+        icon: launch
+        url: https://ph-${{ parameters.project_name | lower | replace(' ', '-') }}-devworkspace-${{ user.entity.metadata.name }}.apps.cluster-5hfx8.dynamic2.redhatworkshops.io
+
+      - title: View in GitHub
+        icon: github
+        url: ${{ steps.publish.output.remoteUrl }}
+
+      - title: View in Catalog
+        icon: catalog
+        url: /catalog/default/component/${{ parameters.project_name | lower | replace(' ', '-') }}
