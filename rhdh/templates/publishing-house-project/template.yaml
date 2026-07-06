@@ -47,67 +47,63 @@ spec:
           default: self_published
           ui:help: Choose review rigor level
 
-        has_existing_repo:
-          title: Do you already have a repository?
-          type: boolean
-          default: false
-          ui:help: Choose "Yes" if you cloned the template yourself, "No" to create a new repo
+        repo_type:
+          title: Repository
+          type: string
+          enum:
+            - new
+            - existing
+          enumNames:
+            - Create new repository from template
+            - Use existing repository
+          default: new
+          ui:help: Choose whether to create a new repo or use one you already have
 
-    - title: Repository Settings
+    - title: New Repository Settings
       dependencies:
-        has_existing_repo:
+        repo_type:
           oneOf:
             - properties:
-                has_existing_repo:
-                  const: false
-              required:
-                - github_org
+                repo_type:
+                  const: new
+      properties:
+        github_org:
+          title: GitHub Organization/User
+          type: string
+          default: treddy08
+          ui:help: Where to create the repository
+
+        repo_visibility:
+          title: Repository Visibility
+          type: string
+          enum: [public, private]
+          default: public
+
+    - title: Existing Repository Settings
+      dependencies:
+        repo_type:
+          oneOf:
             - properties:
-                has_existing_repo:
-                  const: true
-              required:
-                - repo_url
-      allOf:
-        - if:
-            properties:
-              has_existing_repo:
-                const: false
-          then:
-            properties:
-              github_org:
-                title: GitHub Organization/User
-                type: string
-                default: treddy08
-                ui:help: Where to create the repository
+                repo_type:
+                  const: existing
+      properties:
+        repo_url:
+          title: Repository URL
+          type: string
+          ui:placeholder: "https://github.com/treddy08/my-workshop"
+          ui:help: Full URL to your existing repository
 
-              repo_visibility:
-                title: Repository Visibility
-                type: string
-                enum: [public, private]
-                default: public
-        - if:
-            properties:
-              has_existing_repo:
-                const: true
-          then:
-            properties:
-              repo_url:
-                title: Repository URL
-                type: string
-                ui:placeholder: "https://github.com/treddy08/my-workshop"
-                ui:help: Full URL to your existing repository
-
-              repo_branch:
-                title: Branch
-                type: string
-                default: main
-                ui:help: Branch to use for the workspace
+        repo_branch:
+          title: Branch
+          type: string
+          default: main
+          ui:help: Branch to use for the workspace
 
   steps:
     # Step 1 (NEW REPO ONLY): Fetch PH template
     - id: fetch-template
       name: Fetch Publishing House Template
-      if: ${{ parameters.has_existing_repo === false }}
+      if: ${{ parameters.repo_type === 'new' }}
       action: fetch:template
       input:
         url: https://github.com/rhpds/rhdp-publishing-house-template/tree/main
@@ -121,7 +117,7 @@ spec:
     # Step 2 (NEW REPO ONLY): Publish to GitHub
     - id: publish
       name: Create GitHub Repository
-      if: ${{ parameters.has_existing_repo === false }}
+      if: ${{ parameters.repo_type === 'new' }}
       action: publish:github
       input:
         repoUrl: github.com?owner=${{ parameters.github_org }}&repo=${{ parameters.project_name | lower | replace(' ', '-') }}
@@ -142,8 +138,8 @@ spec:
           project_name: ${{ parameters.project_name }}
           user_id: ${{ user.entity.metadata.name }}
           user_email: ${{ user.entity.spec.profile.email }}
-          repo_url: ${{ parameters.has_existing_repo and parameters.repo_url or steps.publish.output.remoteUrl }}
-          repo_branch: ${{ parameters.has_existing_repo and parameters.repo_branch or 'main' }}
+          repo_url: ${{ parameters.repo_type === 'existing' and parameters.repo_url or steps.publish.output.remoteUrl }}
+          repo_branch: ${{ parameters.repo_type === 'existing' and parameters.repo_branch or 'main' }}
 
     # Step 4: Create catalog-info.yaml with ACTUAL workspace URL
     - id: create-catalog-info
@@ -155,7 +151,7 @@ spec:
           project_name: ${{ parameters.project_name }}
           project_type: ${{ parameters.project_type }}
           deployment_mode: ${{ parameters.deployment_mode }}
-          github_org: ${{ parameters.has_existing_repo and parameters.repo_url.split('/')[3] or parameters.github_org }}
+          github_org: ${{ parameters.repo_type === 'existing' and parameters.repo_url.split('/')[3] or parameters.github_org }}
           user: ${{ user.entity.metadata.name }}
           workspace_url: ${{ steps['provision-workspace'].output.body.workspace_url }}
           workspace_name: ${{ steps['provision-workspace'].output.body.workspace_name }}
@@ -164,7 +160,7 @@ spec:
     # Step 5 (NEW REPO ONLY): Commit catalog-info.yaml to GitHub
     - id: publish-catalog-info
       name: Add Catalog Info to Repo
-      if: ${{ parameters.has_existing_repo === false }}
+      if: ${{ parameters.repo_type === 'new' }}
       action: publish:github:pull-request
       input:
         repoUrl: github.com?owner=${{ parameters.github_org }}&repo=${{ parameters.project_name | lower | replace(' ', '-') }}
@@ -176,7 +172,7 @@ spec:
     # Step 5b (EXISTING REPO): Commit catalog-info.yaml via PR
     - id: publish-catalog-info-existing
       name: Add Catalog Info to Existing Repo
-      if: ${{ parameters.has_existing_repo === true }}
+      if: ${{ parameters.repo_type === 'existing' }}
       action: publish:github:pull-request
       input:
         repoUrl: ${{ parameters.repo_url }}
@@ -195,7 +191,7 @@ spec:
       name: Register in Backstage Catalog
       action: catalog:register
       input:
-        repoContentsUrl: ${{ parameters.has_existing_repo and parameters.repo_url or steps.publish.output.repoContentsUrl }}
+        repoContentsUrl: ${{ parameters.repo_type === 'existing' and parameters.repo_url or steps.publish.output.repoContentsUrl }}
         catalogInfoPath: /catalog-info.yaml
         optional: true
 
