@@ -67,36 +67,41 @@ spec:
                   const: true
               required:
                 - repo_url
-      properties:
-        github_org:
-          title: GitHub Organization/User
-          type: string
-          default: treddy08
-          ui:help: Where to create the repository
-          ui:field: HiddenField
-          ui:widget: hidden
-          formHideCondition: has_existing_repo
+      allOf:
+        - if:
+            properties:
+              has_existing_repo:
+                const: false
+          then:
+            properties:
+              github_org:
+                title: GitHub Organization/User
+                type: string
+                default: treddy08
+                ui:help: Where to create the repository
 
-        repo_visibility:
-          title: Repository Visibility
-          type: string
-          enum: [public, private]
-          default: public
-          formHideCondition: has_existing_repo
+              repo_visibility:
+                title: Repository Visibility
+                type: string
+                enum: [public, private]
+                default: public
+        - if:
+            properties:
+              has_existing_repo:
+                const: true
+          then:
+            properties:
+              repo_url:
+                title: Repository URL
+                type: string
+                ui:placeholder: "https://github.com/treddy08/my-workshop"
+                ui:help: Full URL to your existing repository
 
-        repo_url:
-          title: Repository URL
-          type: string
-          ui:placeholder: "https://github.com/treddy08/my-workshop"
-          ui:help: Full URL to your existing repository
-          formHideCondition: "!has_existing_repo"
-
-        repo_branch:
-          title: Branch
-          type: string
-          default: main
-          ui:help: Branch to use for the workspace
-          formHideCondition: "!has_existing_repo"
+              repo_branch:
+                title: Branch
+                type: string
+                default: main
+                ui:help: Branch to use for the workspace
 
   steps:
     # Step 1 (NEW REPO ONLY): Fetch PH template
