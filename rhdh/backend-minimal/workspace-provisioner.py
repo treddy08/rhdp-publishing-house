@@ -155,10 +155,28 @@ async def provision_workspace(req: ProvisionRequest):
             detail=f"DevWorkspace creation failed: {str(e)}"
         )
 
-    # 3. Construct workspace URL
-    # Pattern: https://{workspace-name}-{namespace}.apps.{cluster-domain}
-    cluster_domain = "cluster-5hfx8.dynamic2.redhatworkshops.io"
-    workspace_url = f"https://{workspace_name}-{workspace_namespace}.apps.{cluster_domain}"
+    # 3. Wait for workspace URL to be available
+    import time
+    workspace_url = None
+    for i in range(30):  # Wait up to 30 seconds
+        try:
+            dw = custom_api.get_namespaced_custom_object(
+                group="workspace.devfile.io",
+                version="v1alpha2",
+                namespace=workspace_namespace,
+                plural="devworkspaces",
+                name=workspace_name
+            )
+            workspace_url = dw.get("status", {}).get("mainUrl")
+            if workspace_url:
+                break
+        except Exception:
+            pass
+        time.sleep(1)
+
+    # Fallback if URL not available yet
+    if not workspace_url:
+        workspace_url = f"https://devspaces.apps.cluster-5hfx8.dynamic2.redhatworkshops.io/#/ide/devworkspace-{req.user_id}/{workspace_name}"
 
     # 4. Return metadata (RHDH stores in catalog annotations)
     return ProvisionResponse(
