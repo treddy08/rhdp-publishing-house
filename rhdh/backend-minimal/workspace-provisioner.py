@@ -81,6 +81,28 @@ async def provision_workspace(req: ProvisionRequest):
             if e.status != 409:  # 409 = already exists
                 raise
 
+        # Get user's Kubernetes identity for creator label
+        # DevSpaces dashboard filters by controller.devfile.io/creator label
+        user_identity = None
+        try:
+            # Look up the user's K8s UID
+            v1_api = client.RbacAuthorizationV1Api()
+            # Try to get user identity from OpenShift User resource
+            from kubernetes.client.rest import ApiException
+            try:
+                # Use dynamic client to get User resource
+                user_obj = custom_api.get_cluster_custom_object(
+                    group="user.openshift.io",
+                    version="v1",
+                    plural="users",
+                    name=req.user_id
+                )
+                user_identity = user_obj.get("metadata", {}).get("uid")
+            except ApiException:
+                pass
+        except Exception:
+            pass
+
         # Create DevWorkspace CR
         devworkspace = {
             "apiVersion": "workspace.devfile.io/v1alpha2",
@@ -90,7 +112,9 @@ async def provision_workspace(req: ProvisionRequest):
                 "namespace": workspace_namespace,
                 "labels": {
                     "app.kubernetes.io/managed-by": "publishing-house",
-                    "app.kubernetes.io/created-by": "rhdh"
+                    "app.kubernetes.io/created-by": "rhdh",
+                    # Set creator label if we found user identity
+                    **({"controller.devfile.io/creator": user_identity} if user_identity else {})
                 }
             },
             "spec": {
