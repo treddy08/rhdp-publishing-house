@@ -18,6 +18,7 @@ spec:
       required:
         - project_name
         - deployment_mode
+        - has_existing_repo
       properties:
         project_name:
           title: Project Name
@@ -46,14 +47,27 @@ spec:
           default: self_published
           ui:help: Choose review rigor level
 
-    - title: GitHub Repository
+        has_existing_repo:
+          title: Do you already have a repository?
+          type: boolean
+          default: false
+          ui:help: Choose "Yes" if you cloned the template yourself, "No" to create a new repo
+
+    - title: New Repository Settings
+      description: Create a new repository from the Publishing House template
       required:
         - github_org
+      dependencies:
+        has_existing_repo:
+          oneOf:
+            - properties:
+                has_existing_repo:
+                  const: false
       properties:
         github_org:
           title: GitHub Organization/User
           type: string
-          default: rhpds
+          default: treddy08
           ui:help: Where to create the repository
 
         repo_visibility:
@@ -62,10 +76,34 @@ spec:
           enum: [public, private]
           default: public
 
+    - title: Existing Repository Settings
+      description: Provide the URL of your existing repository
+      required:
+        - repo_url
+      dependencies:
+        has_existing_repo:
+          oneOf:
+            - properties:
+                has_existing_repo:
+                  const: true
+      properties:
+        repo_url:
+          title: Repository URL
+          type: string
+          ui:placeholder: "https://github.com/treddy08/my-workshop"
+          ui:help: Full URL to your existing repository
+
+        repo_branch:
+          title: Branch
+          type: string
+          default: main
+          ui:help: Branch to use for the workspace
+
   steps:
-    # Step 1: Fetch PH template (WITHOUT catalog-info.yaml yet)
+    # Step 1 (NEW REPO ONLY): Fetch PH template
     - id: fetch-template
       name: Fetch Publishing House Template
+      if: ${{ parameters.has_existing_repo === false }}
       action: fetch:template
       input:
         url: https://github.com/rhpds/rhdp-publishing-house-template/tree/main
@@ -76,9 +114,10 @@ spec:
           github_org: ${{ parameters.github_org }}
           user: ${{ user.entity.metadata.name }}
 
-    # Step 2: Publish to GitHub (initial commit without catalog-info)
+    # Step 2 (NEW REPO ONLY): Publish to GitHub
     - id: publish
       name: Create GitHub Repository
+      if: ${{ parameters.has_existing_repo === false }}
       action: publish:github
       input:
         repoUrl: github.com?owner=${{ parameters.github_org }}&repo=${{ parameters.project_name | lower | replace(' ', '-') }}
@@ -86,7 +125,7 @@ spec:
         repoVisibility: ${{ parameters.repo_visibility }}
         defaultBranch: main
 
-    # Step 3: Call provisioner backend to create workspace
+    # Step 3: Provision workspace (ALL scenarios)
     - id: provision-workspace
       name: Provision DevSpaces Workspace
       action: http:backstage:request
@@ -99,8 +138,8 @@ spec:
           project_name: ${{ parameters.project_name }}
           user_id: ${{ user.entity.metadata.name }}
           user_email: ${{ user.entity.spec.profile.email }}
-          repo_url: ${{ steps.publish.output.remoteUrl }}
-          repo_branch: main
+          repo_url: ${{ parameters.has_existing_repo and parameters.repo_url or steps.publish.output.remoteUrl }}
+          repo_branch: ${{ parameters.has_existing_repo and parameters.repo_branch or 'main' }}
 
     # Step 4: Create catalog-info.yaml with ACTUAL workspace URL
     - id: create-catalog-info
@@ -112,15 +151,16 @@ spec:
           project_name: ${{ parameters.project_name }}
           project_type: ${{ parameters.project_type }}
           deployment_mode: ${{ parameters.deployment_mode }}
-          github_org: ${{ parameters.github_org }}
+          github_org: ${{ parameters.has_existing_repo and parameters.repo_url.split('/')[3] or parameters.github_org }}
           user: ${{ user.entity.metadata.name }}
           workspace_url: ${{ steps['provision-workspace'].output.body.workspace_url }}
           workspace_name: ${{ steps['provision-workspace'].output.body.workspace_name }}
           workspace_namespace: ${{ steps['provision-workspace'].output.body.workspace_namespace }}
 
-    # Step 5: Commit catalog-info.yaml to GitHub
+    # Step 5 (NEW REPO ONLY): Commit catalog-info.yaml to GitHub
     - id: publish-catalog-info
       name: Add Catalog Info to Repo
+      if: ${{ parameters.has_existing_repo === false }}
       action: publish:github:pull-request
       input:
         repoUrl: github.com?owner=${{ parameters.github_org }}&repo=${{ parameters.project_name | lower | replace(' ', '-') }}
@@ -129,12 +169,29 @@ spec:
         description: Add catalog-info.yaml with workspace URL
         update: true
 
+    # Step 5b (EXISTING REPO): Commit catalog-info.yaml via PR
+    - id: publish-catalog-info-existing
+      name: Add Catalog Info to Existing Repo
+      if: ${{ parameters.has_existing_repo === true }}
+      action: publish:github:pull-request
+      input:
+        repoUrl: ${{ parameters.repo_url }}
+        branchName: add-rhdh-catalog-info
+        title: "[RHDH] Add Backstage catalog metadata"
+        description: |
+          Add catalog-info.yaml with DevSpaces workspace information.
+
+          This was generated by the Publishing House RHDH template.
+
+          **Workspace URL:** ${{ steps['provision-workspace'].output.body.workspace_url }}
+        update: true
+
     # Step 6: Register in catalog
     - id: register
       name: Register in Backstage Catalog
       action: catalog:register
       input:
-        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        repoContentsUrl: ${{ parameters.has_existing_repo and parameters.repo_url or steps.publish.output.repoContentsUrl }}
         catalogInfoPath: /catalog-info.yaml
         optional: true
 
