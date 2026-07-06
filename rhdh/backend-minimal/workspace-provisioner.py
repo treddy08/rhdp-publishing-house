@@ -116,7 +116,7 @@ async def provision_workspace(req: ProvisionRequest):
                         {
                             "name": "dev",
                             "container": {
-                                "image": "image-registry.openshift-image-registry.svc:5000/ph-provisioner/ph-udi:latest",
+                                "image": "registry.redhat.io/devspaces/udi-rhel8:latest",
                                 "memoryLimit": "4Gi",
                                 "cpuLimit": "2",
                                 "env": [
